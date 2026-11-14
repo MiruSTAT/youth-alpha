@@ -13,7 +13,6 @@ export function initScene(el) {
   } catch (e) { document.body.classList.add('no-webgl'); return false; }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
   scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x0b1030, 12, 30);
   camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
   camera.position.set(0, 3.2, 10.5);
   camera.lookAt(0, 2.4, 0);

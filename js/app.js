@@ -1,8 +1,8 @@
-import { t, getLang, setLang } from './i18n.js?v=7';
-import { api, MODE, ranked, today } from './data.js?v=7';
-import { music } from './music.js?v=7';
-import { art, burst, SPECIAL } from './art.js?v=7';
-import { snow } from './snow.js?v=7';
+import { t, getLang, setLang } from './i18n.js?v=8';
+import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=8';
+import { music } from './music.js?v=8';
+import { art, burst, SPECIAL } from './art.js?v=8';
+import { snow } from './snow.js?v=8';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -35,6 +35,7 @@ function modal(title, inner, { okText = t('save'), extra = '' } = {}) {
     <div class="dlg-actions"><button class="btn" value="cancel" formnovalidate>${t('cancel')}</button>
     <button class="btn primary" value="ok">${okText}</button></div>
     ${extra ? `<div class="dlg-extra">${extra}</div>` : ''}`;
+  form.querySelectorAll('[required]').forEach(i => i.closest('.field')?.querySelector('label')?.classList.add('req'));
   return new Promise((resolve) => {
     dlg.onclose = () => resolve(dlg.returnValue === 'ok' ? new FormData(form) : (dlg.returnValue || null));
     dlg.returnValue = ''; dlg.showModal();
@@ -49,6 +50,23 @@ async function leaderboard(force = false) {
 }
 const pageHead = (title, backTo = '#/admin') =>
   `<div class="page-head"><a class="back" href="${backTo}">‹ ${t('back')}</a><h1 class="page-title">${title}</h1></div>`;
+
+// ------------------------------------------------------------- theme + event timing
+const THEMES = [['night', 'linear-gradient(#2c4591,#1c2d66)'], ['snow', 'linear-gradient(#eef4fd,#d5e4f7)'], ['red', 'linear-gradient(#8a1c2c,#5a0f1c)'], ['forest', 'linear-gradient(#23664a,#123a29)']];
+function applyTheme(k) {
+  document.body.dataset.theme = k; try { localStorage.setItem('ya_theme', k); } catch {}
+  snow.recolor();
+}
+document.body.dataset.theme = localStorage.getItem('ya_theme') || 'night';
+let evCache = null;
+async function eventInfo(force = false) {
+  if (!evCache || force) evCache = await api.eventInfo().catch(() => ({ event_dow: 0, event_start: '10:00', event_end: '12:00' }));
+  return evCache;
+}
+const fmtDur = (mins) => t('dur', Math.floor(mins / 1440), Math.floor((mins % 1440) / 60), mins % 60);
+const hmMin = (s) => { const [h, m] = String(s).split(':').map(Number); return h * 60 + m; };
+// minutes until feedback opens (end of the next/current activity)
+const fbIn = (ev, st) => st.phase === 'live' ? st.mins : st.mins + (hmMin(ev.event_end) - hmMin(ev.event_start));
 
 // ------------------------------------------------------------- top bar
 function paintChrome() {
@@ -69,7 +87,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=7');
+    const m = await import('./scene3d.js?v=8');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -78,54 +96,74 @@ async function ensureScene() {
 // =============================================================== KID SIDE
 function setNav(which) { document.querySelectorAll('.kid-nav a').forEach(a => a.classList.toggle('active', a.dataset.nav === which)); }
 
-async function kidPick() {
-  setNav('me');
-  const rows = await leaderboard();
-  const names = [...rows].sort((a, b) => a.nickname.localeCompare(b.nickname, 'th'));
-  view.innerHTML = `<section class="sheet">
-    <h1 class="sheet-title">${t('whoAreYou')}</h1>
-    <p class="sheet-sub">${t('pickSub')}</p>
-    ${names.length > 10 ? `<input class="search" id="q" placeholder="🔍 ${t('search')}" autocomplete="off">` : ''}
-    <div class="names">${names.map(k => `<button class="name-btn" data-id="${k.id}" data-n="${esc(k.nickname.toLowerCase())}">
-      <span class="av">${esc(k.avatar)}</span><span class="nm">${esc(k.nickname)}</span><span class="go">›</span></button>`).join('')}</div>
-    ${names.length ? '' : `<p class="empty">${t('noKids')}</p>`}</section>`;
-  view.querySelectorAll('.name-btn').forEach(b => b.onclick = () => { localStorage.setItem('ya_me', b.dataset.id); location.hash = `#/me/${b.dataset.id}`; });
-  const q = $('#q');
-  if (q) q.oninput = () => view.querySelectorAll('.name-btn').forEach(b => b.hidden = !b.dataset.n.includes(q.value.trim().toLowerCase()));
-}
-
 function countUp(el, from, to, ms = 1200) {
   const t0 = performance.now();
   const step = (now) => { const p = Math.min(1, (now - t0) / ms); el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))).toLocaleString(); if (p < 1) requestAnimationFrame(step); };
   requestAnimationFrame(step);
 }
 
-async function kidMe(id) {
-  setNav('me');
-  const [rows, cats] = await Promise.all([leaderboard(true), pcats()]), me = rows.find(r => r.id === id);
-  if (!me) { localStorage.removeItem('ya_me'); return kidPick(); }
-  const seenKey = `ya_seen_${id}`, seen = Number(localStorage.getItem(seenKey) ?? me.total);
+function evPill(ev) {
+  const st = eventState(ev), when = `${t('dows')[ev.event_dow]} ${ev.event_start}`;
+  if (st.phase === 'live') return `<button class="ev-pill live" data-ev="sched"><span class="i">🔔</span><span>${t('evLive', fmtDur(st.mins))}</span></button>`;
+  if (st.phase === 'feedback') return `<button class="ev-pill feedback" data-ev="fb"><span class="i">💬</span><span>${t('evFeedback')}</span></button>`;
+  return `<button class="ev-pill" data-ev="sched"><span class="i">⏰</span><span>${t('evWait', when, fmtDur(st.mins))}</span></button>`;
+}
+function wirePill(root) {
+  root.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => b.dataset.ev === 'fb' ? openFeedback() : openSchedule());
+}
+
+// HOME = ranking, with "my card" on top (no separate "me" page)
+async function kidRank() {
+  setNav('rank');
+  const [rows, ev] = await Promise.all([leaderboard(true), eventInfo(), pcats()]);
+  const mineId = localStorage.getItem('ya_me'), me = rows.find(r => r.id === mineId);
+  if (mineId && !me) localStorage.removeItem('ya_me');
   const max = Math.max(1, ...rows.map(r => r.total));
+  scene?.setGlow(me ? me.total / max : 0.6);
+  const medal = ['🥇', '🥈', '🥉'];
   view.innerHTML = `<section class="sheet">
-    <div class="me-head">
-      <div class="me-av">${esc(me.avatar)}</div>
-      <h1 class="me-name">${esc(me.nickname)}</h1>
-      <div class="me-points"><b id="tot">0</b><span>${t('points')}</span></div>
-      <div class="me-rank">🏆 ${t('rank')} ${me.rank} ${t('of')} ${rows.length}</div>
-    </div>
+    ${evPill(ev)}
+    ${me ? `<button class="my-card" id="myCard"><span class="av">${esc(me.avatar)}</span>
+        <span class="who"><b>${esc(me.nickname)}</b><span>🏆 ${t('rank')} ${me.rank} ${t('of')} ${rows.length}</span></span>
+        <span class="pts"><b id="tot">0</b><span>${t('points')}</span></span></button>`
+      : rows.length ? `<p class="my-hint">👇 ${t('tapYourName')}</p>` : ''}
+    <h1 class="sheet-title" style="margin-bottom:12px">🏆 ${t('ranking')}</h1>
+    <div class="rank-list">${rows.map(k => `<button class="rank-row ${k.id === mineId ? 'mine' : ''}" data-id="${k.id}">
+      <span class="n ${k.rank <= 3 ? 'medal' : ''}">${k.rank <= 3 ? medal[k.rank - 1] : k.rank}</span>
+      <span class="av">${esc(k.avatar)}</span><span class="nm">${esc(k.nickname)}</span><span class="pt">${k.total} ⭐</span></button>`).join('')}</div>
+    ${rows.length ? '' : `<p class="empty">${t('noKids')}</p>`}</section>`;
+  wirePill(view);
+  view.querySelectorAll('.rank-row').forEach(b => b.onclick = () => kidDetail(rows.find(r => r.id === b.dataset.id), rows));
+  if (me) {
+    $('#myCard').onclick = () => kidDetail(me, rows);
+    const seenKey = `ya_seen_${me.id}`, seen = Number(localStorage.getItem(seenKey) ?? me.total);
+    countUp($('#tot'), Math.min(seen, me.total), me.total);
+    if (me.total > seen) setTimeout(() => {
+      const pop = document.createElement('div'); pop.className = 'plus-pop'; pop.textContent = `+${me.total - seen} ⭐`;
+      document.body.appendChild(pop); setTimeout(() => pop.remove(), 2100); scene?.burst(60); music.ding();
+    }, 800);
+    localStorage.setItem(seenKey, me.total);
+  }
+}
+
+// a kid's points by category (with details like piano / singing)
+function kidDetail(k, rows) {
+  const isMe = localStorage.getItem('ya_me') === k.id;
+  const cats = catCache.list.filter(c => c.active || k.skills[c.key]);
+  const p = kidSheet(`<div class="panel-head"><h2>${esc(k.nickname)}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
+    <div class="kid-detail-head"><div class="av">${esc(k.avatar)}</div><b>${k.total} ⭐</b><span class="me-rank">🏆 ${t('rank')} ${k.rank} ${t('of')} ${rows.length}</span></div>
     <p class="section-label">${t('mySkills')}</p>
-    <div class="skill-list">${cats.filter(c => c.active || me.skills[c.key]).map(c => `<button class="skill-row ${c.info ? 'has-info' : ''}" data-c="${c.key}" ${c.info ? '' : 'tabindex="-1"'}>
-      <span class="i">${esc(c.icon)}</span><span class="l">${esc(cName(c))}</span><span class="v">${me.skills[c.key] || 0}</span><span class="chev">${c.info ? 'ⓘ' : ''}</span></button>`).join('')}</div>
-    <button class="text-btn" id="notMe">${t('notMe')}</button></section>`;
-  countUp($('#tot'), Math.min(seen, me.total), me.total);
-  $('#notMe').onclick = () => { localStorage.removeItem('ya_me'); location.hash = '#/'; };
-  view.querySelectorAll('.skill-row.has-info').forEach(b => b.onclick = () => catInfo(cOf(b.dataset.c), me.skills[b.dataset.c] || 0));
-  scene?.setGlow(me.total / max);
-  if (me.total > seen) setTimeout(() => {
-    const pop = document.createElement('div'); pop.className = 'plus-pop'; pop.textContent = `+${me.total - seen} ⭐`;
-    document.body.appendChild(pop); setTimeout(() => pop.remove(), 2100); scene?.burst(60); music.ding();
-  }, 800);
-  localStorage.setItem(seenKey, me.total);
+    <div class="skill-list">${cats.map(c => {
+      const det = k.details?.[c.key];
+      return `<button class="skill-row ${c.info ? 'has-info' : ''}" data-c="${c.key}"><span class="i">${esc(c.icon)}</span><span class="l">${esc(cName(c))}</span>
+        <span class="v">${k.skills[c.key] || 0}</span><span class="chev">${c.info ? 'ⓘ' : ''}</span></button>`
+        + (det ? `<div class="sub-rows">${Object.entries(det).map(([d, v]) => `<div><span>${esc(d)}</span><span>${v}</span></div>`).join('')}</div>` : '');
+    }).join('')}</div>
+    ${isMe ? `<button class="text-btn" id="notMe">${t('notMe')}</button>` : `<button class="kbtn" id="thisMe">${t('thisIsMe')}</button>`}`);
+  p.querySelectorAll('.skill-row.has-info').forEach(b => b.onclick = () => catInfo(cOf(b.dataset.c), k.skills[b.dataset.c] || 0));
+  const close = () => { $('#kidSheet').hidden = true; kidRank(); };
+  p.querySelector('#thisMe')?.addEventListener('click', () => { localStorage.setItem('ya_me', k.id); localStorage.setItem(`ya_seen_${k.id}`, k.total); close(); });
+  p.querySelector('#notMe')?.addEventListener('click', () => { localStorage.removeItem('ya_me'); close(); });
 }
 
 function catInfo(c, pts) {
@@ -134,16 +172,68 @@ function catInfo(c, pts) {
     ${pts !== null ? `<div class="cat-pts"><span>${t('myPointsIn')}</span><b>${pts} ⭐</b></div>` : ''}`);
 }
 
-async function kidRank() {
-  setNav('rank'); scene?.setGlow(1);
-  const rows = await leaderboard(true), mine = localStorage.getItem('ya_me');
-  const medal = ['🥇', '🥈', '🥉'];
+// MENU: everything else in one simple list
+async function kidMenu() {
+  setNav('menu'); scene?.setGlow(0.6);
+  const ev = await eventInfo(), st = eventState(ev);
+  const dayTxt = `${t('dows')[ev.event_dow]} ${ev.event_end}`;
+  const thName = t('th_' + (document.body.dataset.theme || 'night'));
   view.innerHTML = `<section class="sheet">
-    <h1 class="sheet-title" style="margin-bottom:16px">🏆 ${t('ranking')}</h1>
-    <div class="rank-list">${rows.map(k => `<div class="rank-row ${k.id === mine ? 'mine' : ''}">
-      <span class="n ${k.rank <= 3 ? 'medal' : ''}">${k.rank <= 3 ? medal[k.rank - 1] : k.rank}</span>
-      <span class="av">${esc(k.avatar)}</span><span class="nm">${esc(k.nickname)}</span><span class="pt">${k.total} ⭐</span></div>`).join('')}</div>
-    ${rows.length ? '' : `<p class="empty">${t('noKids')}</p>`}</section>`;
+    <h1 class="sheet-title" style="margin-bottom:16px">☰ ${t('menu')}</h1>
+    <div class="mlist">
+      <button class="mrow" data-m="sched"><span class="mi">📅</span><span class="mt"><b>${t('schedule')}</b><span>${t('dows')[ev.event_dow]} ${ev.event_start}–${ev.event_end}</span></span><span class="mv">›</span></button>
+      <button class="mrow" data-m="fb" ${st.phase === 'feedback' ? 'style="border:2px solid var(--gold)"' : ''}><span class="mi">💬</span><span class="mt"><b>${t('fb')}</b>
+        <span>${st.phase === 'feedback' ? t('fbOpenSub') : t('fbClosedSub', dayTxt, fmtDur(fbIn(ev, st)))}</span></span><span class="mv">›</span></button>
+      <button class="mrow" data-m="theme"><span class="mi">🎨</span><span class="mt"><b>${t('theme')}</b></span><span class="mv">${thName} ›</span></button>
+      <button class="mrow" data-m="lang"><span class="mi">🌐</span><span class="mt"><b>${t('language')}</b></span><span class="mv">${t('langName')}</span></button>
+      <button class="mrow" data-m="music"><span class="mi">🎵</span><span class="mt"><b>${t('music')}</b></span><span class="mv">${music.playing ? t('on') : t('off')}</span></button>
+      <button class="mrow" data-m="help"><span class="mi">❓</span><span class="mt"><b>${t('help')}</b><span>${t('helpSub')}</span></span><span class="mv">›</span></button>
+      <a class="mrow quiet" href="#/admin"><span class="mi">🔒</span><span class="mt"><b>${t('adults')}</b><span>${t('adminSub')}</span></span><span class="mv">›</span></a>
+    </div></section>`;
+  const act = {
+    sched: openSchedule, fb: openFeedback, theme: openThemes, help: () => showTour(TOUR),
+    lang: () => { setLang(getLang() === 'th' ? 'en' : 'th'); paintChrome(); kidMenu(); },
+    music: () => { music.toggle(); paintChrome(); kidMenu(); },
+  };
+  view.querySelectorAll('[data-m]').forEach(b => b.onclick = () => act[b.dataset.m]());
+}
+
+function openThemes() {
+  const cur = document.body.dataset.theme || 'night';
+  const p = kidSheet(`<div class="panel-head"><h2>🎨 ${t('theme')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
+    <div class="themes">${THEMES.map(([k, g]) => `<button class="sw ${k === cur ? 'on' : ''}" data-th="${k}"><div class="pv" style="background:${g}">🎄</div><span class="nm">${t('th_' + k)}</span></button>`).join('')}</div>`);
+  p.querySelectorAll('[data-th]').forEach(b => b.onclick = () => { applyTheme(b.dataset.th); openThemes(); kidMenu(); });
+}
+
+async function openFeedback() {
+  const ev = await eventInfo(true), st = eventState(ev);
+  const head = `<div class="panel-head"><h2>💬 ${t('fbTitle')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>`;
+  const sentKey = 'ya_fb_' + bkkToday();
+  if (st.phase !== 'feedback') {
+    kidSheet(`${head}<p class="fb-done">⏰ ${t('fbClosed')}<br><span style="font-size:1rem;color:var(--text-d2)">${t('fbClosedSub', `${t('dows')[ev.event_dow]} ${ev.event_end}`, fmtDur(fbIn(ev, st)))}</span></p>`);
+    return;
+  }
+  if (localStorage.getItem(sentKey)) { kidSheet(`${head}<p class="fb-done">${t('fbSentAlready')}</p>`); return; }
+  const me = (await leaderboard()).find(r => r.id === localStorage.getItem('ya_me'));
+  let mood = 0;
+  const p = kidSheet(`${head}<p style="margin:0">${t('fbMood')}</p>
+    <div class="moods">${['😄', '🙂', '😐', '😢'].map((m, i) => `<button class="mood" data-m="${4 - i}" aria-label="${m}">${m}</button>`).join('')}</div>
+    <textarea class="k-text" id="fbMsg" maxlength="500" placeholder="${t('fbMsg')}"></textarea>
+    ${me ? `<label class="fb-as"><input type="checkbox" id="fbName" checked> ${t('fbAs', esc(me.nickname))}</label>` : ''}
+    <button class="kbtn" id="fbSend" disabled>${t('fbSend')}</button>`);
+  const send = p.querySelector('#fbSend'), msg = p.querySelector('#fbMsg');
+  const check = () => { send.disabled = !msg.value.trim(); };
+  msg.oninput = check;
+  p.querySelectorAll('.mood').forEach(b => b.onclick = () => { mood = Number(b.dataset.m); p.querySelectorAll('.mood').forEach(x => x.classList.toggle('on', x === b)); });
+  send.onclick = async () => {
+    send.disabled = true;
+    const useName = me && p.querySelector('#fbName')?.checked;
+    try {
+      await api.sendFeedback({ kid_id: useName ? me.id : null, kid_name: useName ? me.nickname : '', mood, message: msg.value.trim().slice(0, 500) });
+      localStorage.setItem(sentKey, '1');
+      p.innerHTML = `${head}<p class="fb-done">${t('fbThanks')}</p>`; music.ding(); scene?.burst(40);
+    } catch (e) { console.error(e); toast(t('fbClosed')); check(); }
+  };
 }
 
 // ---- kid bottom sheet helper
@@ -211,9 +301,9 @@ function openCategory(c, list, me) {
 // ---- tutorial: arrow + text over a darkened screen
 const TOUR = [
   { sel: '#schedBtn', key: 'tut_schedule' },
+  { sel: '.kid-nav [data-nav="rank"]', key: 'tut_rank2' },
   { sel: '.kid-nav [data-nav="shop"]', key: 'tut_shop' },
-  { sel: '.kid-nav [data-nav="rank"]', key: 'tut_rank' },
-  { sel: '.kid-nav [data-nav="me"]', key: 'tut_me' },
+  { sel: '.kid-nav [data-nav="menu"]', key: 'tut_menu' },
   { sel: '#musicBtn', key: 'tut_music' },
 ];
 function showTour(steps) {
@@ -223,9 +313,12 @@ function showTour(steps) {
     const s = steps[i], el = $(s.sel);
     if (!el || !el.getBoundingClientRect().width) { i++; return i < steps.length ? place() : end(); }
     const r = el.getBoundingClientRect(), pad = 6, below = r.top < innerHeight / 2;
+    // keep the bubble next to its target (matters on wide PC screens)
+    const bw = Math.min(360, innerWidth - 32), cx = r.left + r.width / 2;
+    const bl = Math.max(16, Math.min(innerWidth - bw - 16, cx - bw / 2));
     box.innerHTML = `<div class="tour-hole" style="left:${r.left - pad}px;top:${r.top - pad}px;width:${r.width + pad * 2}px;height:${r.height + pad * 2}px"></div>
       <div class="tour-arrow ${below ? '' : 'down'}" style="left:${Math.max(8, Math.min(innerWidth - 50, r.left + r.width / 2 - 20))}px;top:${below ? r.bottom + 10 : r.top - 58}px">${below ? '⬆' : '⬇'}</div>
-      <div class="tour-bubble" style="${below ? `top:${r.bottom + 64}px` : `bottom:${innerHeight - r.top + 64}px`}">
+      <div class="tour-bubble" style="left:${bl}px;right:auto;width:${bw}px;margin:0;${below ? `top:${r.bottom + 64}px` : `bottom:${innerHeight - r.top + 64}px`}">
         <p>${t(s.key)}</p><div class="row"><span class="dots">${steps.length > 1 ? `${i + 1} / ${steps.length}` : ''}</span>
         <span>${i < steps.length - 1 ? `<button class="sk">${t('skip')}</button>` : ''}<button class="go">${i < steps.length - 1 ? t('next') : t('gotIt')}</button></span></div></div>`;
     box.querySelector('.go').onclick = () => { i++; i < steps.length ? place() : end(); };
@@ -252,20 +345,45 @@ async function adultGate(page) {
   if (!session) return loginView();
   adult.role = await api.myRole(); adult.myId = await api.myId();
   if (adult.role === 'pending') return pendingView();
-  const pages = { attendance: pAttendance, attsum: pAttSummary, points: pPoints, history: pHistory, money: pMoney, kids: pKids, shop: pShop, schedule: pSchedule, pcats: pPcats, ...(adult.role === 'admin' ? { settings: pSettings } : {}) };
+  const pages = { attendance: pAttendance, attsum: pAttSummary, points: pPoints, history: pHistory, money: pMoney, kids: pKids, shop: pShop, schedule: pSchedule, pcats: pPcats, feedback: pFeedback, ...(adult.role === 'admin' ? { settings: pSettings } : {}) };
   if (!pages[page]) return adultHome();
   await pages[page]();
 }
 
 function adultHome() {
-  const items = [['attendance', '✅'], ['points', '⭐'], ['money', '💰'], ['kids', '👧'], ['pcats', '🏷️'], ['shop', '🎁'], ['schedule', '📅'], ...(adult.role === 'admin' ? [['settings', '⚙️']] : [])];
+  const items = [['attendance', '✅'], ['points', '⭐'], ['feedback', '💬'], ['money', '💰'], ['kids', '👧'], ['pcats', '🏷️'], ['shop', '🎁'], ['schedule', '📅'], ...(adult.role === 'admin' ? [['settings', '⚙️']] : [])];
   view.innerHTML = `
     <div class="page-head"><a class="back" href="#/">‹ ${t('back')}</a><h1 class="page-title">${t('adultMenu')}</h1></div>
-    <nav class="menu">${items.map(([k, i]) => `<a href="#/admin/${k}"><span class="mi">${i}</span>
+    <nav class="menu">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
       <span class="mt"><b>${t('tab_' + k)}</b><span>${t('m_' + k)}</span></span><span class="chev">›</span></a>`).join('')}</nav>
     <button class="btn wide" style="margin-top:20px" id="logout">${t('logout')}</button>
     ${MODE === 'preview' ? `<p class="preview-note">${t('previewNote')}</p>` : ''}`;
   $('#logout').onclick = async () => { await api.signOut(); location.hash = '#/admin'; render(); };
+  // red indicators: things that still need filling in
+  computeNeeds().then(n => Object.entries(n).forEach(([k, msg]) => {
+    const a = view.querySelector(`.menu [data-k="${k}"]`); if (!a) return;
+    a.querySelector('.mi').insertAdjacentHTML('beforeend', '<span class="dot"></span>');
+    a.querySelector('.mt span').outerHTML = `<span class="need">${esc(msg)}</span>`;
+  })).catch(console.error);
+}
+async function computeNeeds() {
+  const n = {};
+  const [kids, shop, sched, ev, fb] = await Promise.all([api.kids(), api.shop(), api.schedule(), eventInfo(true), api.feedback().catch(() => [])]);
+  const active = kids.filter(k => k.active);
+  if (!active.length) n.kids = t('need_kids');
+  const live = shop.items.filter(i => i.active);
+  if (!live.length) n.shop = t('need_shopEmpty');
+  else { const empty = shop.cats.find(c => !live.some(i => i.category_id === c.id)); if (empty) n.shop = t('need_shopCat', empty.name); }
+  if (!sched.some(r => r.day >= bkkToday())) n.schedule = t('need_sched');
+  const st = eventState(ev), dow = new Date(Date.now() + 7 * 3600e3).getUTCDay();
+  if (dow === Number(ev.event_dow) && st.phase !== 'wait' && active.length) {
+    const round = await api.round(bkkToday());
+    if (!round?.finished) n.attendance = t('need_att');
+  }
+  const seen = localStorage.getItem('ya_fb_seen') || '';
+  const nNew = fb.filter(f => f.created_at > seen).length;
+  if (nNew) n.feedback = t('newCount', nNew);
+  return n;
 }
 
 function loginView() {
@@ -350,7 +468,7 @@ async function pAttendance() {
 }
 
 // ---------------- Points: 3 steps, one question per screen
-let pw = { step: 1, skill: null, amount: null, sel: new Set() };
+let pw = { step: 1, skill: null, detail: '', amount: null, sel: new Set() };
 async function pPoints() {
   const back = pw.step === 1 ? '#/admin' : 'javascript:void 0';
   const head = `${pageHead(t('tab_points'), back)}<p class="step">${t('stepOf', pw.step)}</p>`;
@@ -362,12 +480,16 @@ async function pPoints() {
       <div class="options">${cats.filter(c => c.active && c.key !== 'attendance').map(c => `<button class="opt" data-s="${c.key}"><span class="i">${esc(c.icon)}</span>
         <span class="t">${esc(cName(c))}${c.info ? `<span class="opt-sub">${esc(c.info)}</span>` : ''}</span><span class="chev">›</span></button>`).join('')}</div>
       <a class="btn wide" style="margin-top:20px" href="#/admin/history">${t('seeHistory')}</a>`;
-    view.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { pw.skill = b.dataset.s; pw.step = 2; pPoints(); });
+    view.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { pw.skill = b.dataset.s; pw.detail = ''; pw.step = 2; pPoints(); });
   } else if (pw.step === 2) {
-    view.innerHTML = `${head}<h2 style="margin-bottom:12px">${esc(cOf(pw.skill).icon)} ${t('s2')}</h2>
+    const dets = (cOf(pw.skill).details || '').split('\n').filter(Boolean);
+    view.innerHTML = `${head}
+      ${dets.length ? `<p class="muted" style="margin:0 0 8px">${t('pickDetail')}</p><div class="dchips">${['', ...dets].map(d => `<button class="dchip ${pw.detail === d ? 'on' : ''}" data-d="${esc(d)}">${d ? esc(d) : t('noDetail')}</button>`).join('')}</div>` : ''}
+      <h2 style="margin-bottom:12px">${esc(cOf(pw.skill).icon)} ${t('s2')}</h2>
       <div class="amounts">${[5, 10, 20, 50, -5, -10].map(a => `<button class="opt ${a < 0 ? 'minus' : ''}" data-a="${a}">${signed(a)}</button>`).join('')}</div>
       <div class="field" style="margin-top:16px"><label>${t('customAmt')}</label>
         <div style="display:flex;gap:10px"><input class="input" id="custom" type="number" inputmode="numeric" min="-1000" max="1000"><button class="btn primary" id="customGo">${t('next')}</button></div></div>`;
+    view.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { pw.detail = b.dataset.d; view.querySelectorAll('[data-d]').forEach(x => x.classList.toggle('on', x === b)); });
     const go = (a) => { if (!a || Math.abs(a) > 1000) return; pw.amount = a; pw.step = 3; pPoints(); };
     view.querySelectorAll('[data-a]').forEach(b => b.onclick = () => go(Number(b.dataset.a)));
     $('#customGo').onclick = () => go(Math.trunc(Number($('#custom').value)));
@@ -376,7 +498,7 @@ async function pPoints() {
     const draw = () => {
       const n = pw.sel.size;
       view.innerHTML = `${head}<h2 style="margin-bottom:12px">${t('s3')}</h2>
-        <div class="list-tools"><span class="muted">${esc(cOf(pw.skill).icon)} ${esc(cName(cOf(pw.skill)))} · ${signed(pw.amount)}</span>
+        <div class="list-tools"><span class="muted">${esc(cOf(pw.skill).icon)} ${esc(cName(cOf(pw.skill)))}${pw.detail ? ' · ' + esc(pw.detail) : ''} · ${signed(pw.amount)}</span>
           <button class="btn small" id="all">${n === kids.length && n ? t('clear') : t('selectAll')}</button></div>
         <div class="options">${kids.map(k => `<button class="opt ${pw.sel.has(k.id) ? 'on' : ''}" data-k="${k.id}"><span class="i">${esc(k.avatar)}</span><span class="t">${esc(k.nickname)}</span><span class="check">${pw.sel.has(k.id) ? '✓' : ''}</span></button>`).join('') || `<p class="muted">${t('noKids')}</p>`}</div>
         <div class="field" style="margin-top:14px"><label>${t('note')}</label><input class="input" id="note" maxlength="80"></div>
@@ -388,9 +510,9 @@ async function pPoints() {
         e.currentTarget.disabled = true;
         try {
           const note = $('#note').value.trim();
-          await api.addPoints([...pw.sel].map(kid_id => ({ kid_id, skill: pw.skill, amount: pw.amount, note })));
+          await api.addPoints([...pw.sel].map(kid_id => ({ kid_id, skill: pw.skill, detail: pw.detail || '', amount: pw.amount, note })));
           toast(`✓ ${t('given', pw.sel.size)}`); lbCache.at = 0;
-          pw = { step: 1, skill: null, amount: null, sel: new Set() }; window.scrollTo(0, 0); pPoints();
+          pw = { step: 1, skill: null, detail: '', amount: null, sel: new Set() }; window.scrollTo(0, 0); pPoints();
         } catch (err) { e.currentTarget.disabled = false; fail(err); }
       };
     };
@@ -403,7 +525,7 @@ async function pHistory() {
   const [recent] = await Promise.all([api.recentPoints(50), pcats()]);
   view.innerHTML = `${pageHead(t('pointsHistory'), '#/admin/points')}
     <div class="card"><div class="list">${recent.map(p => `<div class="li"><span class="av">${esc(p.kids?.avatar || '')}</span>
-      <span class="grow">${esc(p.kids?.nickname || '?')}<span class="sub">${esc(cOf(p.skill).icon)} ${esc(cName(cOf(p.skill)))}${p.note ? ' · ' + esc(p.note) : ''}</span></span>
+      <span class="grow">${esc(p.kids?.nickname || '?')}<span class="sub">${esc(cOf(p.skill).icon)} ${esc(cName(cOf(p.skill)))}${p.detail ? ' · ' + esc(p.detail) : ''}${p.note ? ' · ' + esc(p.note) : ''}</span></span>
       <span class="amt ${p.amount < 0 ? 'neg' : 'pos'}">${signed(p.amount)}</span><button class="btn small danger" data-del="${p.id}">${t('undo')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     if (await confirmBox(t('confirmDel'))) { try { await api.deletePoint(b.dataset.del); lbCache.at = 0; pHistory(); } catch (e) { fail(e); } }
@@ -501,7 +623,7 @@ async function pPcats() {
   view.innerHTML = `${pageHead(t('tab_pcats'))}
     <button class="btn primary wide" id="addPc" style="margin-bottom:12px">+ ${t('addPcat')}</button>
     <div class="card"><div class="list">${cats.map(c => `<div class="li click" data-k="${c.key}"><span class="av">${esc(c.icon)}</span>
-      <span class="grow">${esc(cName(c))}<span class="sub">${c.info ? esc(c.info) : '—'}${c.active ? '' : ' · ' + t('hidden')}</span></span><span class="muted">${t('edit')} ›</span></div>`).join('')}</div></div>`;
+      <span class="grow">${esc(cName(c))}<span class="sub">${c.details ? esc(c.details.split('\n').join(' · ')) + (c.info ? ' — ' : '') : ''}${c.info ? esc(c.info) : (c.details ? '' : '—')}${c.active ? '' : ' · ' + t('hidden')}</span></span><span class="muted">${t('edit')} ›</span></div>`).join('')}</div></div>`;
   $('#addPc').onclick = () => pcForm(null);
   view.querySelectorAll('[data-k]').forEach(b => b.onclick = () => pcForm(cats.find(c => c.key === b.dataset.k)));
 }
@@ -510,13 +632,15 @@ async function pcForm(c) {
     <div class="field"><label>${t('nameTh')}</label><input class="input" name="name_th" required maxlength="40" value="${esc(c?.name_th || '')}"></div>
     <div class="field"><label>${t('nameEn')}</label><input class="input" name="name_en" maxlength="40" value="${esc(c?.name_en || '')}"></div>
     <div class="field"><label>${t('avatar')}</label>${pickRow('icon', PC_ICONS, c?.icon || '⭐')}</div>
-    <div class="field"><label>${t('infoLbl')}</label><textarea class="input" name="info" maxlength="500" rows="4" style="height:auto;padding:12px">${esc(c?.info || '')}</textarea></div>`,
+    <div class="field"><label>${t('infoLbl')}</label><textarea class="input" name="info" maxlength="500" rows="4" style="height:auto;padding:12px">${esc(c?.info || '')}</textarea></div>
+    <div class="field"><label>${t('details')}</label><textarea class="input" name="details" maxlength="300" rows="3" style="height:auto;padding:12px" placeholder="เปียโน&#10;ร้องเพลง">${esc(c?.details || '')}</textarea></div>`,
     { extra: c && c.key !== 'attendance' ? `<button class="btn small" value="toggle" formnovalidate>${c.active ? t('hidden') : t('show')}</button><button class="btn small danger" value="delete" formnovalidate>${t('del')}</button>` : '' });
   wirePickers($('#dlgForm'));
   const r = await p;
   try {
     if (r instanceof FormData) {
-      const d = { name_th: r.get('name_th').trim(), name_en: r.get('name_en').trim(), icon: r.get('icon'), info: r.get('info').trim() };
+      const details = r.get('details').split('\n').map(x => x.trim()).filter(Boolean).slice(0, 12).join('\n');
+      const d = { name_th: r.get('name_th').trim(), name_en: r.get('name_en').trim(), icon: r.get('icon'), info: r.get('info').trim(), details };
       if (c) await api.savePointCat({ key: c.key, ...d }, false);
       else await api.savePointCat({ key: 'c' + Date.now().toString(36), sort: 100, ...d }, true);
       toast(t('saved'));
@@ -618,15 +742,35 @@ async function evForm(ev) {
   } catch (e) { fail(e); }
 }
 
+// ---------------- Kids' feedback
+async function pFeedback() {
+  const list = await api.feedback();
+  const moods = { 4: '😄', 3: '🙂', 2: '😐', 1: '😢', 0: '💬' };
+  view.innerHTML = `${pageHead(t('tab_feedback'))}
+    <div class="card"><div class="list">${list.map(f => `<div class="li fb-item"><span class="mood-i">${moods[f.mood] || '💬'}</span>
+      <span class="grow"><b>${f.kid_name ? esc(f.kid_name) : t('anon')}</b><span class="sub">${new Date(f.created_at).toLocaleString(getLang() === 'th' ? 'th-TH' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+      <span style="display:block;margin-top:4px">${esc(f.message)}</span></span>
+      <button class="btn small danger" data-del="${f.id}">${t('del')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
+  if (list[0]) localStorage.setItem('ya_fb_seen', list[0].created_at);
+  view.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    if (await confirmBox(t('confirmDel'))) { try { await api.deleteFeedback(b.dataset.del); pFeedback(); } catch (e) { fail(e); } }
+  });
+}
+
 // ---------------- Settings (admin)
 async function pSettings() {
-  const settings = await api.settings();
+  const s = await api.settings();
   view.innerHTML = `${pageHead(t('tab_settings'))}
-    <div class="card"><div class="field"><label>${t('attPoints')}</label><input class="input" id="ap" type="number" min="0" max="1000" value="${settings.attendance_points}"></div>
+    <div class="card">
+      <div class="field"><label>${t('eventDay')}</label><select class="input" id="dow">${t('dows').map((d, i) => `<option value="${i}" ${Number(s.event_dow ?? 0) === i ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
+      <div class="field"><label>${t('eventStart')}</label><input class="input" id="st" type="time" value="${esc(s.event_start || '10:00')}"></div>
+      <div class="field"><label>${t('eventEnd')}</label><input class="input" id="en" type="time" value="${esc(s.event_end || '12:00')}"></div>
+      <div class="field"><label>${t('attPoints')}</label><input class="input" id="ap" type="number" min="0" max="1000" value="${s.attendance_points}"></div>
       <button class="btn primary wide" id="saveSet">${t('save')}</button></div>`;
   $('#saveSet').onclick = async () => {
     const v = Math.max(0, Math.min(1000, Math.trunc(Number($('#ap').value) || 0)));
-    try { await api.saveSettings({ attendance_points: v }); toast(t('saved')); } catch (e) { fail(e); }
+    const st = $('#st').value || '10:00', en = $('#en').value || '12:00';
+    try { await api.saveSettings({ attendance_points: v, event_dow: Number($('#dow').value), event_start: st.slice(0, 5), event_end: en.slice(0, 5) }); evCache = null; toast(t('saved')); } catch (e) { fail(e); }
   };
 }
 
@@ -644,18 +788,15 @@ async function render() {
     if (isAdult) { scene?.stop(); return await adultGate(h.split('/')[2]); }
     await ensureScene();
     if (seq !== renderSeq) return;
-    if (h.startsWith('#/me/')) return await kidMe(h.slice(5));
-    if (h === '#/me') { const me = localStorage.getItem('ya_me'); return me ? (location.hash = `#/me/${me}`) : kidPick(); }
-    if (h === '#/rank') return await kidRank();
     if (h === '#/shop') return await kidShop();
-    if (!h && localStorage.getItem('ya_me')) return location.replace(`#/me/${localStorage.getItem('ya_me')}`);
-    scene?.setGlow(0.5);
-    return await kidPick();
+    if (h === '#/menu') return await kidMenu();
+    if (h.startsWith('#/me') || h === '#/rank') { history.replaceState(null, '', '#/'); }
+    return await kidRank();
   } catch (e) { fail(e); view.innerHTML = `<p class="empty">${t('errGeneric')}</p>`; }
 }
 setTimeout(maybeTour, 1800);
 window.addEventListener('hashchange', () => {
-  if (location.hash === '#/admin/points') pw = { step: 1, skill: null, amount: null, sel: new Set() };
+  if (location.hash === '#/admin/points') pw = { step: 1, skill: null, detail: '', amount: null, sel: new Set() };
   window.scrollTo(0, 0); render();
 });
 api.onAuth?.(() => { if (location.hash.startsWith('#/admin')) render(); });

@@ -1,7 +1,8 @@
 // Gentle full-page snowfall (2D canvas, very light). Sits above everything but never blocks taps.
 const c = document.getElementById('snow');
 const ctx = c.getContext('2d');
-let flakes = [], w = 0, h = 0, raf = 0, on = false;
+let flakes = [], w = 0, h = 0, raf = 0, on = false, color = 'rgba(255,255,255,0.75)';
+const recolor = () => { color = getComputedStyle(document.body).getPropertyValue('--flake').trim() || 'rgba(255,255,255,0.75)'; };
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function size() {
@@ -17,7 +18,7 @@ function draw(t) {
   raf = requestAnimationFrame(draw);
   if (w !== innerWidth || h !== innerHeight) size();
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = 'rgba(255,255,255,0.75)';
+  ctx.fillStyle = color;
   for (const f of flakes) {
     f.y += f.v; f.x += Math.sin(t / 1400 + f.s) * 0.3;
     if (f.y > h + 4) { f.y = -4; f.x = Math.random() * w; }
@@ -25,7 +26,8 @@ function draw(t) {
   }
 }
 export const snow = {
-  start() { if (on || reduce) return; on = true; c.hidden = false; size(); raf = requestAnimationFrame(draw); },
+  start() { recolor(); if (on || reduce) return; on = true; c.hidden = false; size(); raf = requestAnimationFrame(draw); },
+  recolor,
   stop() { on = false; cancelAnimationFrame(raf); ctx.clearRect(0, 0, w, h); c.hidden = true; },
 };
 document.addEventListener('visibilitychange', () => { if (document.hidden) cancelAnimationFrame(raf); else if (on) raf = requestAnimationFrame(draw); });

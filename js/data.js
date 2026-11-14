@@ -20,7 +20,11 @@ function supabaseApi() {
     async leaderboard() {
       const [lb, st] = await Promise.all([sb.from('leaderboard').select('*'), sb.from('kid_skill_totals').select('*')]);
       const rows = ok(lb).map(r => ({ ...r, skills: {} })), by = Object.fromEntries(rows.map(r => [r.id, r]));
-      ok(st).forEach(x => { if (by[x.kid_id]) by[x.kid_id].skills[x.skill] = x.total; });
+      ok(st).forEach(x => {
+        const r = by[x.kid_id]; if (!r) return;
+        r.skills[x.skill] = (r.skills[x.skill] || 0) + x.total;
+        if (x.detail) ((r.details ??= {})[x.skill] ??= {})[x.detail] = x.total;
+      });
       return rows;
     },
     async pointCats() { return ok(await sb.from('point_categories').select('*').order('sort')); },
@@ -96,6 +100,11 @@ function supabaseApi() {
     async deleteCategory(id) { ok(await sb.from('shop_categories').delete().eq('id', id)); },
     async saveItem(row) { const { id, ...d } = row; ok(id ? await sb.from('shop_items').update(d).eq('id', id) : await sb.from('shop_items').insert(d)); },
     async deleteItem(id) { ok(await sb.from('shop_items').delete().eq('id', id)); },
+
+    async eventInfo() { return ok(await sb.from('event_info').select('*').single()); },
+    async sendFeedback(row) { ok(await sb.from('feedback').insert(row)); },
+    async feedback() { return ok(await sb.from('feedback').select('*').order('created_at', { ascending: false }).limit(200)); },
+    async deleteFeedback(id) { ok(await sb.from('feedback').delete().eq('id', id)); },
   };
 }
 
@@ -106,10 +115,12 @@ function previewApi() {
     { kids: [], attendance: [], rounds: [], points: [], money: [], settings: { attendance_points: 10 }, loggedIn: false };
   let db = load();
   db.schedule ??= []; db.items ??= [];
-  db.pcats ??= [['piano', 'เปียโน', 'Piano', '🎹', ''], ['singing', 'ร้องเพลง', 'Singing', '🎤', ''], ['practice', 'ซ้อมดนตรี', 'Musical practice', '🎼', ''],
+  db.feedback ??= [];
+  Object.assign(db.settings, { event_dow: 0, event_start: '10:00', event_end: '12:00', ...db.settings });
+  db.pcats ??= [['music', 'ดนตรี', 'Music', '🎵', '', 'เปียโน\nร้องเพลง\nซ้อมดนตรี'],
     ['english', 'อังกฤษ', 'English', '🔤', ''], ['thai', 'อ่านไทย', 'Thai reading', '📖', ''], ['questions', 'ตอบคำถาม', 'Answering questions', '🙋', ''],
     ['chores', 'งานบ้าน', 'Chores', '🧽', 'เช่น ล้างจาน'], ['attendance', 'มาร่วม', 'Came', '⛪', 'ได้คะแนนอัตโนมัติทุกครั้งที่มาร่วมกิจกรรม'], ['bonus', 'โบนัส', 'Bonus', '🎁', '']]
-    .map(([key, name_th, name_en, icon, info], i) => ({ key, name_th, name_en, icon, info, sort: i + 1, active: true }));
+    .map(([key, name_th, name_en, icon, info, details = ''], i) => ({ key, name_th, name_en, icon, info, details, sort: i + 1, active: true }));
   db.cats ??= [{ id: 'c1', name: 'ของเล่น', icon: '🐰', effect: '✨', sort: 1 }, { id: 'c2', name: 'ขนม', icon: 'chipbag', effect: 'chips', sort: 2 }];
   const save = () => localStorage.setItem(KEY, JSON.stringify(db));
   const id = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
@@ -127,7 +138,10 @@ function previewApi() {
     async leaderboard() {
       return db.kids.filter(k => k.active).map(k => {
         const r = { id: k.id, nickname: k.nickname, avatar: k.avatar, total: 0, skills: {} };
-        db.points.filter(p => p.kid_id === k.id).forEach(p => { r.skills[p.skill] = (r.skills[p.skill] || 0) + p.amount; r.total += p.amount; });
+        db.points.filter(p => p.kid_id === k.id).forEach(p => {
+          r.skills[p.skill] = (r.skills[p.skill] || 0) + p.amount; r.total += p.amount;
+          if (p.detail) { const d = ((r.details ??= {})[p.skill] ??= {}); d[p.detail] = (d[p.detail] || 0) + p.amount; }
+        });
         return r;
       });
     },
@@ -200,6 +214,14 @@ function previewApi() {
     async deleteCategory(cid) { db.cats = db.cats.filter(x => x.id !== cid); db.items = db.items.filter(x => x.category_id !== cid); save(); },
     async saveItem(row) { const r = row.id && db.items.find(x => x.id === row.id); r ? Object.assign(r, row) : db.items.push({ active: true, sort: 0, ...row, id: id() }); save(); },
     async deleteItem(iid) { db.items = db.items.filter(x => x.id !== iid); save(); },
+
+    async eventInfo() { const { event_dow, event_start, event_end } = db.settings; return { event_dow, event_start, event_end }; },
+    async sendFeedback(row) {
+      const ev = await this.eventInfo(); if (eventState(ev).phase !== 'feedback') throw new Error('closed');
+      db.feedback.unshift({ id: id(), created_at: now(), ...row }); save();
+    },
+    async feedback() { return db.feedback; },
+    async deleteFeedback(fid) { db.feedback = db.feedback.filter(f => f.id !== fid); save(); },
   };
 }
 
@@ -211,4 +233,20 @@ export function ranked(rows) {
   let rank = 0, prev = null;
   sorted.forEach((r, i) => { if (r.total !== prev) { rank = i + 1; prev = r.total; } r.rank = rank; });
   return sorted;
+}
+
+// ---------------------------------------------------------------- event timing (Thai time)
+// phase: 'live' (event running) | 'feedback' (event day, after end) | 'wait' (until next start)
+export function eventState(ev, nowMs = Date.now()) {
+  const d = new Date(nowMs + 7 * 3600e3);
+  const nowMin = d.getUTCDay() * 1440 + d.getUTCHours() * 60 + d.getUTCMinutes();
+  const hm = (s) => { const [h, m] = String(s || '0:0').split(':').map(Number); return h * 60 + m; };
+  const day = Number(ev?.event_dow ?? 0) * 1440, start = day + hm(ev?.event_start ?? '10:00'), end = day + hm(ev?.event_end ?? '12:00');
+  if (nowMin >= start && nowMin < end) return { phase: 'live', mins: end - nowMin };
+  if (nowMin >= end && nowMin < day + 1440) return { phase: 'feedback', mins: day + 1440 - nowMin };
+  return { phase: 'wait', mins: (start - nowMin + 10080) % 10080 };
+}
+export function bkkToday() {
+  const d = new Date(Date.now() + 7 * 3600e3);
+  return d.toISOString().slice(0, 10);
 }
