@@ -102,7 +102,10 @@ let tapStart = 0, tapX = 0;
 
 function resize() {
   if (!renderer) return;
-  const w = canvas.clientWidth || window.innerWidth, h = canvas.clientHeight || window.innerHeight;
+  // While the canvas is hidden (admin pages, phone keyboard open) it has no size:
+  // skip, otherwise the tree gets the wrong shape (stretched) until refresh.
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   // keep the tree fully visible on narrow phones

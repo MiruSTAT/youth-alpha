@@ -58,7 +58,7 @@ const firstTap = () => {
 window.addEventListener('pointerdown', firstTap);
 
 async function ensureScene() {
-  if (scene) { scene.start(); return scene; }
+  if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
     const m = await import('./scene3d.js');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
@@ -157,17 +157,20 @@ function adultHome() {
 function loginView() {
   view.innerHTML = `${pageHead('🔒 ' + t('adults'), '#/')}
     <form id="lf" class="card">
-      <div class="field"><label>${t('email')}</label><input class="input" name="email" type="email" required autocomplete="username"></div>
+      <div class="field"><label>${t('username')}</label><input class="input" name="email" type="text" required autocomplete="username" autocapitalize="none" spellcheck="false"></div>
       <div class="field"><label>${t('password')}</label><input class="input" name="pw" type="password" required minlength="6" autocomplete="current-password"></div>
       <button class="btn primary wide" value="in">${t('login')}</button>
-      ${MODE === 'preview' ? '' : `<button class="btn wide" style="margin-top:10px" value="up">${t('signup')}</button>`}
     </form>`;
   $('#lf').onsubmit = async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target), which = e.submitter?.value;
     try {
       if (which === 'up') { await api.signUp(fd.get('email'), fd.get('pw')); toast(t('checkEmail')); }
-      else await api.signIn(fd.get('email'), fd.get('pw'));
+      else {
+        // usernames like "admin" map to an internal login email
+        const u = String(fd.get('email')).trim().toLowerCase();
+        await api.signIn(u.includes('@') ? u : `${u}@youth-alpha.app`, fd.get('pw'));
+      }
     } catch (err) { console.error(err); toast(which === 'up' ? (err.message || t('errGeneric')) : t('errLogin')); }
   };
 }
