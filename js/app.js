@@ -1,8 +1,8 @@
-import { t, getLang, setLang } from './i18n.js?v=10';
-import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=10';
-import { music } from './music.js?v=10';
-import { art, burst, SPECIAL } from './art.js?v=10';
-import { snow } from './snow.js?v=10';
+import { t, getLang, setLang } from './i18n.js?v=11';
+import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=11';
+import { music } from './music.js?v=11';
+import { art, burst, SPECIAL } from './art.js?v=11';
+import { snow } from './snow.js?v=11';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -29,11 +29,11 @@ function toast(msg) {
 }
 function fail(e) { console.error(e); toast(t('errGeneric')); }
 
-function modal(title, inner, { okText = t('save'), extra = '' } = {}) {
+function modal(title, inner, { okText = t('save'), extra = '', danger = false } = {}) {
   const dlg = $('#dlg'), form = $('#dlgForm');
   form.innerHTML = `<h3>${title}</h3>${inner}
     <div class="dlg-actions"><button class="btn" value="cancel" formnovalidate>${t('cancel')}</button>
-    <button class="btn primary" value="ok">${okText}</button></div>
+    <button class="btn ${danger ? 'danger-fill' : 'primary'}" value="ok">${okText}</button></div>
     ${extra ? `<div class="dlg-extra">${extra}</div>` : ''}`;
   form.querySelectorAll('[required]').forEach(i => i.closest('.field')?.querySelector('label')?.classList.add('req'));
   return new Promise((resolve) => {
@@ -42,7 +42,7 @@ function modal(title, inner, { okText = t('save'), extra = '' } = {}) {
   });
 }
 async function confirmBox(msg, okText = t('del')) {
-  return (await modal('', `<p style="font-size:1.05rem">${esc(msg)}</p>`, { okText })) instanceof FormData;
+  return (await modal('⚠️ ' + t('warnTitle'), `<p style="font-size:1.05rem;white-space:pre-line">${esc(msg)}</p>`, { okText, danger: true })) instanceof FormData;
 }
 async function leaderboard(force = false) {
   if (force || Date.now() - lbCache.at > 8000) lbCache = { at: Date.now(), rows: ranked(await api.leaderboard()) };
@@ -65,7 +65,6 @@ async function eventInfo(force = false) {
 }
 const fmtDur = (mins) => t('dur', Math.floor(mins / 1440), Math.floor((mins % 1440) / 60), mins % 60);
 const hmMin = (s) => { const [h, m] = String(s).split(':').map(Number); return h * 60 + m; };
-const fbWhen = (ev) => `${t('dows')[ev.fb_dow ?? ev.event_dow]} ${ev.fb_start ?? ev.event_end}`;
 
 // ------------------------------------------------------------- top bar
 function paintChrome() {
@@ -85,7 +84,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=10');
+    const m = await import('./scene3d.js?v=11');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -102,7 +101,7 @@ function countUp(el, from, to, ms = 1200) {
 
 // small reminder on the home page while the feedback box is open
 function fbPill(ev) {
-  return eventState(ev).fbOpen ? `<button class="ev-pill feedback" data-ev="fb"><span class="i">💬</span><span>${t('evFeedback')}</span></button>` : '';
+  return ev.fb_open ? `<button class="ev-pill feedback" data-ev="fb"><span class="i">💬</span><span>${t('evFeedback')}</span></button>` : '';
 }
 function wirePill(root) { root.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => openFeedback()); }
 
@@ -169,13 +168,13 @@ function catInfo(c, pts) {
 // MENU: everything else in one simple list
 async function kidMenu() {
   setNav('menu'); scene?.setGlow(0.6);
-  const ev = await eventInfo(), st = eventState(ev);
+  const ev = await eventInfo(true);
   const thName = t('th_' + (document.body.dataset.theme || 'snow'));
   view.innerHTML = `<section class="sheet">
     <h1 class="sheet-title" style="margin-bottom:16px">☰ ${t('menu')}</h1>
     <div class="mlist">
-      <button class="mrow" data-m="fb" ${st.fbOpen ? 'style="border:2px solid var(--gold)"' : ''}><span class="mi">💬</span><span class="mt"><b>${t('fb')}</b>
-        <span>${st.fbOpen ? t('fbOpenSub', ev.fb_end ?? '23:59') : t('fbClosedSub', fbWhen(ev), fmtDur(st.fbMins))}</span></span><span class="mv">›</span></button>
+      <button class="mrow" data-m="fb" ${ev.fb_open ? 'style="border:2px solid var(--gold)"' : ''}><span class="mi">💬</span><span class="mt"><b>${t('fb')}</b>
+        <span>${ev.fb_open ? t('fbOpenSub') : t('fbClosedSub')}</span></span><span class="mv">›</span></button>
       <button class="mrow" data-m="theme"><span class="mi">🎨</span><span class="mt"><b>${t('theme')}</b></span><span class="mv">${thName} ›</span></button>
       <button class="mrow" data-m="lang"><span class="mi">🌐</span><span class="mt"><b>${t('language')}</b></span><span class="mv">${t('langName')}</span></button>
       <button class="mrow" data-m="help"><span class="mi">❓</span><span class="mt"><b>${t('help')}</b><span>${t('helpSub')}</span></span><span class="mv">›</span></button>
@@ -196,11 +195,11 @@ function openThemes() {
 }
 
 async function openFeedback() {
-  const ev = await eventInfo(true), st = eventState(ev);
+  const ev = await eventInfo(true);
   const head = `<div class="panel-head"><h2>💬 ${t('fbTitle')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>`;
   const sentKey = 'ya_fb_' + bkkToday();
-  if (!st.fbOpen) {
-    kidSheet(`${head}<p class="fb-done">⏰ ${t('fbClosed')}<br><span style="font-size:1rem;color:var(--text-d2)">${t('fbClosedSub', fbWhen(ev), fmtDur(st.fbMins))}</span></p>`);
+  if (!ev.fb_open) {
+    kidSheet(`${head}<p class="fb-done">🔒 ${t('fbClosed')}</p>`);
     return;
   }
   if (localStorage.getItem(sentKey)) { kidSheet(`${head}<p class="fb-done">${t('fbSentAlready')}</p>`); return; }
@@ -327,12 +326,17 @@ async function adultGate(page) {
 }
 
 function adultHome() {
-  const items = [['attendance', '✅'], ['points', '⭐'], ['feedback', '💬'], ['kids', '👧'], ['pcats', '🏷️'], ['shop', '🎁'], ['export', '📥'], ...(adult.role === 'admin' ? [['settings', '⚙️']] : [])];
+  const groups = [
+    ['g_daily', [['attendance', '✅'], ['points', '⭐']]],
+    ['g_kids', [['kids', '👧'], ['feedback', '💬']]],
+    ['g_rewards', [['pcats', '🏷️'], ['shop', '🎁']]],
+    ['g_system', [['export', '📥'], ...(adult.role === 'admin' ? [['settings', '⚙️']] : [])]],
+  ];
   view.innerHTML = `
     <div class="page-head"><a class="back" href="#/">‹ ${t('back')}</a><h1 class="page-title">${t('adultMenu')}</h1></div>
-    <nav class="menu">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
-      <span class="mt"><b>${t('tab_' + k)}</b><span>${t('m_' + k)}</span></span><span class="chev">›</span></a>`).join('')}</nav>
-    <button class="btn wide" style="margin-top:20px" id="logout">${t('logout')}</button>
+    ${groups.map(([g, items]) => `<h2 class="grp">${t(g)}</h2><nav class="menu grouped">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
+      <span class="mt"><b>${t('tab_' + k)}</b><span>${t('m_' + k)}</span></span><span class="chev">›</span></a>`).join('')}</nav>`).join('')}
+    <button class="btn wide" style="margin-top:24px" id="logout">${t('logout')}</button>
     ${MODE === 'preview' ? `<p class="preview-note">${t('previewNote')}</p>` : ''}`;
   $('#logout').onclick = async () => { await api.signOut(); location.hash = '#/admin'; render(); };
   // red indicators: things that still need filling in
@@ -353,6 +357,10 @@ async function computeNeeds() {
   if (active.length) {
     const [rowsToday, round] = await Promise.all([api.attendance(today()), api.round(today())]);
     if (rowsToday.length && !round?.finished) n.attendance = t('need_att');
+  }
+  const ev = await eventInfo(true);
+  if (!fb.some(f => f.created_at > (localStorage.getItem('ya_fb_seen') || ''))) {
+    const s = view.querySelector('.menu [data-k="feedback"] .mt span'); if (s) s.textContent = ev.fb_open ? t('fbStatusOn') : t('fbStatusOff');
   }
   const seen = localStorage.getItem('ya_fb_seen') || '';
   const nNew = fb.filter(f => f.created_at > seen).length;
@@ -662,13 +670,28 @@ async function itemForm(it, cats) {
 async function pFeedback() {
   const list = await api.feedback();
   const moods = { 4: '😄', 3: '🙂', 2: '😐', 1: '😢', 0: '💬' };
+  const ev = await eventInfo(true);
   view.innerHTML = `${pageHead(t('tab_feedback'))}
+    <div class="card switch-card"><div class="sw-text"><b>${t('fbToggle')}</b><span id="fbState" class="${ev.fb_open ? 'c-here' : 'muted'}">${ev.fb_open ? t('fbOnNow') : t('fbOffNow')}</span></div>
+      <button class="switch ${ev.fb_open ? 'on' : ''}" id="fbSwitch" role="switch" aria-checked="${!!ev.fb_open}" aria-label="${t('fbToggle')}"><span></span></button></div>
     ${list.length ? `<button class="btn wide" id="fbXl" style="margin-bottom:12px">📥 ${t('exportFb')}</button>` : ''}
     <div class="card"><div class="list">${list.map(f => `<div class="li fb-item"><span class="mood-i">${moods[f.mood] || '💬'}</span>
       <span class="grow"><b>${f.kid_name ? esc(f.kid_name) : t('anon')}</b><span class="sub">${new Date(f.created_at).toLocaleString(getLang() === 'th' ? 'th-TH' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</span>
       <span style="display:block;margin-top:4px">${esc(f.message)}</span></span>
       <button class="btn small danger" data-del="${f.id}">${t('del')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
   if (list[0]) localStorage.setItem('ya_fb_seen', list[0].created_at);
+  $('#fbSwitch').onclick = async (e) => {
+    const sw = e.currentTarget, turningOn = !sw.classList.contains('on');
+    if (!turningOn && !(await confirmBox(t('fbOffWarn'), t('turnOff')))) return;
+    sw.disabled = true;
+    try {
+      await api.saveSettings({ fb_open: turningOn }); evCache = null;
+      sw.classList.toggle('on', turningOn); sw.setAttribute('aria-checked', String(turningOn));
+      const st = $('#fbState'); st.textContent = turningOn ? t('fbOnNow') : t('fbOffNow'); st.className = turningOn ? 'c-here' : 'muted';
+      toast(turningOn ? t('fbOnNow') : t('fbOffNow'));
+    } catch (err) { fail(err); }
+    sw.disabled = false;
+  };
   $('#fbXl')?.addEventListener('click', async (e) => { const b = e.currentTarget; b.disabled = true; try { await buildExcel(['xs_feedback']); } catch (err) { fail(err); } b.disabled = false; });
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     if (await confirmBox(t('confirmDel'))) { try { await api.deleteFeedback(b.dataset.del); pFeedback(); } catch (e) { fail(e); } }
@@ -678,23 +701,14 @@ async function pFeedback() {
 // ---------------- Settings (admin): all timings in one place
 async function pSettings() {
   const s = await api.settings();
-  const dowSel = (id, v) => `<select class="input" id="${id}">${t('dows').map((d, i) => `<option value="${i}" ${Number(v ?? 0) === i ? 'selected' : ''}>${d}</option>`).join('')}</select>`;
-  const time = (id, v) => `<input class="input" id="${id}" type="time" value="${esc(v)}">`;
   view.innerHTML = `${pageHead(t('tab_settings'))}
-    <div class="card"><h3 class="sec">💬 ${t('secFb')}</h3>
-      <div class="field"><label>${t('fbDay')}</label>${dowSel('fdow', s.fb_dow ?? 0)}</div>
-      <div class="row2"><div class="field"><label>${t('fbStart')}</label>${time('fst', s.fb_start || '12:00')}</div>
-      <div class="field"><label>${t('fbEnd')}</label>${time('fen', s.fb_end || '23:59')}</div></div></div>
     <div class="card"><h3 class="sec">👆 ${t('secTips')}</h3>
       <div class="field"><label>${t('tipDays')}</label><input class="input" id="tips" type="number" min="0" max="60" value="${s.tip_days ?? 3}"></div></div>
     <div class="card"><h3 class="sec">⭐ ${t('secPoints')}</h3>
       <div class="field"><label>${t('attPoints')}</label><input class="input" id="ap" type="number" min="0" max="1000" value="${s.attendance_points}"></div></div>
     <div class="bottom-bar"><button class="btn primary" id="saveSet">${t('save')}</button></div>`;
   $('#saveSet').onclick = async () => {
-    const v = (id) => ($('#' + id).value || '').slice(0, 5);
-    const d = { fb_dow: Number($('#fdow').value), fb_start: v('fst'), fb_end: v('fen'),
-      tip_days: Math.max(0, Math.min(60, Math.trunc(Number($('#tips').value) || 0))), attendance_points: Math.max(0, Math.min(1000, Math.trunc(Number($('#ap').value) || 0))) };
-    if (!d.fb_start || !d.fb_end || d.fb_start >= d.fb_end) { toast(t('errTime')); return; }
+    const d = { tip_days: Math.max(0, Math.min(60, Math.trunc(Number($('#tips').value) || 0))), attendance_points: Math.max(0, Math.min(1000, Math.trunc(Number($('#ap').value) || 0))) };
     try { await api.saveSettings(d); evCache = null; toast(t('saved')); } catch (e) { fail(e); }
   };
 }
@@ -705,16 +719,18 @@ function loadXLSX() {
   if (window.XLSX) return Promise.resolve(window.XLSX);
   return new Promise((res, rej) => { const s = document.createElement('script'); s.src = XLSX_URL; s.onload = () => res(window.XLSX); s.onerror = rej; document.head.appendChild(s); });
 }
+const XL_SHEETS = [['xs_summary', 'summary', '📊'], ['xs_points', 'points', '⭐'], ['xs_att', 'attendance', '✅'], ['xs_attsum', 'attendance-totals', '📈'], ['xs_feedback', 'feedback', '💬'], ['xs_shop', 'shop', '🎁']];
 async function pExport() {
   view.innerHTML = `${pageHead(t('tab_export'))}
-    <div class="card"><p style="margin:0 0 12px">${t('exportIntro')}</p>
-      <ul class="xl-list">${['xs_summary', 'xs_points', 'xs_att', 'xs_attsum', 'xs_feedback', 'xs_shop'].map(k => `<li>${t(k)}</li>`).join('')}</ul>
-      <button class="btn primary wide" id="xl">📥 ${t('exportBtn')}</button></div>`;
-  $('#xl').onclick = async (e) => {
-    const btn = e.currentTarget; btn.disabled = true; btn.textContent = t('exporting');
-    try { await buildExcel(); toast(t('saved')); } catch (err) { fail(err); }
-    btn.disabled = false; btn.textContent = '📥 ' + t('exportBtn');
-  };
+    <button class="btn primary wide" data-x="all" style="margin-bottom:6px">📥 ${t('exportAll')}</button>
+    <p class="muted" style="margin:0 0 14px;text-align:center">${t('exportAllSub')}</p>
+    <h2 class="grp">${t('exportEach')}</h2>
+    <nav class="menu grouped">${XL_SHEETS.map(([k, , i]) => `<button class="xl-row" data-x="${k}"><span class="mi">${i}</span><span class="mt"><b>${t(k)}</b></span><span class="xl-dl">📥 ${t('exportOne')}</span></button>`).join('')}</nav>`;
+  view.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => {
+    const keep = b.innerHTML; b.disabled = true; b.textContent = t('exporting');
+    try { await buildExcel(b.dataset.x === 'all' ? null : [b.dataset.x]); } catch (err) { fail(err); }
+    b.disabled = false; b.innerHTML = keep;
+  });
 }
 async function buildExcel(only = null) {
   const [XLSX, kids, rows, cats, pts, att, fb, shop] = await Promise.all([loadXLSX(), api.kids(), leaderboard(true), pcats(true), api.allPoints(),
@@ -746,7 +762,8 @@ async function buildExcel(only = null) {
     ws['!cols'] = cols.map(c => ({ wch: Math.min(50, Math.max(c.length + 2, ...data.map(r => String(r[c] ?? '').length + 2))) }));
     XLSX.utils.book_append_sheet(wb, ws, t(k).slice(0, 31));
   }
-  XLSX.writeFile(wb, `youth-alpha-${only ? 'feedback-' : ''}${bkkToday()}.xlsx`);
+  const slug = only?.length === 1 ? (XL_SHEETS.find(s => s[0] === only[0])?.[1] + '-') : '';
+  XLSX.writeFile(wb, `youth-alpha-${slug}${bkkToday()}.xlsx`);
 }
 
 // =============================================================== router

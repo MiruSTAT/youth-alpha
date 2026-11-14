@@ -123,7 +123,7 @@ function previewApi() {
   let db = load();
   db.schedule ??= []; db.items ??= [];
   db.feedback ??= [];
-  Object.assign(db.settings, { event_dow: 0, event_start: '10:00', event_end: '12:00', fb_dow: 0, fb_start: '12:00', fb_end: '23:59', tip_days: 3, ...db.settings });
+  Object.assign(db.settings, { event_dow: 0, event_start: '10:00', event_end: '12:00', fb_dow: 0, fb_start: '12:00', fb_end: '23:59', tip_days: 3, fb_open: false, ...db.settings });
   db.pcats ??= [['music', 'ดนตรี', 'Music', '🎵', '', 'เปียโน\nร้องเพลง\nซ้อมดนตรี'],
     ['english', 'อังกฤษ', 'English', '🔤', ''], ['thai', 'อ่านไทย', 'Thai reading', '📖', ''], ['questions', 'ตอบคำถาม', 'Answering questions', '🙋', ''],
     ['chores', 'งานบ้าน', 'Chores', '🧽', 'เช่น ล้างจาน'], ['attendance', 'มาร่วม', 'Came', '⛪', 'ได้คะแนนอัตโนมัติทุกครั้งที่มาร่วมกิจกรรม'], ['bonus', 'โบนัส', 'Bonus', '🎁', '']]
@@ -222,10 +222,10 @@ function previewApi() {
     async saveItem(row) { const r = row.id && db.items.find(x => x.id === row.id); r ? Object.assign(r, row) : db.items.push({ active: true, sort: 0, ...row, id: id() }); save(); },
     async deleteItem(iid) { db.items = db.items.filter(x => x.id !== iid); save(); },
 
-    async eventInfo() { const { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days } = db.settings; return { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days }; },
+    async eventInfo() { const { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open } = db.settings; return { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open }; },
     async allPoints() { return db.points.map(p => ({ ...p, kids: kidOf(p.kid_id) })); },
     async sendFeedback(row) {
-      const ev = await this.eventInfo(); if (!eventState(ev).fbOpen) throw new Error('closed');
+      if (!db.settings.fb_open) throw new Error('closed');
       db.feedback.unshift({ id: id(), created_at: now(), ...row }); save();
     },
     async feedback() { return db.feedback; },
