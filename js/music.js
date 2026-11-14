@@ -1,8 +1,20 @@
 // "Jingle Bells" (James Lord Pierpont, 1857 — public domain melody),
 // played with a synthesized bell sound. No audio files needed.
-const N = { C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.0, A4: 440.0, C5: 523.25, G3: 196.0, C3: 130.81, F3: 174.61 };
-const q = 1, h = 2, w = 4, e = 0.5, dq = 1.5;
-const MELODY = [
+const N = { G3: 196.0, A3: 220.0, B3: 246.94, C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.0, A4: 440.0, C5: 523.25, C3: 130.81, F3: 174.61, G2: 98.0 };
+const q = 1, h = 2, w = 4, e = 0.5, dq = 1.5, dh = 3;
+// Verse ("Dashing through the snow ...") — 16 bars
+const VERSE = [
+  ['G3', q], ['E4', q], ['D4', q], ['C4', q], ['G3', dh], ['G3', e], ['G3', e],
+  ['G3', q], ['E4', q], ['D4', q], ['C4', q], ['A3', w],
+  ['A3', q], ['F4', q], ['E4', q], ['D4', q], ['B3', w],
+  ['G4', q], ['G4', q], ['F4', q], ['D4', q], ['E4', w],
+  ['G3', q], ['E4', q], ['D4', q], ['C4', q], ['G3', w],
+  ['G3', q], ['E4', q], ['D4', q], ['C4', q], ['A3', dh], ['A3', q],
+  ['A3', q], ['F4', q], ['E4', q], ['D4', q], ['G4', q], ['G4', q], ['G4', q], ['G4', q],
+  ['A4', q], ['G4', q], ['F4', q], ['D4', q], ['C4', w],
+];
+// Chorus ("Jingle bells, jingle bells ...") — 16 bars
+const CHORUS = [
   ['E4', q], ['E4', q], ['E4', h], ['E4', q], ['E4', q], ['E4', h],
   ['E4', q], ['G4', q], ['C4', dq], ['D4', e], ['E4', w],
   ['F4', q], ['F4', q], ['F4', dq], ['F4', e], ['F4', q], ['E4', q], ['E4', q], ['E4', e], ['E4', e],
@@ -12,8 +24,11 @@ const MELODY = [
   ['F4', q], ['F4', q], ['F4', dq], ['F4', e], ['F4', q], ['E4', q], ['E4', q], ['E4', e], ['E4', e],
   ['G4', q], ['G4', q], ['F4', q], ['D4', q], ['C4', w],
 ];
-// simple bass, one note per bar (4 beats)
-const BASS = ['C3', 'C3', 'C3', 'C3', 'F3', 'C3', 'G3', 'C3', 'C3', 'C3', 'C3', 'C3', 'F3', 'C3', 'G3', 'C3'];
+// Full song: verse, chorus, chorus — then it loops
+const MELODY = [...VERSE, ...CHORUS, ...CHORUS];
+const BASS_VERSE = ['C3', 'C3', 'C3', 'F3', 'F3', 'G2', 'G2', 'C3', 'C3', 'C3', 'C3', 'F3', 'F3', 'G2', 'G2', 'C3'];
+const BASS_CHORUS = ['C3', 'C3', 'C3', 'C3', 'F3', 'C3', 'G2', 'C3', 'C3', 'C3', 'C3', 'C3', 'F3', 'C3', 'G2', 'C3'];
+const BASS = [...BASS_VERSE, ...BASS_CHORUS, ...BASS_CHORUS];
 const BPM = 150;
 
 let ctx = null, master = null, playing = false, timer = null, nextTime = 0, idx = 0, beatPos = 0;

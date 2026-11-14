@@ -14,15 +14,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=5">
+  <link rel="stylesheet" href="css/style.css?v=7">
 </head>
 <body>
   <canvas id="scene" aria-hidden="true"></canvas>
+  <canvas id="snow" aria-hidden="true"></canvas>
   <div id="cssSnow" aria-hidden="true"></div>
 
   <header class="topbar">
-    <a class="brand" href="#/"><span>🎄</span><span>Youth Alpha</span></a>
+    <div class="top-left">
+      <a id="lockBtn" class="icon-btn small" href="#/admin" aria-label="ผู้ดูแล">🔒</a>
+      <a class="brand" href="#/"><span class="brand-tree">🎄</span><span>Youth Alpha</span></a>
+    </div>
     <div class="top-actions">
+      <button id="schedBtn" class="icon-btn" aria-label="Schedule">📅</button>
       <button id="langBtn" class="icon-btn" aria-label="Language">EN</button>
       <button id="musicBtn" class="icon-btn" aria-label="Music">🔇</button>
     </div>
@@ -34,13 +39,16 @@
   <nav id="kidNav" class="kid-nav">
     <a href="#/me" data-nav="me"><span>🎅</span><b data-t="me"></b></a>
     <a href="#/rank" data-nav="rank"><span>🏆</span><b data-t="ranking"></b></a>
+    <a href="#/shop" data-nav="shop"><span>🎁</span><b data-t="shop"></b></a>
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
+  <div id="kidSheet" class="kid-sheet" hidden></div>
+  <div id="tour" class="tour" hidden></div>
 
-  <script src="config.js?v=5"></script>
+  <script src="config.js?v=7"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
-  <script type="module" src="js/app.js?v=5"></script>
+  <script type="module" src="js/app.js?v=7"></script>
 </body>
 </html>

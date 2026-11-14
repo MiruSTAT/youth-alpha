@@ -217,3 +217,5 @@ create policy staff_admin on public.staff for all    to authenticated using (pub
 
 grant execute on function public.my_role(), public.claim_admin(text),
                           public.pending_users(), public.staff_list() to authenticated;
+
+-- NOTE: after this file, also run 002_schedule_shop.sql and 003_point_categories.sql

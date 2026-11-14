@@ -17,7 +17,15 @@ function supabaseApi() {
 
   return {
     onAuth: (cb) => sb.auth.onAuthStateChange(() => cb()),
-    async leaderboard() { return ok(await sb.from('leaderboard').select('*')); },
+    async leaderboard() {
+      const [lb, st] = await Promise.all([sb.from('leaderboard').select('*'), sb.from('kid_skill_totals').select('*')]);
+      const rows = ok(lb).map(r => ({ ...r, skills: {} })), by = Object.fromEntries(rows.map(r => [r.id, r]));
+      ok(st).forEach(x => { if (by[x.kid_id]) by[x.kid_id].skills[x.skill] = x.total; });
+      return rows;
+    },
+    async pointCats() { return ok(await sb.from('point_categories').select('*').order('sort')); },
+    async savePointCat(row, isNew) { const { key, ...d } = row; ok(isNew ? await sb.from('point_categories').insert(row) : await sb.from('point_categories').update(d).eq('key', key)); },
+    async deletePointCat(key) { ok(await sb.from('point_categories').delete().eq('key', key)); },
 
     async session() { return (await sb.auth.getSession()).data.session; },
     async signIn(email, password) { ok(await sb.auth.signInWithPassword({ email, password })); },
@@ -72,6 +80,22 @@ function supabaseApi() {
     async approve(user_id) { ok(await sb.from('staff').insert({ user_id, role: 'editor' })); },
     async removeStaff(user_id) { ok(await sb.from('staff').delete().eq('user_id', user_id)); },
     async myId() { return uid(); },
+
+    async attendanceAll() { return ok(await sb.from('attendance').select('kid_id,status,day')); },
+
+    async schedule() { return ok(await sb.from('schedule').select('*').order('day').order('time_text')); },
+    async saveSchedule(row) { const { id, ...d } = row; ok(id ? await sb.from('schedule').update(d).eq('id', id) : await sb.from('schedule').insert(d)); },
+    async deleteSchedule(id) { ok(await sb.from('schedule').delete().eq('id', id)); },
+
+    async shop() {
+      const [c, i] = await Promise.all([sb.from('shop_categories').select('*').order('sort').order('created_at'),
+        sb.from('shop_items').select('*').order('sort').order('price')]);
+      return { cats: ok(c), items: ok(i) };
+    },
+    async saveCategory(row) { const { id, ...d } = row; ok(id ? await sb.from('shop_categories').update(d).eq('id', id) : await sb.from('shop_categories').insert(d)); },
+    async deleteCategory(id) { ok(await sb.from('shop_categories').delete().eq('id', id)); },
+    async saveItem(row) { const { id, ...d } = row; ok(id ? await sb.from('shop_items').update(d).eq('id', id) : await sb.from('shop_items').insert(d)); },
+    async deleteItem(id) { ok(await sb.from('shop_items').delete().eq('id', id)); },
   };
 }
 
@@ -81,6 +105,12 @@ function previewApi() {
   const load = () => JSON.parse(localStorage.getItem(KEY) || 'null') ||
     { kids: [], attendance: [], rounds: [], points: [], money: [], settings: { attendance_points: 10 }, loggedIn: false };
   let db = load();
+  db.schedule ??= []; db.items ??= [];
+  db.pcats ??= [['piano', 'เปียโน', 'Piano', '🎹', ''], ['singing', 'ร้องเพลง', 'Singing', '🎤', ''], ['practice', 'ซ้อมดนตรี', 'Musical practice', '🎼', ''],
+    ['english', 'อังกฤษ', 'English', '🔤', ''], ['thai', 'อ่านไทย', 'Thai reading', '📖', ''], ['questions', 'ตอบคำถาม', 'Answering questions', '🙋', ''],
+    ['chores', 'งานบ้าน', 'Chores', '🧽', 'เช่น ล้างจาน'], ['attendance', 'มาร่วม', 'Came', '⛪', 'ได้คะแนนอัตโนมัติทุกครั้งที่มาร่วมกิจกรรม'], ['bonus', 'โบนัส', 'Bonus', '🎁', '']]
+    .map(([key, name_th, name_en, icon, info], i) => ({ key, name_th, name_en, icon, info, sort: i + 1, active: true }));
+  db.cats ??= [{ id: 'c1', name: 'ของเล่น', icon: '🐰', effect: '✨', sort: 1 }, { id: 'c2', name: 'ขนม', icon: 'chipbag', effect: 'chips', sort: 2 }];
   const save = () => localStorage.setItem(KEY, JSON.stringify(db));
   const id = () => (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2));
   const now = () => new Date().toISOString();
@@ -96,12 +126,14 @@ function previewApi() {
     onAuth: (cb) => listeners.push(cb),
     async leaderboard() {
       return db.kids.filter(k => k.active).map(k => {
-        const r = { id: k.id, nickname: k.nickname, avatar: k.avatar, total: 0 };
-        SKILLS.forEach(s => r[s] = 0);
-        db.points.filter(p => p.kid_id === k.id).forEach(p => { r[p.skill] += p.amount; r.total += p.amount; });
+        const r = { id: k.id, nickname: k.nickname, avatar: k.avatar, total: 0, skills: {} };
+        db.points.filter(p => p.kid_id === k.id).forEach(p => { r.skills[p.skill] = (r.skills[p.skill] || 0) + p.amount; r.total += p.amount; });
         return r;
       });
     },
+    async pointCats() { return [...db.pcats].sort((a, b) => a.sort - b.sort); },
+    async savePointCat(row, isNew) { if (isNew) db.pcats.push({ active: true, sort: db.pcats.length + 1, ...row }); else Object.assign(db.pcats.find(c => c.key === row.key), row); save(); },
+    async deletePointCat(key) { if (db.points.some(p => p.skill === key)) throw new Error('in use'); db.pcats = db.pcats.filter(c => c.key !== key); save(); },
     async session() { return db.loggedIn ? { user: { id: 'preview-admin' } } : null; },
     async signIn() { db.loggedIn = true; save(); listeners.forEach(f => f()); },
     async signUp() { return {}; },
@@ -154,6 +186,20 @@ function previewApi() {
     async staffList() { return [{ user_id: 'preview-admin', email: 'preview@local', display_name: 'Preview', role: 'admin' }]; },
     async approve() {}, async removeStaff() {},
     async myId() { return 'preview-admin'; },
+
+    async attendanceAll() { return db.attendance.map(({ kid_id, status, day }) => ({ kid_id, status, day })); },
+
+    async schedule() { return [...db.schedule].sort((a, b) => (a.day + a.time_text).localeCompare(b.day + b.time_text)); },
+    async saveSchedule(row) { const r = row.id && db.schedule.find(x => x.id === row.id); r ? Object.assign(r, row) : db.schedule.push({ ...row, id: id() }); save(); },
+    async deleteSchedule(sid) { db.schedule = db.schedule.filter(x => x.id !== sid); save(); },
+
+    async shop() {
+      return { cats: [...db.cats].sort((a, b) => a.sort - b.sort), items: [...db.items].sort((a, b) => a.sort - b.sort || a.price - b.price) };
+    },
+    async saveCategory(row) { const r = row.id && db.cats.find(x => x.id === row.id); r ? Object.assign(r, row) : db.cats.push({ sort: db.cats.length + 1, ...row, id: id() }); save(); },
+    async deleteCategory(cid) { db.cats = db.cats.filter(x => x.id !== cid); db.items = db.items.filter(x => x.category_id !== cid); save(); },
+    async saveItem(row) { const r = row.id && db.items.find(x => x.id === row.id); r ? Object.assign(r, row) : db.items.push({ active: true, sort: 0, ...row, id: id() }); save(); },
+    async deleteItem(iid) { db.items = db.items.filter(x => x.id !== iid); save(); },
   };
 }
 

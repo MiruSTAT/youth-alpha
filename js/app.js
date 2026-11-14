@@ -1,13 +1,21 @@
-import { t, getLang, setLang } from './i18n.js?v=5';
-import { api, MODE, SKILL_ICON, ranked, today } from './data.js?v=5';
-import { music } from './music.js?v=5';
+import { t, getLang, setLang } from './i18n.js?v=7';
+import { api, MODE, ranked, today } from './data.js?v=7';
+import { music } from './music.js?v=7';
+import { art, burst, SPECIAL } from './art.js?v=7';
+import { snow } from './snow.js?v=7';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const AVATARS = ['⛄', '🎅', '🦌', '🎄', '⭐', '🔔', '🎁', '🧸', '🐧', '🦊', '🐱', '🐶', '🐰', '🐼', '🦁', '🐯', '🐨', '🦄', '🐸', '🐵', '🐳', '🦋', '🎹', '🎤'];
-const KID_SKILLS = ['piano', 'singing', 'english', 'thai', 'attendance'];
-const GIVE_SKILLS = ['piano', 'singing', 'english', 'thai', 'bonus'];
+// point categories come from the database (admins can edit them)
+let catCache = { at: 0, list: [] };
+async function pcats(force = false) {
+  if (force || Date.now() - catCache.at > 30000) catCache = { at: Date.now(), list: await api.pointCats() };
+  return catCache.list;
+}
+const cName = (c) => (getLang() === 'en' && c?.name_en) ? c.name_en : (c?.name_th || '?');
+const cOf = (key) => catCache.list.find(c => c.key === key) || { key, name_th: key, icon: '⭐', info: '' };
 const fmtMoney = (n) => Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 });
 const signed = (n) => (n > 0 ? '+' : '') + n;
 
@@ -51,6 +59,7 @@ function paintChrome() {
 }
 $('#langBtn').onclick = () => { setLang(getLang() === 'th' ? 'en' : 'th'); paintChrome(); render(); };
 $('#musicBtn').onclick = (e) => { e.stopPropagation(); music.toggle(); paintChrome(); };
+$('#schedBtn').onclick = () => openSchedule();
 const firstTap = () => {
   if (music.wantsMusic() && !music.playing && !document.body.classList.contains('adult')) { music.start(); paintChrome(); }
   window.removeEventListener('pointerdown', firstTap);
@@ -60,7 +69,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=5');
+    const m = await import('./scene3d.js?v=7');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -79,8 +88,7 @@ async function kidPick() {
     ${names.length > 10 ? `<input class="search" id="q" placeholder="🔍 ${t('search')}" autocomplete="off">` : ''}
     <div class="names">${names.map(k => `<button class="name-btn" data-id="${k.id}" data-n="${esc(k.nickname.toLowerCase())}">
       <span class="av">${esc(k.avatar)}</span><span class="nm">${esc(k.nickname)}</span><span class="go">›</span></button>`).join('')}</div>
-    ${names.length ? '' : `<p class="empty">${t('noKids')}</p>`}
-    <a class="adult-link" href="#/admin">🔒 ${t('adults')}</a></section>`;
+    ${names.length ? '' : `<p class="empty">${t('noKids')}</p>`}</section>`;
   view.querySelectorAll('.name-btn').forEach(b => b.onclick = () => { localStorage.setItem('ya_me', b.dataset.id); location.hash = `#/me/${b.dataset.id}`; });
   const q = $('#q');
   if (q) q.oninput = () => view.querySelectorAll('.name-btn').forEach(b => b.hidden = !b.dataset.n.includes(q.value.trim().toLowerCase()));
@@ -94,7 +102,7 @@ function countUp(el, from, to, ms = 1200) {
 
 async function kidMe(id) {
   setNav('me');
-  const rows = await leaderboard(true), me = rows.find(r => r.id === id);
+  const [rows, cats] = await Promise.all([leaderboard(true), pcats()]), me = rows.find(r => r.id === id);
   if (!me) { localStorage.removeItem('ya_me'); return kidPick(); }
   const seenKey = `ya_seen_${id}`, seen = Number(localStorage.getItem(seenKey) ?? me.total);
   const max = Math.max(1, ...rows.map(r => r.total));
@@ -106,16 +114,24 @@ async function kidMe(id) {
       <div class="me-rank">🏆 ${t('rank')} ${me.rank} ${t('of')} ${rows.length}</div>
     </div>
     <p class="section-label">${t('mySkills')}</p>
-    <div class="skill-list">${KID_SKILLS.map(s => `<div class="skill-row"><span class="i">${SKILL_ICON[s]}</span><span class="l">${t('skill_' + s)}</span><span class="v">${me[s]}</span></div>`).join('')}</div>
+    <div class="skill-list">${cats.filter(c => c.active || me.skills[c.key]).map(c => `<button class="skill-row ${c.info ? 'has-info' : ''}" data-c="${c.key}" ${c.info ? '' : 'tabindex="-1"'}>
+      <span class="i">${esc(c.icon)}</span><span class="l">${esc(cName(c))}</span><span class="v">${me.skills[c.key] || 0}</span><span class="chev">${c.info ? 'ⓘ' : ''}</span></button>`).join('')}</div>
     <button class="text-btn" id="notMe">${t('notMe')}</button></section>`;
   countUp($('#tot'), Math.min(seen, me.total), me.total);
   $('#notMe').onclick = () => { localStorage.removeItem('ya_me'); location.hash = '#/'; };
+  view.querySelectorAll('.skill-row.has-info').forEach(b => b.onclick = () => catInfo(cOf(b.dataset.c), me.skills[b.dataset.c] || 0));
   scene?.setGlow(me.total / max);
   if (me.total > seen) setTimeout(() => {
     const pop = document.createElement('div'); pop.className = 'plus-pop'; pop.textContent = `+${me.total - seen} ⭐`;
     document.body.appendChild(pop); setTimeout(() => pop.remove(), 2100); scene?.burst(60); music.ding();
   }, 800);
   localStorage.setItem(seenKey, me.total);
+}
+
+function catInfo(c, pts) {
+  kidSheet(`<div class="panel-head"><span class="art" style="font-size:2rem">${esc(c.icon)}</span><h2>${esc(cName(c))}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
+    <p class="cat-info">${esc(c.info).replace(/\n/g, '<br>')}</p>
+    ${pts !== null ? `<div class="cat-pts"><span>${t('myPointsIn')}</span><b>${pts} ⭐</b></div>` : ''}`);
 }
 
 async function kidRank() {
@@ -130,6 +146,104 @@ async function kidRank() {
     ${rows.length ? '' : `<p class="empty">${t('noKids')}</p>`}</section>`;
 }
 
+// ---- kid bottom sheet helper
+function kidSheet(html) {
+  const el = $('#kidSheet');
+  el.innerHTML = `<div class="panel" role="dialog" aria-modal="true">${html}</div>`;
+  el.hidden = false;
+  const close = () => { el.hidden = true; el.innerHTML = ''; };
+  el.onclick = (e) => { if (e.target === el || e.target.closest('.x')) close(); };
+  return el.querySelector('.panel');
+}
+const fmtDay = (d) => new Date(d + 'T00:00:00').toLocaleDateString(getLang() === 'th' ? 'th-TH' : 'en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+const dayNum = (d) => Number(d.slice(8, 10));
+const monShort = (d) => new Date(d + 'T00:00:00').toLocaleDateString(getLang() === 'th' ? 'th-TH' : 'en-GB', { month: 'short' });
+
+async function openSchedule() {
+  const p = kidSheet(`<div class="panel-head"><h2>📅 ${t('schedule')}</h2><button class="x" aria-label="${t('close')}">✕</button></div><p class="empty">${t('loading')}</p>`);
+  try {
+    const rows = await api.schedule(), td = today();
+    const up = rows.filter(r => r.day >= td), past = rows.filter(r => r.day < td).slice(-3);
+    const ev = (r, cls = '') => `<div class="ev ${cls} ${r.day === td ? 'today' : ''}"><div class="d"><b>${dayNum(r.day)}</b><span>${monShort(r.day)}</span></div>
+      <div class="tx"><b>${esc(r.title)}</b><span>${r.day === td ? t('todayLbl') + ' · ' : ''}${fmtDay(r.day)}${r.time_text ? ' · ' + esc(r.time_text) : ''}</span>
+      ${r.note ? `<span style="display:block">${esc(r.note)}</span>` : ''}</div></div>`;
+    p.innerHTML = `<div class="panel-head"><h2>📅 ${t('schedule')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
+      ${up.map(r => ev(r)).join('') || `<p class="empty">${t('noSchedule')}</p>`}
+      ${past.length ? `<p class="section-label">${t('pastEvents')}</p>${past.reverse().map(r => ev(r, 'past')).join('')}` : ''}`;
+  } catch (e) { fail(e); }
+}
+
+async function kidShop() {
+  setNav('shop'); scene?.setGlow(0.7);
+  const [{ cats, items }, rows] = await Promise.all([api.shop(), leaderboard()]);
+  const me = rows.find(r => r.id === localStorage.getItem('ya_me'));
+  const live = items.filter(i => i.active);
+  const pairs = []; for (let i = 0; i < cats.length; i += 2) pairs.push(cats.slice(i, i + 2));
+  view.innerHTML = `<section class="sheet">
+    <h1 class="sheet-title">🎁 ${t('shopTitle')}</h1><p class="sheet-sub">${t('shopSub')}</p>
+    ${cats.length ? `<div class="stand">
+      <div class="stand-sign">⭐ ${t('shop')} ⭐</div>
+      <div class="awning"></div>
+      <div class="shelves">${pairs.map(row => `<div class="shelf-row">${row.map(c => `<button class="slot" data-cat="${c.id}">
+          ${art(c.icon)}<div class="plank"></div><span class="lbl">${esc(c.name)}</span><span class="hint">${t('tapCat')}</span></button>`).join('')}</div>`).join('')}</div>
+      <div class="counter"></div></div>` : `<p class="empty">${t('emptyShop')}</p>`}
+</section>`;
+  view.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => {
+    const c = cats.find(x => x.id === b.dataset.cat);
+    b.classList.remove('popping'); void b.offsetWidth; b.classList.add('popping');
+    burst(b.querySelector('.art'), c.effect, 12); music.ding();
+    setTimeout(() => openCategory(c, live.filter(i => i.category_id === c.id), me), 650);
+  });
+}
+function openCategory(c, list, me) {
+  const p = kidSheet(`<div class="panel-head">${art(c.icon)}<h2>${esc(c.name)}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
+    ${list.length ? `<div class="prizes">${list.map(i => {
+      return `<button class="prize" data-i="${i.id}">${art(i.icon)}<span class="nm">${esc(i.name)}</span><span class="tag">${i.price} ⭐</span></button>`;
+    }).join('')}</div>` : `<p class="empty">${t('emptyCat')}</p>`}
+`);
+  p.querySelector('.panel-head .art').style.fontSize = '2rem';
+  p.querySelectorAll('.prize').forEach(b => b.onclick = () => {
+    b.classList.remove('wiggle'); void b.offsetWidth; b.classList.add('wiggle');
+    burst(b.querySelector('.art'), c.effect, 6);
+  });
+}
+
+// ---- tutorial: arrow + text over a darkened screen
+const TOUR = [
+  { sel: '#schedBtn', key: 'tut_schedule' },
+  { sel: '.kid-nav [data-nav="shop"]', key: 'tut_shop' },
+  { sel: '.kid-nav [data-nav="rank"]', key: 'tut_rank' },
+  { sel: '.kid-nav [data-nav="me"]', key: 'tut_me' },
+  { sel: '#musicBtn', key: 'tut_music' },
+];
+function showTour(steps) {
+  const box = $('#tour'); let i = 0;
+  const end = () => { box.hidden = true; box.innerHTML = ''; window.removeEventListener('resize', place); };
+  function place() {
+    const s = steps[i], el = $(s.sel);
+    if (!el || !el.getBoundingClientRect().width) { i++; return i < steps.length ? place() : end(); }
+    const r = el.getBoundingClientRect(), pad = 6, below = r.top < innerHeight / 2;
+    box.innerHTML = `<div class="tour-hole" style="left:${r.left - pad}px;top:${r.top - pad}px;width:${r.width + pad * 2}px;height:${r.height + pad * 2}px"></div>
+      <div class="tour-arrow ${below ? '' : 'down'}" style="left:${Math.max(8, Math.min(innerWidth - 50, r.left + r.width / 2 - 20))}px;top:${below ? r.bottom + 10 : r.top - 58}px">${below ? '⬆' : '⬇'}</div>
+      <div class="tour-bubble" style="${below ? `top:${r.bottom + 64}px` : `bottom:${innerHeight - r.top + 64}px`}">
+        <p>${t(s.key)}</p><div class="row"><span class="dots">${steps.length > 1 ? `${i + 1} / ${steps.length}` : ''}</span>
+        <span>${i < steps.length - 1 ? `<button class="sk">${t('skip')}</button>` : ''}<button class="go">${i < steps.length - 1 ? t('next') : t('gotIt')}</button></span></div></div>`;
+    box.querySelector('.go').onclick = () => { i++; i < steps.length ? place() : end(); };
+    box.querySelector('.sk')?.addEventListener('click', end);
+  }
+  box.hidden = false; place(); window.addEventListener('resize', place);
+}
+// full tour on the first visit; afterwards one tip every few days
+function maybeTour() {
+  if (document.body.classList.contains('adult') || !$('#tour').hidden || !$('#kidSheet').hidden) return;
+  let st; try { st = JSON.parse(localStorage.getItem('ya_tour') || 'null'); } catch { st = null; }
+  const now = Date.now(), DAYS3 = 3 * 864e5;
+  if (!st) { showTour(TOUR); st = { done: true, last: now, n: 0 }; }
+  else if (now - st.last > DAYS3) { showTour([TOUR[st.n % TOUR.length]]); st.n++; st.last = now; }
+  else return;
+  try { localStorage.setItem('ya_tour', JSON.stringify(st)); } catch {}
+}
+
 // =============================================================== ADULT SIDE
 let adult = { role: null, myId: null };
 
@@ -138,13 +252,13 @@ async function adultGate(page) {
   if (!session) return loginView();
   adult.role = await api.myRole(); adult.myId = await api.myId();
   if (adult.role === 'pending') return pendingView();
-  const pages = { attendance: pAttendance, points: pPoints, history: pHistory, money: pMoney, kids: pKids, ...(adult.role === 'admin' ? { staff: pStaff } : {}) };
+  const pages = { attendance: pAttendance, attsum: pAttSummary, points: pPoints, history: pHistory, money: pMoney, kids: pKids, shop: pShop, schedule: pSchedule, pcats: pPcats, ...(adult.role === 'admin' ? { settings: pSettings } : {}) };
   if (!pages[page]) return adultHome();
   await pages[page]();
 }
 
 function adultHome() {
-  const items = [['attendance', '✅'], ['points', '⭐'], ['money', '💰'], ['kids', '👧'], ...(adult.role === 'admin' ? [['staff', '👥']] : [])];
+  const items = [['attendance', '✅'], ['points', '⭐'], ['money', '💰'], ['kids', '👧'], ['pcats', '🏷️'], ['shop', '🎁'], ['schedule', '📅'], ...(adult.role === 'admin' ? [['settings', '⚙️']] : [])];
   view.innerHTML = `
     <div class="page-head"><a class="back" href="#/">‹ ${t('back')}</a><h1 class="page-title">${t('adultMenu')}</h1></div>
     <nav class="menu">${items.map(([k, i]) => `<a href="#/admin/${k}"><span class="mi">${i}</span>
@@ -200,6 +314,7 @@ async function pAttendance() {
     const waiting = active.length - c.present - c.leave - c.absent;
     const qv = $('#q')?.value || '';
     view.innerHTML = `${pageHead(t('tab_attendance'))}
+      <a class="btn wide" href="#/admin/attsum" style="margin-bottom:12px">📊 ${t('attSummary')}</a>
       <div class="date-row"><input type="date" class="input" id="day" value="${attDay}"></div>
       ${active.length > 8 ? `<input class="input" id="q" placeholder="🔍 ${t('search')}" style="margin-bottom:12px" value="${esc(qv)}">` : ''}
       ${round?.finished ? `<div class="finished-banner"><span>${t('finished')}</span><button class="btn small" id="reopen">${t('reopen')}</button></div>` : ''}
@@ -241,13 +356,15 @@ async function pPoints() {
   const head = `${pageHead(t('tab_points'), back)}<p class="step">${t('stepOf', pw.step)}</p>`;
   const wire = () => { const b = $('.page-head .back'); if (pw.step > 1) b.onclick = (e) => { e.preventDefault(); pw.step--; pPoints(); }; };
 
+  const cats = await pcats();
   if (pw.step === 1) {
     view.innerHTML = `${head}<h2 style="margin-bottom:12px">${t('s1')}</h2>
-      <div class="options">${GIVE_SKILLS.map(s => `<button class="opt" data-s="${s}"><span class="i">${SKILL_ICON[s]}</span><span class="t">${t('skill_' + s)}</span><span class="chev">›</span></button>`).join('')}</div>
+      <div class="options">${cats.filter(c => c.active && c.key !== 'attendance').map(c => `<button class="opt" data-s="${c.key}"><span class="i">${esc(c.icon)}</span>
+        <span class="t">${esc(cName(c))}${c.info ? `<span class="opt-sub">${esc(c.info)}</span>` : ''}</span><span class="chev">›</span></button>`).join('')}</div>
       <a class="btn wide" style="margin-top:20px" href="#/admin/history">${t('seeHistory')}</a>`;
     view.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { pw.skill = b.dataset.s; pw.step = 2; pPoints(); });
   } else if (pw.step === 2) {
-    view.innerHTML = `${head}<h2 style="margin-bottom:12px">${SKILL_ICON[pw.skill]} ${t('s2')}</h2>
+    view.innerHTML = `${head}<h2 style="margin-bottom:12px">${esc(cOf(pw.skill).icon)} ${t('s2')}</h2>
       <div class="amounts">${[5, 10, 20, 50, -5, -10].map(a => `<button class="opt ${a < 0 ? 'minus' : ''}" data-a="${a}">${signed(a)}</button>`).join('')}</div>
       <div class="field" style="margin-top:16px"><label>${t('customAmt')}</label>
         <div style="display:flex;gap:10px"><input class="input" id="custom" type="number" inputmode="numeric" min="-1000" max="1000"><button class="btn primary" id="customGo">${t('next')}</button></div></div>`;
@@ -259,11 +376,11 @@ async function pPoints() {
     const draw = () => {
       const n = pw.sel.size;
       view.innerHTML = `${head}<h2 style="margin-bottom:12px">${t('s3')}</h2>
-        <div class="list-tools"><span class="muted">${SKILL_ICON[pw.skill]} ${t('skill_' + pw.skill)} · ${signed(pw.amount)}</span>
+        <div class="list-tools"><span class="muted">${esc(cOf(pw.skill).icon)} ${esc(cName(cOf(pw.skill)))} · ${signed(pw.amount)}</span>
           <button class="btn small" id="all">${n === kids.length && n ? t('clear') : t('selectAll')}</button></div>
         <div class="options">${kids.map(k => `<button class="opt ${pw.sel.has(k.id) ? 'on' : ''}" data-k="${k.id}"><span class="i">${esc(k.avatar)}</span><span class="t">${esc(k.nickname)}</span><span class="check">${pw.sel.has(k.id) ? '✓' : ''}</span></button>`).join('') || `<p class="muted">${t('noKids')}</p>`}</div>
         <div class="field" style="margin-top:14px"><label>${t('note')}</label><input class="input" id="note" maxlength="80"></div>
-        <div class="bottom-bar"><button class="btn primary" id="give" ${n ? '' : 'disabled'}>${t('giveTo', signed(pw.amount), SKILL_ICON[pw.skill], n)}</button></div>`;
+        <div class="bottom-bar"><button class="btn primary" id="give" ${n ? '' : 'disabled'}>${t('giveTo', signed(pw.amount), esc(cOf(pw.skill).icon), n)}</button></div>`;
       wire();
       view.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const id = b.dataset.k, y = window.scrollY; pw.sel.has(id) ? pw.sel.delete(id) : pw.sel.add(id); draw(); window.scrollTo(0, y); });
       $('#all').onclick = () => { n === kids.length ? pw.sel.clear() : kids.forEach(k => pw.sel.add(k.id)); draw(); };
@@ -283,10 +400,10 @@ async function pPoints() {
 }
 
 async function pHistory() {
-  const recent = await api.recentPoints(50);
+  const [recent] = await Promise.all([api.recentPoints(50), pcats()]);
   view.innerHTML = `${pageHead(t('pointsHistory'), '#/admin/points')}
     <div class="card"><div class="list">${recent.map(p => `<div class="li"><span class="av">${esc(p.kids?.avatar || '')}</span>
-      <span class="grow">${esc(p.kids?.nickname || '?')}<span class="sub">${SKILL_ICON[p.skill]} ${t('skill_' + p.skill)}${p.note ? ' · ' + esc(p.note) : ''}</span></span>
+      <span class="grow">${esc(p.kids?.nickname || '?')}<span class="sub">${esc(cOf(p.skill).icon)} ${esc(cName(cOf(p.skill)))}${p.note ? ' · ' + esc(p.note) : ''}</span></span>
       <span class="amt ${p.amount < 0 ? 'neg' : 'pos'}">${signed(p.amount)}</span><button class="btn small danger" data-del="${p.id}">${t('undo')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     if (await confirmBox(t('confirmDel'))) { try { await api.deletePoint(b.dataset.del); lbCache.at = 0; pHistory(); } catch (e) { fail(e); } }
@@ -362,20 +479,151 @@ async function kidForm(kid) {
   } catch (e) { fail(e); }
 }
 
-// ---------------- Team + settings (admin)
-async function pStaff() {
-  const [pending, staff, settings] = await Promise.all([api.pendingUsers(), api.staffList(), api.settings()]);
-  view.innerHTML = `${pageHead(t('tab_staff'))}
-    <div class="card"><h3 style="font-size:1.05rem;margin-bottom:6px">${t('pendingUsers')}</h3><div class="list">
-      ${pending.map(u => `<div class="li"><span class="grow">${esc(u.email)}</span><button class="btn small primary" data-ok="${u.user_id}">${t('approve')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>
-    <div class="card"><h3 style="font-size:1.05rem;margin-bottom:6px">${t('staffList')}</h3><div class="list">
-      ${staff.map(s => `<div class="li"><span class="grow">${esc(s.email)}<span class="sub">${s.role}</span></span>
-        ${s.user_id !== adult.myId ? `<button class="btn small danger" data-rm="${s.user_id}">${t('remove')}</button>` : ''}</div>`).join('')}</div></div>
-    <div class="card"><h3 style="font-size:1.05rem;margin-bottom:10px">${t('settings')}</h3>
-      <div class="field"><label>${t('attPoints')}</label><input class="input" id="ap" type="number" min="0" max="1000" value="${settings.attendance_points}"></div>
+// ---------------- Attendance totals
+async function pAttSummary() {
+  const [kids, rows] = await Promise.all([api.kids(), api.attendanceAll()]);
+  const days = new Set(rows.map(r => r.day)).size;
+  const c = {}; rows.forEach(r => { (c[r.kid_id] ??= { present: 0, leave: 0, absent: 0 })[r.status]++; });
+  const list = kids.map(k => ({ k, ...(c[k.id] || { present: 0, leave: 0, absent: 0 }) })).sort((a, b) => b.present - a.present || a.k.nickname.localeCompare(b.k.nickname, 'th'));
+  const tot = list.reduce((s, r) => ({ present: s.present + r.present, leave: s.leave + r.leave, absent: s.absent + r.absent }), { present: 0, leave: 0, absent: 0 });
+  view.innerHTML = `${pageHead(t('attSummary'), '#/admin/attendance')}
+    <p class="muted" style="margin:-6px 0 12px">${t('rounds', days)}</p>
+    <div class="summary"><div><b class="c-here">${tot.present}</b><span>${t('present')}</span></div><div><b class="c-leave">${tot.leave}</b><span>${t('leave')}</span></div><div><b class="c-absent">${tot.absent}</b><span>${t('absent')}</span></div></div>
+    <div class="card"><div class="list">${list.map(r => `<div class="li"><span class="av">${esc(r.k.avatar)}</span>
+      <span class="grow">${esc(r.k.nickname)}<span class="sub">${t('attTimes', r.present, r.leave, r.absent)}</span></span>
+      <span class="amt c-here">${r.present}${days ? `<span class="muted"> / ${days}</span>` : ''}</span></div>`).join('') || `<p class="muted">${t('noKids')}</p>`}</div></div>`;
+}
+
+// ---------------- Point categories (name, icon, extra info)
+const PC_ICONS = ['🎹', '🎤', '🎼', '🎸', '🥁', '🔤', '📖', '🙋', '🧽', '🍽️', '🧹', '⛪', '🎁', '⭐', '💡', '🙏', '📝', '🤝'];
+async function pPcats() {
+  const cats = await pcats(true);
+  view.innerHTML = `${pageHead(t('tab_pcats'))}
+    <button class="btn primary wide" id="addPc" style="margin-bottom:12px">+ ${t('addPcat')}</button>
+    <div class="card"><div class="list">${cats.map(c => `<div class="li click" data-k="${c.key}"><span class="av">${esc(c.icon)}</span>
+      <span class="grow">${esc(cName(c))}<span class="sub">${c.info ? esc(c.info) : '—'}${c.active ? '' : ' · ' + t('hidden')}</span></span><span class="muted">${t('edit')} ›</span></div>`).join('')}</div></div>`;
+  $('#addPc').onclick = () => pcForm(null);
+  view.querySelectorAll('[data-k]').forEach(b => b.onclick = () => pcForm(cats.find(c => c.key === b.dataset.k)));
+}
+async function pcForm(c) {
+  const p = modal(c ? t('edit') : t('addPcat'), `
+    <div class="field"><label>${t('nameTh')}</label><input class="input" name="name_th" required maxlength="40" value="${esc(c?.name_th || '')}"></div>
+    <div class="field"><label>${t('nameEn')}</label><input class="input" name="name_en" maxlength="40" value="${esc(c?.name_en || '')}"></div>
+    <div class="field"><label>${t('avatar')}</label>${pickRow('icon', PC_ICONS, c?.icon || '⭐')}</div>
+    <div class="field"><label>${t('infoLbl')}</label><textarea class="input" name="info" maxlength="500" rows="4" style="height:auto;padding:12px">${esc(c?.info || '')}</textarea></div>`,
+    { extra: c && c.key !== 'attendance' ? `<button class="btn small" value="toggle" formnovalidate>${c.active ? t('hidden') : t('show')}</button><button class="btn small danger" value="delete" formnovalidate>${t('del')}</button>` : '' });
+  wirePickers($('#dlgForm'));
+  const r = await p;
+  try {
+    if (r instanceof FormData) {
+      const d = { name_th: r.get('name_th').trim(), name_en: r.get('name_en').trim(), icon: r.get('icon'), info: r.get('info').trim() };
+      if (c) await api.savePointCat({ key: c.key, ...d }, false);
+      else await api.savePointCat({ key: 'c' + Date.now().toString(36), sort: 100, ...d }, true);
+      toast(t('saved'));
+    } else if (r === 'toggle') await api.savePointCat({ key: c.key, active: !c.active }, false);
+    else if (r === 'delete') {
+      if (!(await confirmBox(t('confirmDel')))) return;
+      try { await api.deletePointCat(c.key); } catch { toast(t('cantDelPcat')); return; }
+    } else return;
+    catCache.at = 0; pPcats();
+  } catch (e) { fail(e); }
+}
+
+// ---------------- Shop editor
+const ICONS = ['🐰', '🧸', '🎁', '🍿', 'chipbag', '🍫', '🍬', '🍭', '🧃', '🥤', '🍪', '🍩', '✏️', '📒', '🎨', '⚽', '🏀', '🎮', '🪀', '🧩', '🎀', '👕', '🧢', '⭐'];
+const EFFECTS = ['✨', '⭐', 'chips', '🍬', '🍿', '🎀', '❤️', '🎈', '❄️', '🎉'];
+function pickRow(name, list, cur) {
+  return `<input type="hidden" name="${name}" value="${esc(cur)}"><div class="pick-row" data-for="${name}">
+    ${list.map(v => `<button type="button" class="${v === cur ? 'on' : ''}" data-v="${esc(v)}" title="${esc(SPECIAL[v] || v)}">${art(v)}</button>`).join('')}</div>
+    <input class="input" data-own="${name}" placeholder="${t('orType')}" maxlength="8" style="height:48px">`;
+}
+function wirePickers(form) {
+  form.querySelectorAll('.pick-row').forEach(row => row.querySelectorAll('button').forEach(b => b.onclick = () => {
+    row.querySelectorAll('button').forEach(x => x.classList.remove('on')); b.classList.add('on'); form[row.dataset.for].value = b.dataset.v;
+    const own = form.querySelector(`[data-own="${row.dataset.for}"]`); if (own) own.value = '';
+  }));
+  form.querySelectorAll('[data-own]').forEach(inp => inp.oninput = () => {
+    if (inp.value.trim()) { form[inp.dataset.own].value = inp.value.trim(); form.querySelectorAll(`[data-for="${inp.dataset.own}"] button`).forEach(x => x.classList.remove('on')); }
+  });
+}
+async function pShop() {
+  const { cats, items } = await api.shop();
+  view.innerHTML = `${pageHead(t('tab_shop'))}
+    <div class="row-actions" style="margin-bottom:12px"><button class="btn primary" id="addItem" ${cats.length ? '' : 'disabled'} style="flex:1">+ ${t('addItem')}</button><button class="btn" id="addCat" style="flex:1">+ ${t('addCategory')}</button></div>
+    ${cats.map(c => `<div class="card cat-block"><div class="cat-head">${art(c.icon)}<b>${esc(c.name)}</b><button class="btn small" data-cat="${c.id}">${t('edit')}</button></div>
+      <div class="list">${items.filter(i => i.category_id === c.id).map(i => `<div class="li click" data-item="${i.id}">${art(i.icon)}
+        <span class="grow">${esc(i.name)}${i.active ? '' : `<span class="sub">${t('hidden')}</span>`}</span><span class="amt">${i.price} ⭐</span><span class="muted">›</span></div>`).join('') || `<p class="muted">${t('emptyCat')}</p>`}</div></div>`).join('')}`;
+  $('#addCat').onclick = () => catForm(null);
+  $('#addItem').onclick = () => itemForm(null, cats);
+  view.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => catForm(cats.find(c => c.id === b.dataset.cat)));
+  view.querySelectorAll('[data-item]').forEach(b => b.onclick = () => itemForm(items.find(i => i.id === b.dataset.item), cats));
+}
+async function catForm(c) {
+  const p = modal(c ? t('edit') : t('addCategory'), `
+    <div class="field"><label>${t('catName')}</label><input class="input" name="name" required maxlength="40" value="${esc(c?.name || '')}"></div>
+    <div class="field"><label>${t('shelfIcon')}</label>${pickRow('icon', ICONS, c?.icon || '🎁')}</div>
+    <div class="field"><label>${t('effectIcon')}</label>${pickRow('effect', EFFECTS, c?.effect || '✨')}</div>`,
+    { extra: c ? `<button class="btn small danger" value="delete" formnovalidate>${t('del')}</button>` : '' });
+  wirePickers($('#dlgForm'));
+  const r = await p;
+  try {
+    if (r instanceof FormData) { await api.saveCategory({ ...(c ? { id: c.id } : {}), name: r.get('name').trim(), icon: r.get('icon'), effect: r.get('effect') }); toast(t('saved')); }
+    else if (r === 'delete') { if (!(await confirmBox(t('delCatConfirm', c.name)))) return; await api.deleteCategory(c.id); }
+    else return;
+    pShop();
+  } catch (e) { fail(e); }
+}
+async function itemForm(it, cats) {
+  const p = modal(it ? t('edit') : t('addItem'), `
+    <div class="field"><label>${t('itemName')}</label><input class="input" name="name" required maxlength="40" value="${esc(it?.name || '')}"></div>
+    <div class="field"><label>${t('price')}</label><input class="input" name="price" type="number" inputmode="numeric" min="0" max="100000" required value="${it?.price ?? ''}"></div>
+    <div class="field"><label>${t('category')}</label><select class="input" name="cat">${cats.map(c => `<option value="${c.id}" ${(it?.category_id || cats[0].id) === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
+    <div class="field"><label>${t('avatar')}</label>${pickRow('icon', ICONS, it?.icon || '🎁')}</div>`,
+    { extra: it ? `<button class="btn small" value="toggle" formnovalidate>${it.active ? t('hidden') : t('show')}</button><button class="btn small danger" value="delete" formnovalidate>${t('del')}</button>` : '' });
+  wirePickers($('#dlgForm'));
+  const r = await p;
+  try {
+    if (r instanceof FormData) {
+      await api.saveItem({ ...(it ? { id: it.id } : {}), name: r.get('name').trim(), price: Math.max(0, Math.trunc(Number(r.get('price')) || 0)), category_id: r.get('cat'), icon: r.get('icon') });
+      toast(t('saved'));
+    } else if (r === 'toggle') await api.saveItem({ id: it.id, active: !it.active });
+    else if (r === 'delete') { if (!(await confirmBox(t('confirmDel')))) return; await api.deleteItem(it.id); }
+    else return;
+    pShop();
+  } catch (e) { fail(e); }
+}
+
+// ---------------- Schedule editor
+async function pSchedule() {
+  const rows = await api.schedule(), td = today();
+  view.innerHTML = `${pageHead(t('tab_schedule'))}
+    <button class="btn primary wide" id="addEv" style="margin-bottom:12px">+ ${t('addEvent')}</button>
+    <div class="card"><div class="list">${rows.map(r => `<div class="li click" data-ev="${r.id}" style="${r.day < td ? 'opacity:.5' : ''}">
+      <span class="grow"><b>${esc(r.title)}</b><span class="sub">${fmtDay(r.day)}${r.time_text ? ' · ' + esc(r.time_text) : ''}</span></span><span class="muted">${t('edit')} ›</span></div>`).join('') || `<p class="muted">${t('noSchedule')}</p>`}</div></div>`;
+  $('#addEv').onclick = () => evForm(null);
+  view.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => evForm(rows.find(r => r.id === b.dataset.ev)));
+}
+async function evForm(ev) {
+  const r = await modal(ev ? t('edit') : t('addEvent'), `
+    <div class="field"><label>${t('evTitle')}</label><input class="input" name="title" required maxlength="80" value="${esc(ev?.title || '')}"></div>
+    <div class="field"><label>${t('date')}</label><input class="input" name="day" type="date" required value="${ev?.day || today()}"></div>
+    <div class="field"><label>${t('time')}</label><input class="input" name="time" maxlength="30" placeholder="13:00 – 15:00" value="${esc(ev?.time_text || '')}"></div>
+    <div class="field"><label>${t('note')}</label><input class="input" name="note" maxlength="120" value="${esc(ev?.note || '')}"></div>`,
+    { extra: ev ? `<button class="btn small danger" value="delete" formnovalidate>${t('del')}</button>` : '' });
+  try {
+    if (r instanceof FormData) { await api.saveSchedule({ ...(ev ? { id: ev.id } : {}), title: r.get('title').trim(), day: r.get('day'), time_text: r.get('time').trim(), note: r.get('note').trim() }); toast(t('saved')); }
+    else if (r === 'delete') { if (!(await confirmBox(t('confirmDel')))) return; await api.deleteSchedule(ev.id); }
+    else return;
+    pSchedule();
+  } catch (e) { fail(e); }
+}
+
+// ---------------- Settings (admin)
+async function pSettings() {
+  const settings = await api.settings();
+  view.innerHTML = `${pageHead(t('tab_settings'))}
+    <div class="card"><div class="field"><label>${t('attPoints')}</label><input class="input" id="ap" type="number" min="0" max="1000" value="${settings.attendance_points}"></div>
       <button class="btn primary wide" id="saveSet">${t('save')}</button></div>`;
-  view.querySelectorAll('[data-ok]').forEach(b => b.onclick = async () => { try { await api.approve(b.dataset.ok); pStaff(); } catch (e) { fail(e); } });
-  view.querySelectorAll('[data-rm]').forEach(b => b.onclick = async () => { if (await confirmBox(t('remove') + '?', t('remove'))) { try { await api.removeStaff(b.dataset.rm); pStaff(); } catch (e) { fail(e); } } });
   $('#saveSet').onclick = async () => {
     const v = Math.max(0, Math.min(1000, Math.trunc(Number($('#ap').value) || 0)));
     try { await api.saveSettings({ attendance_points: v }); toast(t('saved')); } catch (e) { fail(e); }
@@ -389,6 +637,8 @@ async function render() {
   const isAdult = h.startsWith('#/admin');
   document.body.classList.toggle('adult', isAdult);
   if (isAdult && music.playing) { music.stop(); localStorage.setItem('ya_music', 'on'); }
+  $('#kidSheet').hidden = true;
+  isAdult ? snow.stop() : snow.start();
   paintChrome();
   try {
     if (isAdult) { scene?.stop(); return await adultGate(h.split('/')[2]); }
@@ -397,11 +647,13 @@ async function render() {
     if (h.startsWith('#/me/')) return await kidMe(h.slice(5));
     if (h === '#/me') { const me = localStorage.getItem('ya_me'); return me ? (location.hash = `#/me/${me}`) : kidPick(); }
     if (h === '#/rank') return await kidRank();
+    if (h === '#/shop') return await kidShop();
     if (!h && localStorage.getItem('ya_me')) return location.replace(`#/me/${localStorage.getItem('ya_me')}`);
     scene?.setGlow(0.5);
     return await kidPick();
   } catch (e) { fail(e); view.innerHTML = `<p class="empty">${t('errGeneric')}</p>`; }
 }
+setTimeout(maybeTour, 1800);
 window.addEventListener('hashchange', () => {
   if (location.hash === '#/admin/points') pw = { step: 1, skill: null, amount: null, sel: new Set() };
   window.scrollTo(0, 0); render();
