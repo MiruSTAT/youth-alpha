@@ -1,11 +1,11 @@
-import { t, getLang, setLang } from './i18n.js?v=19';
-import { api, MODE, ranked, today, bkkToday } from './data.js?v=19';
-import { music } from './music.js?v=19';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=19';
-import { snow } from './snow.js?v=19';
-import { track } from './track.js?v=19';
-import { metro } from './metronome.js?v=19';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=19';
+import { t, getLang, setLang } from './i18n.js?v=20';
+import { api, MODE, ranked, today, bkkToday } from './data.js?v=20';
+import { music } from './music.js?v=20';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=20';
+import { snow } from './snow.js?v=20';
+import { track } from './track.js?v=20';
+import { metro } from './metronome.js?v=20';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=20';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -100,7 +100,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=19');
+    const m = await import('./scene3d.js?v=20');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -1240,8 +1240,8 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=19');
-      const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
+      const { readSheet } = await import('./ocr.js?v=20');
+      const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
       const box = $('#pvBox'); box.hidden = false; box.innerHTML = renderSong(parseSong(txt));
