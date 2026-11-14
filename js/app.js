@@ -1,8 +1,8 @@
-import { t, getLang, setLang } from './i18n.js?v=9';
-import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=9';
-import { music } from './music.js?v=9';
-import { art, burst, SPECIAL } from './art.js?v=9';
-import { snow } from './snow.js?v=9';
+import { t, getLang, setLang } from './i18n.js?v=10';
+import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=10';
+import { music } from './music.js?v=10';
+import { art, burst, SPECIAL } from './art.js?v=10';
+import { snow } from './snow.js?v=10';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -76,7 +76,6 @@ function paintChrome() {
 }
 $('#langBtn').onclick = () => { setLang(getLang() === 'th' ? 'en' : 'th'); paintChrome(); render(); };
 $('#musicBtn').onclick = (e) => { e.stopPropagation(); music.toggle(); paintChrome(); };
-$('#schedBtn').onclick = () => openSchedule();
 const firstTap = () => {
   if (music.wantsMusic() && !music.playing && !document.body.classList.contains('adult')) { music.start(); paintChrome(); }
   window.removeEventListener('pointerdown', firstTap);
@@ -86,7 +85,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=9');
+    const m = await import('./scene3d.js?v=10');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -101,15 +100,11 @@ function countUp(el, from, to, ms = 1200) {
   requestAnimationFrame(step);
 }
 
-function evPill(ev) {
-  const st = eventState(ev), when = `${t('dows')[ev.event_dow]} ${ev.event_start}`;
-  if (st.phase === 'live') return `<button class="ev-pill live" data-ev="sched"><span class="i">🔔</span><span>${t('evLive', fmtDur(st.mins))}</span></button>`;
-  if (st.phase === 'feedback') return `<button class="ev-pill feedback" data-ev="fb"><span class="i">💬</span><span>${t('evFeedback')}</span></button>`;
-  return `<button class="ev-pill" data-ev="sched"><span class="i">⏰</span><span>${t('evWait', when, fmtDur(st.mins))}</span></button>`;
+// small reminder on the home page while the feedback box is open
+function fbPill(ev) {
+  return eventState(ev).fbOpen ? `<button class="ev-pill feedback" data-ev="fb"><span class="i">💬</span><span>${t('evFeedback')}</span></button>` : '';
 }
-function wirePill(root) {
-  root.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => b.dataset.ev === 'fb' ? openFeedback() : openSchedule());
-}
+function wirePill(root) { root.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => openFeedback()); }
 
 // HOME = ranking, with "my card" on top (no separate "me" page)
 async function kidRank() {
@@ -121,7 +116,7 @@ async function kidRank() {
   scene?.setGlow(me ? me.total / max : 0.6);
   const medal = ['🥇', '🥈', '🥉'];
   view.innerHTML = `<section class="sheet">
-    ${evPill(ev)}
+    ${fbPill(ev)}
     ${me ? `<button class="my-card" id="myCard"><span class="av">${esc(me.avatar)}</span>
         <span class="who"><b>${esc(me.nickname)}</b><span>🏆 ${t('rank')} ${me.rank} ${t('of')} ${rows.length}</span></span>
         <span class="pts"><b id="tot">0</b><span>${t('points')}</span></span></button>`
@@ -179,19 +174,16 @@ async function kidMenu() {
   view.innerHTML = `<section class="sheet">
     <h1 class="sheet-title" style="margin-bottom:16px">☰ ${t('menu')}</h1>
     <div class="mlist">
-      <button class="mrow" data-m="sched"><span class="mi">📅</span><span class="mt"><b>${t('schedule')}</b><span>${t('dows')[ev.event_dow]} ${ev.event_start}–${ev.event_end}</span></span><span class="mv">›</span></button>
       <button class="mrow" data-m="fb" ${st.fbOpen ? 'style="border:2px solid var(--gold)"' : ''}><span class="mi">💬</span><span class="mt"><b>${t('fb')}</b>
         <span>${st.fbOpen ? t('fbOpenSub', ev.fb_end ?? '23:59') : t('fbClosedSub', fbWhen(ev), fmtDur(st.fbMins))}</span></span><span class="mv">›</span></button>
       <button class="mrow" data-m="theme"><span class="mi">🎨</span><span class="mt"><b>${t('theme')}</b></span><span class="mv">${thName} ›</span></button>
       <button class="mrow" data-m="lang"><span class="mi">🌐</span><span class="mt"><b>${t('language')}</b></span><span class="mv">${t('langName')}</span></button>
-      <button class="mrow" data-m="music"><span class="mi">🎵</span><span class="mt"><b>${t('music')}</b></span><span class="mv">${music.playing ? t('on') : t('off')}</span></button>
       <button class="mrow" data-m="help"><span class="mi">❓</span><span class="mt"><b>${t('help')}</b><span>${t('helpSub')}</span></span><span class="mv">›</span></button>
       <a class="mrow quiet" href="#/admin"><span class="mi">🔒</span><span class="mt"><b>${t('adults')}</b><span>${t('adminSub')}</span></span><span class="mv">›</span></a>
     </div></section>`;
   const act = {
-    sched: openSchedule, fb: openFeedback, theme: openThemes, help: () => showTour(TOUR),
+    fb: openFeedback, theme: openThemes, help: () => showTour(TOUR),
     lang: () => { setLang(getLang() === 'th' ? 'en' : 'th'); paintChrome(); kidMenu(); },
-    music: () => { music.toggle(); paintChrome(); kidMenu(); },
   };
   view.querySelectorAll('[data-m]').forEach(b => b.onclick = () => act[b.dataset.m]());
 }
@@ -247,20 +239,6 @@ const fmtDay = (d) => new Date(d + 'T00:00:00').toLocaleDateString(getLang() ===
 const dayNum = (d) => Number(d.slice(8, 10));
 const monShort = (d) => new Date(d + 'T00:00:00').toLocaleDateString(getLang() === 'th' ? 'th-TH' : 'en-GB', { month: 'short' });
 
-async function openSchedule() {
-  const p = kidSheet(`<div class="panel-head"><h2>📅 ${t('schedule')}</h2><button class="x" aria-label="${t('close')}">✕</button></div><p class="empty">${t('loading')}</p>`);
-  try {
-    const rows = await api.schedule(), td = today();
-    const up = rows.filter(r => r.day >= td), past = rows.filter(r => r.day < td).slice(-3);
-    const ev = (r, cls = '') => `<div class="ev ${cls} ${r.day === td ? 'today' : ''}"><div class="d"><b>${dayNum(r.day)}</b><span>${monShort(r.day)}</span></div>
-      <div class="tx"><b>${esc(r.title)}</b><span>${r.day === td ? t('todayLbl') + ' · ' : ''}${fmtDay(r.day)}${r.time_text ? ' · ' + esc(r.time_text) : ''}</span>
-      ${r.note ? `<span style="display:block">${esc(r.note)}</span>` : ''}</div></div>`;
-    p.innerHTML = `<div class="panel-head"><h2>📅 ${t('schedule')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
-      ${up.map(r => ev(r)).join('') || `<p class="empty">${t('noSchedule')}</p>`}
-      ${past.length ? `<p class="section-label">${t('pastEvents')}</p>${past.reverse().map(r => ev(r, 'past')).join('')}` : ''}`;
-  } catch (e) { fail(e); }
-}
-
 async function kidShop() {
   setNav('shop'); scene?.setGlow(0.7);
   const [{ cats, items }, rows] = await Promise.all([api.shop(), leaderboard()]);
@@ -298,7 +276,6 @@ function openCategory(c, list, me) {
 
 // ---- tutorial: arrow + text over a darkened screen
 const TOUR = [
-  { sel: '#schedBtn', key: 'tut_schedule' },
   { sel: '.kid-nav [data-nav="rank"]', key: 'tut_rank2' },
   { sel: '.kid-nav [data-nav="shop"]', key: 'tut_shop' },
   { sel: '.kid-nav [data-nav="menu"]', key: 'tut_menu' },
@@ -344,13 +321,13 @@ async function adultGate(page) {
   if (!session) return loginView();
   adult.role = await api.myRole(); adult.myId = await api.myId();
   if (adult.role === 'pending') return pendingView();
-  const pages = { attendance: pAttendance, attsum: pAttSummary, points: pPoints, history: pHistory, money: pMoney, kids: pKids, shop: pShop, schedule: pSchedule, pcats: pPcats, feedback: pFeedback, export: pExport, ...(adult.role === 'admin' ? { settings: pSettings } : {}) };
+  const pages = { attendance: pAttendance, attsum: pAttSummary, points: pPoints, history: pHistory, kids: pKids, shop: pShop, pcats: pPcats, feedback: pFeedback, export: pExport, ...(adult.role === 'admin' ? { settings: pSettings } : {}) };
   if (!pages[page]) return adultHome();
   await pages[page]();
 }
 
 function adultHome() {
-  const items = [['attendance', '✅'], ['points', '⭐'], ['feedback', '💬'], ['money', '💰'], ['kids', '👧'], ['pcats', '🏷️'], ['shop', '🎁'], ['schedule', '📅'], ['export', '📥'], ...(adult.role === 'admin' ? [['settings', '⚙️']] : [])];
+  const items = [['attendance', '✅'], ['points', '⭐'], ['feedback', '💬'], ['kids', '👧'], ['pcats', '🏷️'], ['shop', '🎁'], ['export', '📥'], ...(adult.role === 'admin' ? [['settings', '⚙️']] : [])];
   view.innerHTML = `
     <div class="page-head"><a class="back" href="#/">‹ ${t('back')}</a><h1 class="page-title">${t('adultMenu')}</h1></div>
     <nav class="menu">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
@@ -367,17 +344,15 @@ function adultHome() {
 }
 async function computeNeeds() {
   const n = {};
-  const [kids, shop, sched, ev, fb] = await Promise.all([api.kids(), api.shop(), api.schedule(), eventInfo(true), api.feedback().catch(() => [])]);
+  const [kids, shop, fb] = await Promise.all([api.kids(), api.shop(), api.feedback().catch(() => [])]);
   const active = kids.filter(k => k.active);
   if (!active.length) n.kids = t('need_kids');
   const live = shop.items.filter(i => i.active);
   if (!live.length) n.shop = t('need_shopEmpty');
   else { const empty = shop.cats.find(c => !live.some(i => i.category_id === c.id)); if (empty) n.shop = t('need_shopCat', empty.name); }
-  if (!sched.some(r => r.day >= bkkToday())) n.schedule = t('need_sched');
-  const st = eventState(ev), dow = new Date(Date.now() + 7 * 3600e3).getUTCDay();
-  if (dow === Number(ev.event_dow) && st.started && active.length) {
-    const round = await api.round(bkkToday());
-    if (!round?.finished) n.attendance = t('need_att');
+  if (active.length) {
+    const [rowsToday, round] = await Promise.all([api.attendance(today()), api.round(today())]);
+    if (rowsToday.length && !round?.finished) n.attendance = t('need_att');
   }
   const seen = localStorage.getItem('ya_fb_seen') || '';
   const nNew = fb.filter(f => f.created_at > seen).length;
@@ -529,39 +504,6 @@ async function pHistory() {
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     if (await confirmBox(t('confirmDel'))) { try { await api.deletePoint(b.dataset.del); lbCache.at = 0; pHistory(); } catch (e) { fail(e); } }
   });
-}
-
-// ---------------- Money: just record what each kid was paid
-async function pMoney() {
-  const [kids, money] = await Promise.all([api.kids(), api.money()]);
-  const paid = (id) => money.filter(m => m.kid_id === id && m.kind === 'paid').reduce((a, m) => a + Number(m.amount), 0);
-  let total = 0;
-  const rows = kids.map(k => { const p = paid(k.id); total += p; return { k, p }; });
-  view.innerHTML = `${pageHead(t('tab_money'))}
-    <p class="muted" style="margin:-6px 0 12px">🔒 ${t('moneyHint')}</p>
-    <div class="card"><div class="list">${rows.map(({ k, p }) => `<div class="li click" data-kid="${k.id}"><span class="av">${esc(k.avatar)}</span>
-      <span class="grow">${esc(k.nickname)}</span><span class="amt">${fmtMoney(p)} ฿</span><span class="muted">›</span></div>`).join('') || `<p class="muted">${t('noKids')}</p>`}</div></div>
-    <div class="card"><div class="total-row"><span>${t('totalPaid')}</span><span>${fmtMoney(total)} ฿</span></div></div>`;
-  view.querySelectorAll('[data-kid]').forEach(r => r.onclick = () => moneyKid(kids.find(k => k.id === r.dataset.kid), money));
-}
-async function moneyKid(kid, money) {
-  const hist = money.filter(m => m.kid_id === kid.id && m.kind === 'paid');
-  const p = modal(`${esc(kid.avatar)} ${esc(kid.nickname)}`, `
-    <div class="field"><label>${t('amount')}</label>
-      <div class="seg" style="margin-bottom:8px"><button type="button" class="btn" data-q="100">100 ฿</button><button type="button" class="btn" data-q="150">150 ฿</button></div>
-      <input class="input" name="amount" type="number" min="0.01" step="0.01" inputmode="decimal" required></div>
-    <div class="field"><label>${t('note')}</label><input class="input" name="note" maxlength="80"></div>
-    ${hist.length ? `<p class="muted" style="margin:4px 0 0">${t('history')}</p><div class="list" style="max-height:180px;overflow:auto">${hist.map(m => `<div class="li"><span class="grow">${m.created_at.slice(0, 10)}${m.note ? `<span class="sub">${esc(m.note)}</span>` : ''}</span>
-      <span class="amt">${fmtMoney(m.amount)} ฿</span><button class="btn small danger" value="del:${m.id}" formnovalidate>${t('undo')}</button></div>`).join('')}</div>` : ''}`);
-  const form = $('#dlgForm');
-  form.querySelectorAll('[data-q]').forEach(b => b.onclick = () => { form.amount.value = b.dataset.q; });
-  const r = await p;
-  try {
-    if (r instanceof FormData) { await api.addMoney({ kid_id: kid.id, kind: 'paid', amount: Number(r.get('amount')), note: r.get('note') || '' }); toast(t('saved')); }
-    else if (typeof r === 'string' && r.startsWith('del:')) { if (await confirmBox(t('confirmDel'))) await api.deleteMoney(r.slice(4)); else return; }
-    else return;
-    pMoney();
-  } catch (e) { fail(e); }
 }
 
 // ---------------- Kids list
@@ -716,41 +658,18 @@ async function itemForm(it, cats) {
   } catch (e) { fail(e); }
 }
 
-// ---------------- Schedule editor
-async function pSchedule() {
-  const rows = await api.schedule(), td = today();
-  view.innerHTML = `${pageHead(t('tab_schedule'))}
-    <button class="btn primary wide" id="addEv" style="margin-bottom:12px">+ ${t('addEvent')}</button>
-    <div class="card"><div class="list">${rows.map(r => `<div class="li click" data-ev="${r.id}" style="${r.day < td ? 'opacity:.5' : ''}">
-      <span class="grow"><b>${esc(r.title)}</b><span class="sub">${fmtDay(r.day)}${r.time_text ? ' · ' + esc(r.time_text) : ''}</span></span><span class="muted">${t('edit')} ›</span></div>`).join('') || `<p class="muted">${t('noSchedule')}</p>`}</div></div>`;
-  $('#addEv').onclick = () => evForm(null);
-  view.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => evForm(rows.find(r => r.id === b.dataset.ev)));
-}
-async function evForm(ev) {
-  const r = await modal(ev ? t('edit') : t('addEvent'), `
-    <div class="field"><label>${t('evTitle')}</label><input class="input" name="title" required maxlength="80" value="${esc(ev?.title || '')}"></div>
-    <div class="field"><label>${t('date')}</label><input class="input" name="day" type="date" required value="${ev?.day || today()}"></div>
-    <div class="field"><label>${t('time')}</label><input class="input" name="time" maxlength="30" placeholder="13:00 – 15:00" value="${esc(ev?.time_text || '')}"></div>
-    <div class="field"><label>${t('note')}</label><input class="input" name="note" maxlength="120" value="${esc(ev?.note || '')}"></div>`,
-    { extra: ev ? `<button class="btn small danger" value="delete" formnovalidate>${t('del')}</button>` : '' });
-  try {
-    if (r instanceof FormData) { await api.saveSchedule({ ...(ev ? { id: ev.id } : {}), title: r.get('title').trim(), day: r.get('day'), time_text: r.get('time').trim(), note: r.get('note').trim() }); toast(t('saved')); }
-    else if (r === 'delete') { if (!(await confirmBox(t('confirmDel')))) return; await api.deleteSchedule(ev.id); }
-    else return;
-    pSchedule();
-  } catch (e) { fail(e); }
-}
-
 // ---------------- Kids' feedback
 async function pFeedback() {
   const list = await api.feedback();
   const moods = { 4: '😄', 3: '🙂', 2: '😐', 1: '😢', 0: '💬' };
   view.innerHTML = `${pageHead(t('tab_feedback'))}
+    ${list.length ? `<button class="btn wide" id="fbXl" style="margin-bottom:12px">📥 ${t('exportFb')}</button>` : ''}
     <div class="card"><div class="list">${list.map(f => `<div class="li fb-item"><span class="mood-i">${moods[f.mood] || '💬'}</span>
       <span class="grow"><b>${f.kid_name ? esc(f.kid_name) : t('anon')}</b><span class="sub">${new Date(f.created_at).toLocaleString(getLang() === 'th' ? 'th-TH' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</span>
       <span style="display:block;margin-top:4px">${esc(f.message)}</span></span>
       <button class="btn small danger" data-del="${f.id}">${t('del')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
   if (list[0]) localStorage.setItem('ya_fb_seen', list[0].created_at);
+  $('#fbXl')?.addEventListener('click', async (e) => { const b = e.currentTarget; b.disabled = true; try { await buildExcel(['xs_feedback']); } catch (err) { fail(err); } b.disabled = false; });
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     if (await confirmBox(t('confirmDel'))) { try { await api.deleteFeedback(b.dataset.del); pFeedback(); } catch (e) { fail(e); } }
   });
@@ -762,12 +681,8 @@ async function pSettings() {
   const dowSel = (id, v) => `<select class="input" id="${id}">${t('dows').map((d, i) => `<option value="${i}" ${Number(v ?? 0) === i ? 'selected' : ''}>${d}</option>`).join('')}</select>`;
   const time = (id, v) => `<input class="input" id="${id}" type="time" value="${esc(v)}">`;
   view.innerHTML = `${pageHead(t('tab_settings'))}
-    <div class="card"><h3 class="sec">📅 ${t('secEvent')}</h3>
-      <div class="field"><label>${t('eventDay')}</label>${dowSel('dow', s.event_dow)}</div>
-      <div class="row2"><div class="field"><label>${t('eventStart')}</label>${time('st', s.event_start || '10:00')}</div>
-      <div class="field"><label>${t('eventEnd')}</label>${time('en', s.event_end || '12:00')}</div></div></div>
     <div class="card"><h3 class="sec">💬 ${t('secFb')}</h3>
-      <div class="field"><label>${t('fbDay')}</label>${dowSel('fdow', s.fb_dow ?? s.event_dow)}</div>
+      <div class="field"><label>${t('fbDay')}</label>${dowSel('fdow', s.fb_dow ?? 0)}</div>
       <div class="row2"><div class="field"><label>${t('fbStart')}</label>${time('fst', s.fb_start || '12:00')}</div>
       <div class="field"><label>${t('fbEnd')}</label>${time('fen', s.fb_end || '23:59')}</div></div></div>
     <div class="card"><h3 class="sec">👆 ${t('secTips')}</h3>
@@ -777,9 +692,9 @@ async function pSettings() {
     <div class="bottom-bar"><button class="btn primary" id="saveSet">${t('save')}</button></div>`;
   $('#saveSet').onclick = async () => {
     const v = (id) => ($('#' + id).value || '').slice(0, 5);
-    const d = { event_dow: Number($('#dow').value), event_start: v('st'), event_end: v('en'), fb_dow: Number($('#fdow').value), fb_start: v('fst'), fb_end: v('fen'),
+    const d = { fb_dow: Number($('#fdow').value), fb_start: v('fst'), fb_end: v('fen'),
       tip_days: Math.max(0, Math.min(60, Math.trunc(Number($('#tips').value) || 0))), attendance_points: Math.max(0, Math.min(1000, Math.trunc(Number($('#ap').value) || 0))) };
-    if (!d.event_start || !d.event_end || !d.fb_start || !d.fb_end || d.event_start >= d.event_end || d.fb_start >= d.fb_end) { toast(t('errTime')); return; }
+    if (!d.fb_start || !d.fb_end || d.fb_start >= d.fb_end) { toast(t('errTime')); return; }
     try { await api.saveSettings(d); evCache = null; toast(t('saved')); } catch (e) { fail(e); }
   };
 }
@@ -793,7 +708,7 @@ function loadXLSX() {
 async function pExport() {
   view.innerHTML = `${pageHead(t('tab_export'))}
     <div class="card"><p style="margin:0 0 12px">${t('exportIntro')}</p>
-      <ul class="xl-list">${['xs_summary', 'xs_points', 'xs_att', 'xs_attsum', 'xs_money', 'xs_feedback', 'xs_shop', 'xs_sched'].map(k => `<li>${t(k)}</li>`).join('')}</ul>
+      <ul class="xl-list">${['xs_summary', 'xs_points', 'xs_att', 'xs_attsum', 'xs_feedback', 'xs_shop'].map(k => `<li>${t(k)}</li>`).join('')}</ul>
       <button class="btn primary wide" id="xl">📥 ${t('exportBtn')}</button></div>`;
   $('#xl').onclick = async (e) => {
     const btn = e.currentTarget; btn.disabled = true; btn.textContent = t('exporting');
@@ -801,20 +716,19 @@ async function pExport() {
     btn.disabled = false; btn.textContent = '📥 ' + t('exportBtn');
   };
 }
-async function buildExcel() {
-  const [XLSX, kids, rows, cats, pts, att, money, fb, shop, sched] = await Promise.all([loadXLSX(), api.kids(), leaderboard(true), pcats(true), api.allPoints(),
-    api.attendanceAll(), api.money(), api.feedback().catch(() => []), api.shop(), api.schedule()]);
+async function buildExcel(only = null) {
+  const [XLSX, kids, rows, cats, pts, att, fb, shop] = await Promise.all([loadXLSX(), api.kids(), leaderboard(true), pcats(true), api.allPoints(),
+    api.attendanceAll(), api.feedback().catch(() => []), api.shop()]);
   const kidName = Object.fromEntries(kids.map(k => [k.id, k.nickname]));
   const dt = (s) => s ? new Date(new Date(s).getTime() + 7 * 3600e3).toISOString().slice(0, 16).replace('T', ' ') : ''; // Thai time, 2026-11-14 21:41
   const stTxt = { present: t('present'), leave: t('leave'), absent: t('absent') };
   const by = Object.fromEntries(rows.map(r => [r.id, r]));
   const attC = {}; att.forEach(r => { (attC[r.kid_id] ??= { present: 0, leave: 0, absent: 0 })[r.status]++; });
-  const paid = {}; money.filter(m => m.kind === 'paid').forEach(m => paid[m.kid_id] = (paid[m.kid_id] || 0) + Number(m.amount));
   const summary = kids.map(k => {
     const r = by[k.id] || { total: 0, skills: {} }, row = { [t('nickname')]: k.nickname, [t('group').replace(/ \(.*\)/, '')]: k.grp, [t('xc_total')]: r.total };
     cats.forEach(c => { row[cName(c)] = r.skills?.[c.key] || 0; });
     const a = attC[k.id] || { present: 0, leave: 0, absent: 0 };
-    Object.assign(row, { [t('present')]: a.present, [t('leave')]: a.leave, [t('absent')]: a.absent, [t('xc_paid')]: paid[k.id] || 0 });
+    Object.assign(row, { [t('present')]: a.present, [t('leave')]: a.leave, [t('absent')]: a.absent });
     return row;
   }).sort((a, b) => b[t('xc_total')] - a[t('xc_total')]);
   const sheets = [
@@ -822,19 +736,17 @@ async function buildExcel() {
     ['xs_points', pts.map(p => ({ [t('date')]: dt(p.created_at), [t('nickname')]: p.kids?.nickname || kidName[p.kid_id] || '', [t('category')]: cName(cOf(p.skill)), [t('xc_detail')]: p.detail || '', [t('xc_points')]: p.amount, [t('note')]: p.note || '' }))],
     ['xs_att', [...att].sort((a, b) => a.day.localeCompare(b.day)).map(r => ({ [t('date')]: r.day, [t('nickname')]: kidName[r.kid_id] || '', [t('xc_status')]: stTxt[r.status] }))],
     ['xs_attsum', kids.map(k => { const a = attC[k.id] || { present: 0, leave: 0, absent: 0 }; return { [t('nickname')]: k.nickname, [t('present')]: a.present, [t('leave')]: a.leave, [t('absent')]: a.absent }; })],
-    ['xs_money', money.filter(m => m.kind === 'paid').map(m => ({ [t('date')]: dt(m.created_at), [t('nickname')]: kidName[m.kid_id] || '', [t('xc_baht')]: Number(m.amount), [t('note')]: m.note || '' }))],
     ['xs_feedback', fb.map(f => ({ [t('date')]: dt(f.created_at), [t('nickname')]: f.kid_name || t('anon'), [t('xc_mood')]: ['', '😢', '😐', '🙂', '😄'][f.mood] || '', [t('xc_msg')]: f.message }))],
     ['xs_shop', shop.items.map(i => ({ [t('category')]: shop.cats.find(c => c.id === i.category_id)?.name || '', [t('itemName')]: i.name, [t('xc_points')]: i.price, [t('xc_shown')]: i.active ? '✓' : t('hidden') }))],
-    ['xs_sched', sched.map(r => ({ [t('date')]: r.day, [t('time')]: r.time_text, [t('evTitle')]: r.title, [t('note')]: r.note }))],
   ];
   const wb = XLSX.utils.book_new();
-  for (const [k, data] of sheets) {
+  for (const [k, data] of sheets.filter(([k]) => !only || only.includes(k))) {
     const ws = XLSX.utils.json_to_sheet(data.length ? data : [{ '-': t('none') }]);
     const cols = Object.keys(data[0] || { '-': 1 });
     ws['!cols'] = cols.map(c => ({ wch: Math.min(50, Math.max(c.length + 2, ...data.map(r => String(r[c] ?? '').length + 2))) }));
     XLSX.utils.book_append_sheet(wb, ws, t(k).slice(0, 31));
   }
-  XLSX.writeFile(wb, `youth-alpha-${bkkToday()}.xlsx`);
+  XLSX.writeFile(wb, `youth-alpha-${only ? 'feedback-' : ''}${bkkToday()}.xlsx`);
 }
 
 // =============================================================== router
