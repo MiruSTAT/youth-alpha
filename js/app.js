@@ -1,8 +1,8 @@
-import { t, getLang, setLang } from './i18n.js?v=13';
-import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=13';
-import { music } from './music.js?v=13';
-import { art, burst, SPECIAL } from './art.js?v=13';
-import { snow } from './snow.js?v=13';
+import { t, getLang, setLang } from './i18n.js?v=14';
+import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=14';
+import { music } from './music.js?v=14';
+import { art, burst, SPECIAL } from './art.js?v=14';
+import { snow } from './snow.js?v=14';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -41,8 +41,8 @@ function modal(title, inner, { okText = t('save'), extra = '', danger = false } 
     dlg.returnValue = ''; dlg.showModal();
   });
 }
-async function confirmBox(msg, okText = t('del')) {
-  return (await modal('⚠️ ' + t('warnTitle'), `<p style="font-size:1.05rem;white-space:pre-line">${esc(msg)}</p>`, { okText, danger: true })) instanceof FormData;
+async function confirmBox(msg, okText = t('del'), danger = true) {
+  return (await modal('⚠️ ' + t('warnTitle'), `<p style="font-size:1.05rem;white-space:pre-line">${esc(msg)}</p>`, { okText, danger })) instanceof FormData;
 }
 async function leaderboard(force = false) {
   if (force || Date.now() - lbCache.at > 8000) lbCache = { at: Date.now(), rows: ranked(await api.leaderboard()) };
@@ -84,7 +84,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=13');
+    const m = await import('./scene3d.js?v=14');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -452,6 +452,7 @@ async function pAttendance() {
     if (q) { q.oninput = filter; if (qv) filter(); }
     view.querySelectorAll('.st button').forEach(b => b.onclick = async () => {
       const k = b.dataset.k, s = b.dataset.s, prev = status[k], y = window.scrollY;
+      if (prev === s && !(await confirmBox(t('clearAttWarn', active.find(x => x.id === k)?.nickname || ''), t('clearAtt')))) return;
       if (prev === s) delete status[k]; else status[k] = s;      // tap again = back to "waiting"
       draw(); window.scrollTo(0, y);
       try { prev === s ? await api.clearAttendance(k, attDay) : await api.setAttendance(k, attDay, s); lbCache.at = 0; }
@@ -470,7 +471,7 @@ async function pAttendance() {
     });
     const fin = $('#finish');
     if (fin) fin.onclick = async () => {
-      if (await confirmBox(t('finishConfirm', waiting), t('finishRound'))) { await api.setRound(attDay, true); round = { finished: true }; draw(); toast(t('saved')); }
+      if (await confirmBox(t('finishConfirm', waiting), t('finishRound'), false)) { await api.setRound(attDay, true); round = { finished: true }; draw(); toast(t('saved')); }
     };
     const ro = $('#reopen'); if (ro) ro.onclick = async () => { await api.setRound(attDay, false); round = { finished: false }; draw(); };
   };
@@ -538,7 +539,8 @@ async function pHistory() {
       <span class="grow">${esc(p.kids?.nickname || '?')}<span class="sub">${esc(cOf(p.skill).icon)} ${esc(cName(cOf(p.skill)))}${p.detail ? ' · ' + esc(p.detail) : ''}${p.note ? ' · ' + esc(p.note) : ''}</span></span>
       <span class="amt ${p.amount < 0 ? 'neg' : 'pos'}">${signed(p.amount)}</span><button class="btn small danger" data-del="${p.id}">${t('undo')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
-    if (await confirmBox(t('confirmDel'))) { try { await api.deletePoint(b.dataset.del); lbCache.at = 0; pHistory(); } catch (e) { fail(e); } }
+    const p = recent.find(x => x.id === b.dataset.del);
+    if (await confirmBox(t('delPointWarn', p?.kids?.nickname || '', signed(p?.amount || 0)))) { try { await api.deletePoint(b.dataset.del); lbCache.at = 0; pHistory(); } catch (e) { fail(e); } }
   });
 }
 
@@ -623,7 +625,7 @@ async function pcForm(c) {
       toast(t('saved'));
     } else if (r === 'toggle') await api.savePointCat({ key: c.key, active: !c.active }, false);
     else if (r === 'delete') {
-      if (!(await confirmBox(t('confirmDel')))) return;
+      if (!(await confirmBox(t('delWarn', cName(c))))) return;
       try { await api.deletePointCat(c.key); } catch { toast(t('cantDelPcat')); return; }
     } else return;
     catCache.at = 0; pPcats();
@@ -670,7 +672,7 @@ async function itemForm(it) {
       await api.saveItem({ ...(it ? { id: it.id } : {}), name: r.get('name').trim(), price: Math.max(0, Math.trunc(Number(r.get('price')) || 0)), icon: r.get('icon') });
       toast(t('saved'));
     } else if (r === 'toggle') await api.saveItem({ id: it.id, active: !it.active });
-    else if (r === 'delete') { if (!(await confirmBox(t('confirmDel')))) return; await api.deleteItem(it.id); }
+    else if (r === 'delete') { if (!(await confirmBox(t('delWarn', it.name)))) return; await api.deleteItem(it.id); }
     else return;
     pShop();
   } catch (e) { fail(e); }
@@ -687,8 +689,7 @@ async function pFeedback() {
     ${list.length ? `<button class="btn wide" id="fbXl" style="margin-bottom:12px">📥 ${t('exportFb')}</button>` : ''}
     <div class="card"><div class="list">${list.map(f => `<div class="li fb-item"><span class="mood-i">${moods[f.mood] || '💬'}</span>
       <span class="grow"><b>${f.kid_name ? esc(f.kid_name) : t('anon')}</b><span class="sub">${new Date(f.created_at).toLocaleString(getLang() === 'th' ? 'th-TH' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</span>
-      <span style="display:block;margin-top:4px">${esc(f.message)}</span></span>
-      <button class="btn small danger" data-del="${f.id}">${t('del')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
+      <span style="display:block;margin-top:4px">${esc(f.message)}</span></span></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
   const hadNew = list.some(f => f.created_at > (localStorage.getItem('ya_fb_seen') || ''));
   if (list[0]) localStorage.setItem('ya_fb_seen', list[0].created_at);
   if (hadNew) setTimeout(() => hearts(view.querySelector('.fb-item') || view.querySelector('.card')), 300);
@@ -705,9 +706,6 @@ async function pFeedback() {
     sw.disabled = false;
   };
   $('#fbXl')?.addEventListener('click', async (e) => { const b = e.currentTarget; b.disabled = true; try { await buildExcel(['xs_feedback']); } catch (err) { fail(err); } b.disabled = false; });
-  view.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
-    if (await confirmBox(t('confirmDel'))) { try { await api.deleteFeedback(b.dataset.del); pFeedback(); } catch (e) { fail(e); } }
-  });
 }
 
 // ---------------- Settings (admin): all timings in one place
