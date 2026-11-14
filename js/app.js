@@ -1,11 +1,11 @@
-import { t, getLang, setLang } from './i18n.js?v=21';
-import { api, MODE, ranked, today, bkkToday } from './data.js?v=21';
-import { music } from './music.js?v=21';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=21';
-import { snow } from './snow.js?v=21';
-import { track } from './track.js?v=21';
-import { metro } from './metronome.js?v=21';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=21';
+import { t, getLang, setLang } from './i18n.js?v=22';
+import { api, MODE, ranked, today, bkkToday } from './data.js?v=22';
+import { music } from './music.js?v=22';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=22';
+import { snow } from './snow.js?v=22';
+import { track } from './track.js?v=22';
+import { metro } from './metronome.js?v=22';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=22';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -102,7 +102,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=21');
+    const m = await import('./scene3d.js?v=22');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -520,7 +520,7 @@ async function kidSong(id) {
       ${beatMap || lineMap ? `<p class="sync-note">🔗 ${t(lineMap ? 'syncedAll' : 'syncedBeat')}</p>` : ''}` : ''}
     ${langs.size > 1 ? `<div class="lang-sw" role="tablist">${[['all', t('langAll')], ['th', 'ไทย'], ['en', 'English']].map(([k, l]) => `<button data-lg="${k}" class="${st.lang === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}
     <div class="lyrics" id="lyrics" style="--fs:${st.fs}" ${showLyrics ? '' : 'hidden'}></div>
-    ${sheets.length ? `<details class="orig" id="orig" ${showLyrics ? '' : 'open'}><summary><span class="ot">📄 ${t('origSheet')}</span><span class="orig-key" id="origKey" hidden></span><span class="chev">›</span></summary>
+    ${sheets.length ? `<details class="orig" id="orig" open><summary><span class="ot">📄 ${t('origSheet')}</span><span class="orig-key" id="origKey" hidden></span><span class="chev">›</span></summary>
       <div class="sheets">${sheets.map((u, i) => `<button class="sheet-img" data-sh="${i}"><img src="${esc(u)}" alt="${t('sheetLbl')} ${i + 1}" loading="lazy"></button>`).join('')}</div></details>` : ''}
     ${s.credits ? `<p class="song-credit">🎵 ${t('credits')}: ${esc(s.credits)}</p>` : ''}
   </section>`;
@@ -1233,12 +1233,28 @@ async function pSongEdit(id) {
       <div class="bottom-bar"><button class="btn primary" id="saveSong">${t('save')}</button></div>
     </form>`;
   const form = $('#sf');
-  view.querySelectorAll('[data-so]').forEach(b => b.onclick = async () => {
-    const k = b.dataset.so, on = !b.classList.contains('on'), opts = { ...(x.opts || {}), [k]: on };
+  // "original sheet only": everything else switches off (and back on when it is turned off)
+  view.querySelector('[data-only]')?.addEventListener('click', async (e) => {
+    const b = e.currentTarget, on = !b.classList.contains('on'), keys = MUSIC_OPTS.find(([g]) => g === 'ms_player')[1].map(([k]) => k);
+    const opts = Object.fromEntries(keys.map(k => [k, k === 'origSheet' ? true : !on])); opts.sheetOnly = on;
     b.disabled = true;
     try {
       await api.saveSong({ id: x.id, opts }); x.opts = opts; songCache.at = 0;
       b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on));
+      view.querySelectorAll('[data-so]').forEach(sw => { const v = opts[sw.dataset.so] !== false; sw.classList.toggle('on', v); sw.setAttribute('aria-checked', String(v)); });
+      toast(`${t('sheetOnly')} · ${on ? t('moOn') : t('moOff')}`);
+    } catch (err) { fail(err); }
+    b.disabled = false;
+  });
+  view.querySelectorAll('[data-so]').forEach(b => b.onclick = async () => {
+    const k = b.dataset.so, on = !b.classList.contains('on'), opts = { ...(x.opts || {}), [k]: on };
+    if (on && k !== 'origSheet') opts.sheetOnly = false;                    // turning anything else on ends "sheet only"
+    if (!on && k === 'origSheet') opts.sheetOnly = false;
+    b.disabled = true;
+    try {
+      await api.saveSong({ id: x.id, opts }); x.opts = opts; songCache.at = 0;
+      b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on));
+      const only = view.querySelector('[data-only]'); if (only) { only.classList.toggle('on', !!opts.sheetOnly); only.setAttribute('aria-checked', String(!!opts.sheetOnly)); }
       toast(`${t('mo_' + k)} · ${on ? t('moOn') : t('moOff')}`);
     } catch (e) { fail(e); }
     b.disabled = false;
@@ -1255,7 +1271,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=21');
+      const { readSheet } = await import('./ocr.js?v=22');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1309,6 +1325,8 @@ function songSwitches(x) {
   const items = MUSIC_OPTS.find(([g]) => g === 'ms_player')[1], o = x.opts || {};
   return `<div class="card toggles"><b style="display:block;padding:12px 0 4px">👀 ${t('songSw')}</b>
     <p class="muted" style="margin:0 0 4px">${t('songSwSub')}</p>
+    <div class="tg-row only"><span class="tg-i">📄</span><span class="tg-t"><b>${t('sheetOnly')}</b><span>${t('sheetOnlySub')}</span></span>
+      <button type="button" class="switch ${o.sheetOnly ? 'on' : ''}" data-only role="switch" aria-checked="${!!o.sheetOnly}" aria-label="${t('sheetOnly')}"><span></span></button></div>
     ${items.map(([k, i]) => { const off = !moApp(k); return `<div class="tg-row"><span class="tg-i">${i}</span>
       <span class="tg-t"><b>${t('mo_' + k)}</b>${off ? `<span>${t('songSwOff')}</span>` : ''}</span>
       <button type="button" class="switch ${o[k] !== false ? 'on' : ''}" data-so="${k}" role="switch" aria-checked="${o[k] !== false}" aria-label="${t('mo_' + k)}" ${off ? 'disabled' : ''}><span></span></button></div>`; }).join('')}</div>`;
