@@ -1,8 +1,8 @@
-import { t, getLang, setLang } from './i18n.js?v=11';
-import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=11';
-import { music } from './music.js?v=11';
-import { art, burst, SPECIAL } from './art.js?v=11';
-import { snow } from './snow.js?v=11';
+import { t, getLang, setLang } from './i18n.js?v=12';
+import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=12';
+import { music } from './music.js?v=12';
+import { art, burst, SPECIAL } from './art.js?v=12';
+import { snow } from './snow.js?v=12';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -76,7 +76,7 @@ function paintChrome() {
 $('#langBtn').onclick = () => { setLang(getLang() === 'th' ? 'en' : 'th'); paintChrome(); render(); };
 $('#musicBtn').onclick = (e) => { e.stopPropagation(); music.toggle(); paintChrome(); };
 const firstTap = () => {
-  if (music.wantsMusic() && !music.playing && !document.body.classList.contains('adult')) { music.start(); paintChrome(); }
+  if (music.wantsMusic() && !music.playing) { music.start(); paintChrome(); }
   window.removeEventListener('pointerdown', firstTap);
 };
 window.addEventListener('pointerdown', firstTap);
@@ -84,7 +84,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=11');
+    const m = await import('./scene3d.js?v=12');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -108,7 +108,7 @@ function wirePill(root) { root.querySelectorAll('[data-ev]').forEach(b => b.oncl
 // HOME = ranking, with "my card" on top (no separate "me" page)
 async function kidRank() {
   setNav('rank');
-  const [rows, ev] = await Promise.all([leaderboard(true), eventInfo(), pcats()]);
+  const [rows, ev] = await Promise.all([leaderboard(true), eventInfo(), pcats(true)]);
   const mineId = localStorage.getItem('ya_me'), me = rows.find(r => r.id === mineId);
   if (mineId && !me) localStorage.removeItem('ya_me');
   const max = Math.max(1, ...rows.map(r => r.total));
@@ -165,6 +165,24 @@ function catInfo(c, pts) {
     ${pts !== null ? `<div class="cat-pts"><span>${t('myPointsIn')}</span><b>${pts} ⭐</b></div>` : ''}`);
 }
 
+// a shower of red hearts
+function hearts(el, waves = 3) {
+  if (!el) return;
+  for (let w = 0; w < waves; w++) setTimeout(() => burst(el, '❤️', 14), w * 260);
+}
+
+// Bible: trusted links (YouVersion — free, no ads, many Thai versions)
+function openBible() {
+  const link = (href, icon, title, sub) => `<a class="mrow" href="${href}" target="_blank" rel="noopener noreferrer"><span class="mi">${icon}</span><span class="mt"><b>${title}</b><span>${sub}</span></span><span class="mv">↗</span></a>`;
+  kidSheet(`<div class="panel-head"><h2>📖 ${t('bible')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
+    <p class="cat-info" style="font-size:1rem">${t('bibleIntro')}</p>
+    <div class="mlist">
+      ${link('https://www.bible.com/th', '🌐', t('bibleRead'), 'bible.com (YouVersion)')}
+      ${link('https://play.google.com/store/apps/details?id=com.sirma.mobile.bible.android', '🤖', t('bibleAndroid'), 'Google Play')}
+      ${link('https://apps.apple.com/app/id282935706', '🍎', t('bibleIos'), 'App Store')}
+    </div>`);
+}
+
 // MENU: everything else in one simple list
 async function kidMenu() {
   setNav('menu'); scene?.setGlow(0.6);
@@ -175,13 +193,14 @@ async function kidMenu() {
     <div class="mlist">
       <button class="mrow" data-m="fb" ${ev.fb_open ? 'style="border:2px solid var(--gold)"' : ''}><span class="mi">💬</span><span class="mt"><b>${t('fb')}</b>
         <span>${ev.fb_open ? t('fbOpenSub') : t('fbClosedSub')}</span></span><span class="mv">›</span></button>
+      <button class="mrow" data-m="bible"><span class="mi">📖</span><span class="mt"><b>${t('bible')}</b><span>${t('bibleSub')}</span></span><span class="mv">›</span></button>
       <button class="mrow" data-m="theme"><span class="mi">🎨</span><span class="mt"><b>${t('theme')}</b></span><span class="mv">${thName} ›</span></button>
       <button class="mrow" data-m="lang"><span class="mi">🌐</span><span class="mt"><b>${t('language')}</b></span><span class="mv">${t('langName')}</span></button>
       <button class="mrow" data-m="help"><span class="mi">❓</span><span class="mt"><b>${t('help')}</b><span>${t('helpSub')}</span></span><span class="mv">›</span></button>
       <a class="mrow quiet" href="#/admin"><span class="mi">🔒</span><span class="mt"><b>${t('adults')}</b><span>${t('adminSub')}</span></span><span class="mv">›</span></a>
     </div></section>`;
   const act = {
-    fb: openFeedback, theme: openThemes, help: () => showTour(TOUR),
+    fb: openFeedback, bible: openBible, theme: openThemes, help: () => showTour(TOUR),
     lang: () => { setLang(getLang() === 'th' ? 'en' : 'th'); paintChrome(); kidMenu(); },
   };
   view.querySelectorAll('[data-m]').forEach(b => b.onclick = () => act[b.dataset.m]());
@@ -220,7 +239,7 @@ async function openFeedback() {
     try {
       await api.sendFeedback({ kid_id: useName ? me.id : null, kid_name: useName ? me.nickname : '', mood, message: msg.value.trim().slice(0, 500) });
       localStorage.setItem(sentKey, '1');
-      p.innerHTML = `${head}<p class="fb-done">${t('fbThanks')}</p>`; music.ding(); scene?.burst(40);
+      p.innerHTML = `${head}<p class="fb-done">${t('fbThanks')}</p>`; music.ding(); hearts(p.querySelector('.fb-done'));
     } catch (e) { console.error(e); toast(t('fbClosed')); check(); }
   };
 }
@@ -340,11 +359,17 @@ function adultHome() {
     ${MODE === 'preview' ? `<p class="preview-note">${t('previewNote')}</p>` : ''}`;
   $('#logout').onclick = async () => { await api.signOut(); location.hash = '#/admin'; render(); };
   // red indicators: things that still need filling in
-  computeNeeds().then(n => Object.entries(n).forEach(([k, msg]) => {
-    const a = view.querySelector(`.menu [data-k="${k}"]`); if (!a) return;
-    a.querySelector('.mi').insertAdjacentHTML('beforeend', '<span class="dot"></span>');
-    a.querySelector('.mt span').outerHTML = `<span class="need">${esc(msg)}</span>`;
-  })).catch(console.error);
+  computeNeeds().then(n => {
+    const keys = Object.keys(n);
+    keys.forEach(k => {
+      const a = view.querySelector(`.menu [data-k="${k}"]`); if (!a) return;
+      a.classList.add('alert');
+      a.querySelector('.mi').insertAdjacentHTML('beforeend', '<span class="dot"></span>');
+      a.querySelector('.mt span').outerHTML = `<span class="need">${esc(n[k])}</span>`;
+    });
+    if (keys.length) view.querySelector('.page-head').insertAdjacentHTML('afterend',
+      `<div class="alert-banner"><span class="bell">🔔</span><span><b>${t('needCount', keys.length)}</b><br>${keys.map(k => t('tab_' + k)).join(' · ')}</span></div>`);
+  }).catch(console.error);
 }
 async function computeNeeds() {
   const n = {};
@@ -408,6 +433,7 @@ async function pAttendance() {
   const active = kids.filter(k => k.active);
   const status = Object.fromEntries(rows.map(r => [r.kid_id, r.status]));
   const stateTxt = { present: ['c-here', t('present')], leave: ['c-leave', t('leave')], absent: ['c-absent', t('absent')] };
+  let multi = false; const pick = new Set();
   const draw = () => {
     const c = { present: 0, leave: 0, absent: 0 };
     active.forEach(k => status[k.id] && c[status[k.id]]++);
@@ -423,13 +449,18 @@ async function pAttendance() {
         <div><b class="c-leave">${c.leave}</b><span>${t('leave')}</span></div>
         <div><b class="c-absent">${c.absent}</b><span>${t('absent')}</span></div>
         <div><b class="c-wait">${waiting}</b><span>${t('waiting')}</span></div></div>
+      ${active.length ? `<div class="list-tools"><button class="btn small ${multi ? 'primary' : ''}" id="multi">☑️ ${multi ? t('multiDone') : t('multiSelect')}</button>
+        ${multi ? `<button class="btn small" id="pickAll">${pick.size === active.length ? t('clear') : t('selectAll')}</button>` : ''}</div>` : ''}
       <div class="att-list">${active.map(k => {
         const st = status[k.id], [cls, label] = st ? stateTxt[st] : ['c-wait', t('waiting')];
+        if (multi) return `<button class="opt att-pick ${pick.has(k.id) ? 'on' : ''}" data-p="${k.id}" data-n="${esc(k.nickname.toLowerCase())}"><span class="i">${esc(k.avatar)}</span>
+          <span class="t">${esc(k.nickname)}<span class="opt-sub ${cls}">${label}</span></span><span class="check">${pick.has(k.id) ? '✓' : ''}</span></button>`;
         return `<div class="att" data-n="${esc(k.nickname.toLowerCase())}">
           <div class="who"><span class="av">${esc(k.avatar)}</span><span class="nm">${esc(k.nickname)}</span>${st ? '' : `<span class="state ${cls}">${label}</span>`}</div>
           <div class="st">${['present', 'leave', 'absent'].map(s => `<button class="${s} ${st === s ? 'on' : ''}" data-k="${k.id}" data-s="${s}">${t(s)}</button>`).join('')}</div></div>`;
       }).join('') || `<p class="muted">${t('noKids')}</p>`}</div>
-      ${active.length && !round?.finished ? `<div class="bottom-bar"><button class="btn primary" id="finish">✓ ${t('finishRound')}</button></div>` : ''}`;
+      ${multi ? `<div class="bottom-bar bulk"><span class="muted">${t('selectedN', pick.size)}</span><div class="st">${['present', 'leave', 'absent'].map(s => `<button class="${s} on" data-bulk="${s}" ${pick.size ? '' : 'disabled'}>${t(s)}</button>`).join('')}</div></div>`
+        : active.length && !round?.finished ? `<div class="bottom-bar"><button class="btn primary" id="finish">✓ ${t('finishRound')}</button></div>` : ''}`;
     $('#day').onchange = (e) => { attDay = e.target.value || today(); pAttendance().catch(fail); };
     const q = $('#q'), filter = () => view.querySelectorAll('.att').forEach(r => r.hidden = !r.dataset.n.includes(q.value.trim().toLowerCase()));
     if (q) { q.oninput = filter; if (qv) filter(); }
@@ -439,6 +470,17 @@ async function pAttendance() {
       draw(); window.scrollTo(0, y);
       try { prev === s ? await api.clearAttendance(k, attDay) : await api.setAttendance(k, attDay, s); lbCache.at = 0; }
       catch (e) { if (prev) status[k] = prev; else delete status[k]; draw(); fail(e); }
+    });
+    $('#multi')?.addEventListener('click', () => { multi = !multi; pick.clear(); draw(); });
+    $('#pickAll')?.addEventListener('click', () => { pick.size === active.length ? pick.clear() : active.forEach(k => pick.add(k.id)); draw(); });
+    view.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const id = b.dataset.p, y = window.scrollY; pick.has(id) ? pick.delete(id) : pick.add(id); draw(); window.scrollTo(0, y); });
+    view.querySelectorAll('[data-bulk]').forEach(b => b.onclick = async () => {
+      const s = b.dataset.bulk, ids = [...pick];
+      view.querySelectorAll('[data-bulk]').forEach(x => x.disabled = true);
+      try {
+        for (const k of ids) { await api.setAttendance(k, attDay, s); status[k] = s; }
+        lbCache.at = 0; toast(t('bulkDone', ids.length, t(s))); pick.clear(); multi = false; draw();
+      } catch (e) { fail(e); draw(); }
     });
     const fin = $('#finish');
     if (fin) fin.onclick = async () => {
@@ -468,11 +510,11 @@ async function pPoints() {
     view.innerHTML = `${head}
       ${dets.length ? `<p class="muted" style="margin:0 0 8px">${t('pickDetail')}</p><div class="dchips">${['', ...dets].map(d => `<button class="dchip ${pw.detail === d ? 'on' : ''}" data-d="${esc(d)}">${d ? esc(d) : t('noDetail')}</button>`).join('')}</div>` : ''}
       <h2 style="margin-bottom:12px">${esc(cOf(pw.skill).icon)} ${t('s2')}</h2>
-      <div class="amounts">${[5, 10, 20, 50, -5, -10].map(a => `<button class="opt ${a < 0 ? 'minus' : ''}" data-a="${a}">${signed(a)}</button>`).join('')}</div>
+      <div class="amounts">${(pw.skill === 'bonus' ? [5, 10, 20, 50] : [5, 10, 20, 50, -5, -10]).map(a => `<button class="opt ${a < 0 ? 'minus' : ''}" data-a="${a}">${signed(a)}</button>`).join('')}</div>
       <div class="field" style="margin-top:16px"><label>${t('customAmt')}</label>
         <div style="display:flex;gap:10px"><input class="input" id="custom" type="number" inputmode="numeric" min="-1000" max="1000"><button class="btn primary" id="customGo">${t('next')}</button></div></div>`;
     view.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { pw.detail = b.dataset.d; view.querySelectorAll('[data-d]').forEach(x => x.classList.toggle('on', x === b)); });
-    const go = (a) => { if (!a || Math.abs(a) > 1000) return; pw.amount = a; pw.step = 3; pPoints(); };
+    const go = (a) => { if (!a || Math.abs(a) > 1000) return; if (pw.skill === 'bonus' && a < 0) { toast(t('bonusPositive')); return; } pw.amount = a; pw.step = 3; pPoints(); };
     view.querySelectorAll('[data-a]').forEach(b => b.onclick = () => go(Number(b.dataset.a)));
     $('#customGo').onclick = () => go(Math.trunc(Number($('#custom').value)));
   } else {
@@ -679,7 +721,9 @@ async function pFeedback() {
       <span class="grow"><b>${f.kid_name ? esc(f.kid_name) : t('anon')}</b><span class="sub">${new Date(f.created_at).toLocaleString(getLang() === 'th' ? 'th-TH' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</span>
       <span style="display:block;margin-top:4px">${esc(f.message)}</span></span>
       <button class="btn small danger" data-del="${f.id}">${t('del')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
+  const hadNew = list.some(f => f.created_at > (localStorage.getItem('ya_fb_seen') || ''));
   if (list[0]) localStorage.setItem('ya_fb_seen', list[0].created_at);
+  if (hadNew) setTimeout(() => hearts(view.querySelector('.fb-item') || view.querySelector('.card')), 300);
   $('#fbSwitch').onclick = async (e) => {
     const sw = e.currentTarget, turningOn = !sw.classList.contains('on');
     if (!turningOn && !(await confirmBox(t('fbOffWarn'), t('turnOff')))) return;
@@ -772,7 +816,6 @@ async function render() {
   const seq = ++renderSeq, h = location.hash || '';
   const isAdult = h.startsWith('#/admin');
   document.body.classList.toggle('adult', isAdult);
-  if (isAdult && music.playing) { music.stop(); localStorage.setItem('ya_music', 'on'); }
   $('#kidSheet').hidden = true;
   isAdult ? snow.stop() : snow.start();
   paintChrome();
