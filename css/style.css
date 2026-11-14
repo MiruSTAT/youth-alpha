@@ -514,3 +514,7 @@ body[data-theme="snow"] .mrow, body[data-theme="snow"] .rank-row, body[data-them
 .bottom-bar.bulk button:disabled { opacity: .4; }
 .att-pick .opt-sub { font-weight: 600; }
 @media (prefers-reduced-motion: reduce) { .menu a.alert { box-shadow: inset 0 0 0 2px var(--absent); } }
+
+/* update 9: prizes sit directly on the shelves */
+.slot .lbl { margin: 8px 0 2px; max-width: 100%; overflow-wrap: anywhere; line-height: 1.35; }
+.slot .tag { margin: 6px 0 16px; }

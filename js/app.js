@@ -1,8 +1,8 @@
-import { t, getLang, setLang } from './i18n.js?v=12';
-import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=12';
-import { music } from './music.js?v=12';
-import { art, burst, SPECIAL } from './art.js?v=12';
-import { snow } from './snow.js?v=12';
+import { t, getLang, setLang } from './i18n.js?v=13';
+import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=13';
+import { music } from './music.js?v=13';
+import { art, burst, SPECIAL } from './art.js?v=13';
+import { snow } from './snow.js?v=13';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -84,7 +84,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=12');
+    const m = await import('./scene3d.js?v=13');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -259,36 +259,23 @@ const monShort = (d) => new Date(d + 'T00:00:00').toLocaleDateString(getLang() =
 
 async function kidShop() {
   setNav('shop'); scene?.setGlow(0.7);
-  const [{ cats, items }, rows] = await Promise.all([api.shop(), leaderboard()]);
-  const me = rows.find(r => r.id === localStorage.getItem('ya_me'));
-  const live = items.filter(i => i.active);
-  const pairs = []; for (let i = 0; i < cats.length; i += 2) pairs.push(cats.slice(i, i + 2));
+  const { items } = await api.shop();
+  const live = items.filter(i => i.active).sort((x, y) => x.price - y.price);
+  const rows = []; for (let i = 0; i < live.length; i += 2) rows.push(live.slice(i, i + 2));
   view.innerHTML = `<section class="sheet">
     <h1 class="sheet-title">🎁 ${t('shopTitle')}</h1><p class="sheet-sub">${t('shopSub')}</p>
-    ${cats.length ? `<div class="stand">
+    ${live.length ? `<div class="stand">
       <div class="stand-sign">⭐ ${t('shop')} ⭐</div>
       <div class="awning"></div>
-      <div class="shelves">${pairs.map(row => `<div class="shelf-row">${row.map(c => `<button class="slot" data-cat="${c.id}">
-          ${art(c.icon)}<div class="plank"></div><span class="lbl">${esc(c.name)}</span><span class="hint">${t('tapCat')}</span></button>`).join('')}</div>`).join('')}</div>
+      <div class="shelves">${rows.map(row => `<div class="shelf-row">${row.map(i => `<button class="slot" data-i="${i.id}">
+          ${art(i.icon)}<div class="plank"></div><span class="lbl">${esc(i.name)}</span><span class="tag">${i.price} ⭐</span></button>`).join('')}</div>`).join('')}</div>
       <div class="counter"></div></div>` : `<p class="empty">${t('emptyShop')}</p>`}
 </section>`;
-  view.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => {
-    const c = cats.find(x => x.id === b.dataset.cat);
+  // tap a prize: it pops out of the shelf (chip bags spill chips, others sparkle)
+  view.querySelectorAll('.slot').forEach(b => b.onclick = () => {
+    const it = live.find(x => x.id === b.dataset.i);
     b.classList.remove('popping'); void b.offsetWidth; b.classList.add('popping');
-    burst(b.querySelector('.art'), c.effect, 12); music.ding();
-    setTimeout(() => openCategory(c, live.filter(i => i.category_id === c.id), me), 650);
-  });
-}
-function openCategory(c, list, me) {
-  const p = kidSheet(`<div class="panel-head">${art(c.icon)}<h2>${esc(c.name)}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
-    ${list.length ? `<div class="prizes">${list.map(i => {
-      return `<button class="prize" data-i="${i.id}">${art(i.icon)}<span class="nm">${esc(i.name)}</span><span class="tag">${i.price} ⭐</span></button>`;
-    }).join('')}</div>` : `<p class="empty">${t('emptyCat')}</p>`}
-`);
-  p.querySelector('.panel-head .art').style.fontSize = '2rem';
-  p.querySelectorAll('.prize').forEach(b => b.onclick = () => {
-    b.classList.remove('wiggle'); void b.offsetWidth; b.classList.add('wiggle');
-    burst(b.querySelector('.art'), c.effect, 6);
+    burst(b.querySelector('.art'), it.icon === 'chipbag' ? 'chips' : '✨', 12); music.ding();
   });
 }
 
@@ -378,7 +365,6 @@ async function computeNeeds() {
   if (!active.length) n.kids = t('need_kids');
   const live = shop.items.filter(i => i.active);
   if (!live.length) n.shop = t('need_shopEmpty');
-  else { const empty = shop.cats.find(c => !live.some(i => i.category_id === c.id)); if (empty) n.shop = t('need_shopCat', empty.name); }
   if (active.length) {
     const [rowsToday, round] = await Promise.all([api.attendance(today()), api.round(today())]);
     if (rowsToday.length && !round?.finished) n.attendance = t('need_att');
@@ -662,44 +648,26 @@ function wirePickers(form) {
   });
 }
 async function pShop() {
-  const { cats, items } = await api.shop();
+  const { items } = await api.shop();
+  const list = [...items].sort((x, y) => x.price - y.price);
   view.innerHTML = `${pageHead(t('tab_shop'))}
-    <div class="row-actions" style="margin-bottom:12px"><button class="btn primary" id="addItem" ${cats.length ? '' : 'disabled'} style="flex:1">+ ${t('addItem')}</button><button class="btn" id="addCat" style="flex:1">+ ${t('addCategory')}</button></div>
-    ${cats.map(c => `<div class="card cat-block"><div class="cat-head">${art(c.icon)}<b>${esc(c.name)}</b><button class="btn small" data-cat="${c.id}">${t('edit')}</button></div>
-      <div class="list">${items.filter(i => i.category_id === c.id).map(i => `<div class="li click" data-item="${i.id}">${art(i.icon)}
-        <span class="grow">${esc(i.name)}${i.active ? '' : `<span class="sub">${t('hidden')}</span>`}</span><span class="amt">${i.price} ⭐</span><span class="muted">›</span></div>`).join('') || `<p class="muted">${t('emptyCat')}</p>`}</div></div>`).join('')}`;
-  $('#addCat').onclick = () => catForm(null);
-  $('#addItem').onclick = () => itemForm(null, cats);
-  view.querySelectorAll('[data-cat]').forEach(b => b.onclick = () => catForm(cats.find(c => c.id === b.dataset.cat)));
-  view.querySelectorAll('[data-item]').forEach(b => b.onclick = () => itemForm(items.find(i => i.id === b.dataset.item), cats));
+    <button class="btn primary wide" id="addItem" style="margin-bottom:12px">+ ${t('addItem')}</button>
+    <div class="card"><div class="list">${list.map(i => `<div class="li click" data-item="${i.id}">${art(i.icon)}
+      <span class="grow">${esc(i.name)}${i.active ? '' : `<span class="sub">${t('hidden')}</span>`}</span><span class="amt">${i.price} ⭐</span><span class="muted">›</span></div>`).join('') || `<p class="muted">${t('need_shopEmpty')}</p>`}</div></div>`;
+  $('#addItem').onclick = () => itemForm(null);
+  view.querySelectorAll('[data-item]').forEach(b => b.onclick = () => itemForm(list.find(i => i.id === b.dataset.item)));
 }
-async function catForm(c) {
-  const p = modal(c ? t('edit') : t('addCategory'), `
-    <div class="field"><label>${t('catName')}</label><input class="input" name="name" required maxlength="40" value="${esc(c?.name || '')}"></div>
-    <div class="field"><label>${t('shelfIcon')}</label>${pickRow('icon', ICONS, c?.icon || '🎁')}</div>
-    <div class="field"><label>${t('effectIcon')}</label>${pickRow('effect', EFFECTS, c?.effect || '✨')}</div>`,
-    { extra: c ? `<button class="btn small danger" value="delete" formnovalidate>${t('del')}</button>` : '' });
-  wirePickers($('#dlgForm'));
-  const r = await p;
-  try {
-    if (r instanceof FormData) { await api.saveCategory({ ...(c ? { id: c.id } : {}), name: r.get('name').trim(), icon: r.get('icon'), effect: r.get('effect') }); toast(t('saved')); }
-    else if (r === 'delete') { if (!(await confirmBox(t('delCatConfirm', c.name)))) return; await api.deleteCategory(c.id); }
-    else return;
-    pShop();
-  } catch (e) { fail(e); }
-}
-async function itemForm(it, cats) {
+async function itemForm(it) {
   const p = modal(it ? t('edit') : t('addItem'), `
     <div class="field"><label>${t('itemName')}</label><input class="input" name="name" required maxlength="40" value="${esc(it?.name || '')}"></div>
     <div class="field"><label>${t('price')}</label><input class="input" name="price" type="number" inputmode="numeric" min="0" max="100000" required value="${it?.price ?? ''}"></div>
-    <div class="field"><label>${t('category')}</label><select class="input" name="cat">${cats.map(c => `<option value="${c.id}" ${(it?.category_id || cats[0].id) === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
     <div class="field"><label>${t('avatar')}</label>${pickRow('icon', ICONS, it?.icon || '🎁')}</div>`,
     { extra: it ? `<button class="btn small" value="toggle" formnovalidate>${it.active ? t('hidden') : t('show')}</button><button class="btn small danger" value="delete" formnovalidate>${t('del')}</button>` : '' });
   wirePickers($('#dlgForm'));
   const r = await p;
   try {
     if (r instanceof FormData) {
-      await api.saveItem({ ...(it ? { id: it.id } : {}), name: r.get('name').trim(), price: Math.max(0, Math.trunc(Number(r.get('price')) || 0)), category_id: r.get('cat'), icon: r.get('icon') });
+      await api.saveItem({ ...(it ? { id: it.id } : {}), name: r.get('name').trim(), price: Math.max(0, Math.trunc(Number(r.get('price')) || 0)), icon: r.get('icon') });
       toast(t('saved'));
     } else if (r === 'toggle') await api.saveItem({ id: it.id, active: !it.active });
     else if (r === 'delete') { if (!(await confirmBox(t('confirmDel')))) return; await api.deleteItem(it.id); }
@@ -797,7 +765,7 @@ async function buildExcel(only = null) {
     ['xs_att', [...att].sort((a, b) => a.day.localeCompare(b.day)).map(r => ({ [t('date')]: r.day, [t('nickname')]: kidName[r.kid_id] || '', [t('xc_status')]: stTxt[r.status] }))],
     ['xs_attsum', kids.map(k => { const a = attC[k.id] || { present: 0, leave: 0, absent: 0 }; return { [t('nickname')]: k.nickname, [t('present')]: a.present, [t('leave')]: a.leave, [t('absent')]: a.absent }; })],
     ['xs_feedback', fb.map(f => ({ [t('date')]: dt(f.created_at), [t('nickname')]: f.kid_name || t('anon'), [t('xc_mood')]: ['', '😢', '😐', '🙂', '😄'][f.mood] || '', [t('xc_msg')]: f.message }))],
-    ['xs_shop', shop.items.map(i => ({ [t('category')]: shop.cats.find(c => c.id === i.category_id)?.name || '', [t('itemName')]: i.name, [t('xc_points')]: i.price, [t('xc_shown')]: i.active ? '✓' : t('hidden') }))],
+    ['xs_shop', shop.items.map(i => ({ [t('itemName')]: i.name, [t('xc_points')]: i.price, [t('xc_shown')]: i.active ? '✓' : t('hidden') }))],
   ];
   const wb = XLSX.utils.book_new();
   for (const [k, data] of sheets.filter(([k]) => !only || only.includes(k))) {
