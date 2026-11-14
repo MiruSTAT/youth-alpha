@@ -1,8 +1,9 @@
-import { t, getLang, setLang } from './i18n.js?v=14';
-import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=14';
-import { music } from './music.js?v=14';
-import { art, burst, SPECIAL } from './art.js?v=14';
-import { snow } from './snow.js?v=14';
+import { t, getLang, setLang } from './i18n.js?v=15';
+import { api, MODE, ranked, today, eventState, bkkToday } from './data.js?v=15';
+import { music } from './music.js?v=15';
+import { art, burst, SPECIAL } from './art.js?v=15';
+import { snow } from './snow.js?v=15';
+import { track } from './track.js?v=15';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -74,7 +75,7 @@ function paintChrome() {
   document.querySelectorAll('[data-t]').forEach(el => el.textContent = t(el.dataset.t));
 }
 $('#langBtn').onclick = () => { setLang(getLang() === 'th' ? 'en' : 'th'); paintChrome(); render(); };
-$('#musicBtn').onclick = (e) => { e.stopPropagation(); music.toggle(); paintChrome(); };
+$('#musicBtn').onclick = (e) => { e.stopPropagation(); music.toggle(); paintChrome(); track('music', music.playing ? 'on' : 'off'); };
 const firstTap = () => {
   if (music.wantsMusic() && !music.playing) { music.start(); paintChrome(); }
   window.removeEventListener('pointerdown', firstTap);
@@ -84,7 +85,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=14');
+    const m = await import('./scene3d.js?v=15');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -103,7 +104,7 @@ function countUp(el, from, to, ms = 1200) {
 function fbPill(ev) {
   return ev.fb_open ? `<button class="ev-pill feedback" data-ev="fb"><span class="i">💬</span><span>${t('evFeedback')}</span></button>` : '';
 }
-function wirePill(root) { root.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => openFeedback()); }
+function wirePill(root) { root.querySelectorAll('[data-ev]').forEach(b => b.onclick = () => { track('fb_pill'); openFeedback(); }); }
 
 // HOME = ranking, with "my card" on top (no separate "me" page)
 async function kidRank() {
@@ -126,9 +127,9 @@ async function kidRank() {
       <span class="av">${esc(k.avatar)}</span><span class="nm">${esc(k.nickname)}</span><span class="pt">${k.total} ⭐</span></button>`).join('')}</div>
     ${rows.length ? '' : `<p class="empty">${t('noKids')}</p>`}</section>`;
   wirePill(view);
-  view.querySelectorAll('.rank-row').forEach(b => b.onclick = () => kidDetail(rows.find(r => r.id === b.dataset.id), rows));
+  view.querySelectorAll('.rank-row').forEach(b => b.onclick = () => { const k = rows.find(r => r.id === b.dataset.id); track('tap_kid', k?.id === localStorage.getItem('ya_me') ? 'self' : 'other'); kidDetail(k, rows); });
   if (me) {
-    $('#myCard').onclick = () => kidDetail(me, rows);
+    $('#myCard').onclick = () => { track('tap_my_card'); kidDetail(me, rows); };
     const seenKey = `ya_seen_${me.id}`, seen = Number(localStorage.getItem(seenKey) ?? me.total);
     countUp($('#tot'), Math.min(seen, me.total), me.total);
     if (me.total > seen) setTimeout(() => {
@@ -153,10 +154,10 @@ function kidDetail(k, rows) {
         + (det ? `<div class="sub-rows">${Object.entries(det).map(([d, v]) => `<div><span>${esc(d)}</span><span>${v}</span></div>`).join('')}</div>` : '');
     }).join('')}</div>
     ${isMe ? `<button class="text-btn" id="notMe">${t('notMe')}</button>` : `<button class="kbtn" id="thisMe">${t('thisIsMe')}</button>`}`);
-  p.querySelectorAll('.skill-row.has-info').forEach(b => b.onclick = () => catInfo(cOf(b.dataset.c), k.skills[b.dataset.c] || 0));
+  p.querySelectorAll('.skill-row.has-info').forEach(b => b.onclick = () => { track('cat_info', b.dataset.c); catInfo(cOf(b.dataset.c), k.skills[b.dataset.c] || 0); });
   const close = () => { $('#kidSheet').hidden = true; kidRank(); };
-  p.querySelector('#thisMe')?.addEventListener('click', () => { localStorage.setItem('ya_me', k.id); localStorage.setItem(`ya_seen_${k.id}`, k.total); close(); });
-  p.querySelector('#notMe')?.addEventListener('click', () => { localStorage.removeItem('ya_me'); close(); });
+  p.querySelector('#thisMe')?.addEventListener('click', () => { localStorage.setItem('ya_me', k.id); track('set_me'); localStorage.setItem(`ya_seen_${k.id}`, k.total); close(); });
+  p.querySelector('#notMe')?.addEventListener('click', () => { track('not_me'); localStorage.removeItem('ya_me'); close(); });
 }
 
 function catInfo(c, pts) {
@@ -173,6 +174,7 @@ function hearts(el, waves = 3) {
 
 // Bible: trusted links (YouVersion — free, no ads, many Thai versions)
 function openBible() {
+  track('bible_open');
   const link = (href, icon, title, sub) => `<a class="mrow" href="${href}" target="_blank" rel="noopener noreferrer"><span class="mi">${icon}</span><span class="mt"><b>${title}</b><span>${sub}</span></span><span class="mv">↗</span></a>`;
   kidSheet(`<div class="panel-head"><h2>📖 ${t('bible')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
     <p class="cat-info" style="font-size:1rem">${t('bibleIntro')}</p>
@@ -181,6 +183,7 @@ function openBible() {
       ${link('https://play.google.com/store/apps/details?id=com.sirma.mobile.bible.android', '🤖', t('bibleAndroid'), 'Google Play')}
       ${link('https://apps.apple.com/app/id282935706', '🍎', t('bibleIos'), 'App Store')}
     </div>`);
+  $('#kidSheet').querySelectorAll('a.mrow').forEach((l, i) => l.addEventListener('click', () => { track('bible_link', ['web', 'android', 'ios'][i]); }));
 }
 
 // MENU: everything else in one simple list
@@ -200,8 +203,8 @@ async function kidMenu() {
       <a class="mrow quiet" href="#/admin"><span class="mi">🔒</span><span class="mt"><b>${t('adults')}</b><span>${t('adminSub')}</span></span><span class="mv">›</span></a>
     </div></section>`;
   const act = {
-    fb: openFeedback, bible: openBible, theme: openThemes, help: () => showTour(TOUR),
-    lang: () => { setLang(getLang() === 'th' ? 'en' : 'th'); paintChrome(); kidMenu(); },
+    fb: openFeedback, bible: openBible, theme: () => { track('theme_open'); openThemes(); }, help: () => { track('help_open'); showTour(TOUR); },
+    lang: () => { setLang(getLang() === 'th' ? 'en' : 'th'); track('lang', getLang()); paintChrome(); kidMenu(); },
   };
   view.querySelectorAll('[data-m]').forEach(b => b.onclick = () => act[b.dataset.m]());
 }
@@ -210,10 +213,11 @@ function openThemes() {
   const cur = document.body.dataset.theme || 'snow';
   const p = kidSheet(`<div class="panel-head"><h2>🎨 ${t('theme')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
     <div class="themes">${THEMES.map(([k, g]) => `<button class="sw ${k === cur ? 'on' : ''}" data-th="${k}"><div class="pv" style="background:${g}">🎄</div><span class="nm">${t('th_' + k)}</span></button>`).join('')}</div>`);
-  p.querySelectorAll('[data-th]').forEach(b => b.onclick = () => { applyTheme(b.dataset.th); openThemes(); kidMenu(); });
+  p.querySelectorAll('[data-th]').forEach(b => b.onclick = () => { applyTheme(b.dataset.th); track('theme', b.dataset.th); openThemes(); kidMenu(); });
 }
 
 async function openFeedback() {
+  track('fb_open');
   const ev = await eventInfo(true);
   const head = `<div class="panel-head"><h2>💬 ${t('fbTitle')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>`;
   const sentKey = 'ya_fb_' + bkkToday();
@@ -237,6 +241,7 @@ async function openFeedback() {
     send.disabled = true;
     const useName = me && p.querySelector('#fbName')?.checked;
     try {
+      track('fb_send', `mood ${mood}${useName ? ', named' : ', anonymous'}`);
       await api.sendFeedback({ kid_id: useName ? me.id : null, kid_name: useName ? me.nickname : '', mood, message: msg.value.trim().slice(0, 500) });
       localStorage.setItem(sentKey, '1');
       p.innerHTML = `${head}<p class="fb-done">${t('fbThanks')}</p>`; music.ding(); hearts(p.querySelector('.fb-done'));
@@ -274,6 +279,7 @@ async function kidShop() {
   // tap a prize: it pops out of the shelf (chip bags spill chips, others sparkle)
   view.querySelectorAll('.slot').forEach(b => b.onclick = () => {
     const it = live.find(x => x.id === b.dataset.i);
+    track('shop_tap', it?.name);
     b.classList.remove('popping'); void b.offsetWidth; b.classList.add('popping');
     burst(b.querySelector('.art'), it.icon === 'chipbag' ? 'chips' : '✨', 12); music.ding();
   });
@@ -301,8 +307,8 @@ function showTour(steps) {
       <div class="tour-bubble" style="left:${bl}px;right:auto;width:${bw}px;margin:0;${below ? `top:${r.bottom + 64}px` : `bottom:${innerHeight - r.top + 64}px`}">
         <p>${t(s.key)}</p><div class="row"><span class="dots">${steps.length > 1 ? `${i + 1} / ${steps.length}` : ''}</span>
         <span>${i < steps.length - 1 ? `<button class="sk">${t('skip')}</button>` : ''}<button class="go">${i < steps.length - 1 ? t('next') : t('gotIt')}</button></span></div></div>`;
-    box.querySelector('.go').onclick = () => { i++; i < steps.length ? place() : end(); };
-    box.querySelector('.sk')?.addEventListener('click', end);
+    box.querySelector('.go').onclick = () => { track(i < steps.length - 1 ? 'tour_next' : 'tour_done', steps[i].key); i++; i < steps.length ? place() : end(); };
+    box.querySelector('.sk')?.addEventListener('click', () => { track('tour_skip', steps[i].key); end(); });
   }
   box.hidden = false; place(); window.addEventListener('resize', place);
 }
@@ -326,7 +332,7 @@ async function adultGate(page) {
   if (!session) return loginView();
   adult.role = await api.myRole(); adult.myId = await api.myId();
   if (adult.role === 'pending') return pendingView();
-  const pages = { attendance: pAttendance, attsum: pAttSummary, points: pPoints, history: pHistory, kids: pKids, shop: pShop, pcats: pPcats, feedback: pFeedback, export: pExport, ...(adult.role === 'admin' ? { settings: pSettings } : {}) };
+  const pages = { attendance: pAttendance, attsum: pAttSummary, points: pPoints, history: pHistory, kids: pKids, shop: pShop, pcats: pPcats, feedback: pFeedback, export: pExport, logs: pLogs, ...(adult.role === 'admin' ? { settings: pSettings } : {}) };
   if (!pages[page]) return adultHome();
   await pages[page]();
 }
@@ -336,7 +342,7 @@ function adultHome() {
     ['g_daily', [['attendance', '✅'], ['points', '⭐']]],
     ['g_kids', [['kids', '👧'], ['feedback', '💬']]],
     ['g_rewards', [['pcats', '🏷️'], ['shop', '🎁']]],
-    ['g_system', [['export', '📥'], ...(adult.role === 'admin' ? [['settings', '⚙️']] : [])]],
+    ['g_system', [['export', '📥'], ['logs', '📜'], ...(adult.role === 'admin' ? [['settings', '⚙️']] : [])]],
   ];
   view.innerHTML = `
     <div class="page-head"><a class="back" href="#/">‹ ${t('back')}</a><h1 class="page-title">${t('adultMenu')}</h1></div>
@@ -346,16 +352,15 @@ function adultHome() {
     ${MODE === 'preview' ? `<p class="preview-note">${t('previewNote')}</p>` : ''}`;
   $('#logout').onclick = async () => { await api.signOut(); location.hash = '#/admin'; render(); };
   // red indicators: things that still need filling in
+  const seq = renderSeq;
   computeNeeds().then(n => {
-    const keys = Object.keys(n);
-    keys.forEach(k => {
-      const a = view.querySelector(`.menu [data-k="${k}"]`); if (!a) return;
-      a.classList.add('alert');
-      a.querySelector('.mi').insertAdjacentHTML('beforeend', '<span class="dot"></span>');
-      a.querySelector('.mt span').outerHTML = `<span class="need">${esc(n[k])}</span>`;
+    if (seq !== renderSeq) return;                              // page changed meanwhile
+    Object.keys(n).forEach(k => {
+      const el = view.querySelector(`.menu [data-k="${k}"]`); if (!el || el.classList.contains('alert')) return;
+      el.classList.add('alert');
+      el.querySelector('.mi').insertAdjacentHTML('beforeend', '<span class="dot"></span>');
+      el.querySelector('.mt span').outerHTML = `<span class="need">${esc(n[k])}</span>`;
     });
-    if (keys.length) view.querySelector('.page-head').insertAdjacentHTML('afterend',
-      `<div class="alert-banner"><span class="bell">🔔</span><span><b>${t('needCount', keys.length)}</b><br>${keys.map(k => t('tab_' + k)).join(' · ')}</span></div>`);
   }).catch(console.error);
 }
 async function computeNeeds() {
@@ -729,7 +734,71 @@ function loadXLSX() {
   if (window.XLSX) return Promise.resolve(window.XLSX);
   return new Promise((res, rej) => { const s = document.createElement('script'); s.src = XLSX_URL; s.onload = () => res(window.XLSX); s.onerror = rej; document.head.appendChild(s); });
 }
-const XL_SHEETS = [['xs_summary', 'summary', '📊'], ['xs_points', 'points', '⭐'], ['xs_att', 'attendance', '✅'], ['xs_attsum', 'attendance-totals', '📈'], ['xs_feedback', 'feedback', '💬'], ['xs_shop', 'shop', '🎁']];
+const XL_SHEETS = [['xs_summary', 'summary', '📊'], ['xs_points', 'points', '⭐'], ['xs_att', 'attendance', '✅'], ['xs_attsum', 'attendance-totals', '📈'], ['xs_feedback', 'feedback', '💬'], ['xs_shop', 'shop', '🎁'],
+  ['xs_adminlog', 'admin-log', '📜'], ['xs_kidlog', 'kid-activity', '👆'], ['xs_kidsum', 'kid-activity-summary', '📈']];
+const LOG_SHEETS = ['xs_adminlog', 'xs_kidlog', 'xs_kidsum'];
+const TBL = { kids: 'lt_kids', points: 'lt_points', attendance: 'lt_att', attendance_rounds: 'lt_round', shop_items: 'lt_shop', point_categories: 'lt_pcats', settings: 'lt_settings', staff: 'lt_staff', kid_events: 'lt_kidlog' };
+const SKIP_FIELDS = new Set(['updated_at', 'created_at', 'updated_by', 'given_by', 'created_by', 'finished_by', 'finished_at']);
+// one admin-log row -> readable text
+function describeLog(e, kidName) {
+  const o = e.old_data || {}, n = e.new_data || {}, r = { ...o, ...n };
+  const who = (id) => kidName[id] || '?';
+  let item = '';
+  switch (e.table_name) {
+    case 'kids': item = r.nickname; break;
+    case 'points': item = `${who(r.kid_id)} ${signed(r.amount)} ${cName(cOf(r.skill))}${r.detail ? ' (' + r.detail + ')' : ''}${r.note ? ' · ' + r.note : ''}`; break;
+    case 'attendance': item = `${who(r.kid_id)} · ${r.day} · ${t(r.status) || r.status}`; break;
+    case 'attendance_rounds': item = `${r.day} · ${r.finished ? t('finished') : t('reopen')}`; break;
+    case 'shop_items': item = `${r.name} (${r.price} ⭐)`; break;
+    case 'point_categories': item = r.name_th; break;
+    case 'staff': item = r.role; break;
+    case 'kid_events': item = t('logCleared', r.rows_deleted ?? 0); break;
+    default: item = '';
+  }
+  let changes = '';
+  if (e.op === 'UPDATE') changes = Object.keys(n).filter(k => !SKIP_FIELDS.has(k) && JSON.stringify(o[k]) !== JSON.stringify(n[k]))
+    .map(k => `${k}: ${o[k] ?? '—'} → ${n[k] ?? '—'}`).join(' ; ');
+  else if (e.op === 'INSERT' && e.table_name === 'settings') changes = JSON.stringify(n);
+  return { item, changes, op: t('op_' + e.op) || e.op, area: t(TBL[e.table_name] || '') || e.table_name };
+}
+const EVT_TH = ['open_app', 'view', 'tap_kid', 'tap_my_card', 'set_me', 'not_me', 'cat_info', 'shop_tap', 'bible_open', 'bible_link', 'theme_open', 'theme', 'lang', 'music', 'help_open', 'tour_next', 'tour_skip', 'tour_done', 'fb_pill', 'fb_open', 'fb_send', 'tree_tap'];
+const evName = (e) => EVT_TH.includes(e) ? t('ev_' + e) : e;
+
+async function pLogs() {
+  const since = new Date(Date.now() - 7 * 864e5).toISOString();
+  const [log, kids, ev7] = await Promise.all([api.auditLog(60), api.kids(), api.kidEventsSince(since), pcats()]);
+  const kidName = Object.fromEntries(kids.map(k => [k.id, k.nickname]));
+  const dt = (s) => new Date(new Date(s).getTime() + 7 * 3600e3).toISOString().slice(0, 16).replace('T', ' ');
+  const counts = {}; ev7.forEach(e => counts[e.event] = (counts[e.event] || 0) + 1);
+  const devices = new Set(ev7.map(e => e.device_id)).size;
+  const top = Object.entries(counts).sort((x, y) => y[1] - x[1]).slice(0, 8);
+  view.innerHTML = `${pageHead(t('tab_logs'))}
+    <h2 class="grp">📜 ${t('adminLog')}</h2>
+    <p class="muted" style="margin:-4px 4px 8px">🔒 ${t('adminLogNote')}</p>
+    <button class="btn wide" data-x="xs_adminlog" style="margin-bottom:10px">📥 ${t('exportAdminLog')}</button>
+    <div class="card"><div class="list">${log.map(e => { const d = describeLog(e, kidName); return `<div class="li"><span class="grow"><b>${esc(d.op)} · ${esc(d.area)}</b> ${esc(d.item || '')}
+      <span class="sub">${dt(e.created_at)} · ${esc(e.actor_email || t('lt_system'))}${d.changes ? ' · ' + esc(d.changes) : ''}</span></span></div>`; }).join('') || `<p class="muted">${t('none')}</p>`}</div></div>
+    <h2 class="grp">👆 ${t('kidLog')}</h2>
+    <div class="card"><p style="margin:0 0 8px"><b>${t('last7')}</b> · ${t('evCount', ev7.length)} · ${t('devCount', devices)}</p>
+      <div class="list">${top.map(([e, c]) => `<div class="li"><span class="grow">${esc(evName(e))}</span><span class="amt">${c}</span></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>
+    <button class="btn wide" data-x="xs_kidlog" style="margin-bottom:8px">📥 ${t('exportKidLog')}</button>
+    <button class="btn wide" data-x="xs_kidsum">📥 ${t('exportKidSum')}</button>
+    ${adult.role === 'admin' ? `<button class="btn danger wide" id="clearKid" style="margin-top:20px">🗑️ ${t('clearKidLog')}</button>
+    <p class="muted" style="margin:6px 4px 0">${t('clearKidNote')}</p>` : ''}`;
+  view.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => {
+    const keep = b.innerHTML; b.disabled = true; b.textContent = t('exporting');
+    try { await buildExcel([b.dataset.x]); } catch (err) { fail(err); }
+    b.disabled = false; b.innerHTML = keep;
+  });
+  $('#clearKid')?.addEventListener('click', async () => {
+    const r = await modal('⚠️ ' + t('warnTitle'), `<p style="white-space:pre-line;font-size:1.05rem">${esc(t('clearKidWarn'))}</p>
+      <div class="field"><label>${t('password')}</label><input class="input" name="pw" type="password" required autocomplete="current-password"></div>`,
+      { okText: t('clearNow'), danger: true });
+    if (!(r instanceof FormData)) return;
+    try { await api.reauth(r.get('pw')); } catch { toast(t('errLogin')); return; }
+    try { const n = await api.clearKidEvents(); toast(t('logCleared', n)); pLogs(); } catch (e) { fail(e); }
+  });
+}
 async function pExport() {
   view.innerHTML = `${pageHead(t('tab_export'))}
     <button class="btn primary wide" data-x="all" style="margin-bottom:6px">📥 ${t('exportAll')}</button>
@@ -743,8 +812,10 @@ async function pExport() {
   });
 }
 async function buildExcel(only = null) {
-  const [XLSX, kids, rows, cats, pts, att, fb, shop] = await Promise.all([loadXLSX(), api.kids(), leaderboard(true), pcats(true), api.allPoints(),
-    api.attendanceAll(), api.feedback().catch(() => []), api.shop()]);
+  const want = (k) => !only || only.includes(k);
+  const [XLSX, kids, rows, cats, pts, att, fb, shop, alog, kev] = await Promise.all([loadXLSX(), api.kids(), leaderboard(true), pcats(true), api.allPoints(),
+    api.attendanceAll(), api.feedback().catch(() => []), api.shop(),
+    want('xs_adminlog') ? api.auditAll() : [], (want('xs_kidlog') || want('xs_kidsum')) ? api.kidEvents() : []]);
   const kidName = Object.fromEntries(kids.map(k => [k.id, k.nickname]));
   const dt = (s) => s ? new Date(new Date(s).getTime() + 7 * 3600e3).toISOString().slice(0, 16).replace('T', ' ') : ''; // Thai time, 2026-11-14 21:41
   const stTxt = { present: t('present'), leave: t('leave'), absent: t('absent') };
@@ -763,10 +834,14 @@ async function buildExcel(only = null) {
     ['xs_att', [...att].sort((a, b) => a.day.localeCompare(b.day)).map(r => ({ [t('date')]: r.day, [t('nickname')]: kidName[r.kid_id] || '', [t('xc_status')]: stTxt[r.status] }))],
     ['xs_attsum', kids.map(k => { const a = attC[k.id] || { present: 0, leave: 0, absent: 0 }; return { [t('nickname')]: k.nickname, [t('present')]: a.present, [t('leave')]: a.leave, [t('absent')]: a.absent }; })],
     ['xs_feedback', fb.map(f => ({ [t('date')]: dt(f.created_at), [t('nickname')]: f.kid_name || t('anon'), [t('xc_mood')]: ['', '😢', '😐', '🙂', '😄'][f.mood] || '', [t('xc_msg')]: f.message }))],
+    ['xs_adminlog', alog.map(e => { const d = describeLog(e, kidName); return { [t('xc_time')]: dt(e.created_at), [t('xc_admin')]: e.actor_email || t('lt_system'), [t('xc_action')]: d.op, [t('xc_area')]: d.area, [t('xc_item')]: d.item || '', [t('xc_changes')]: d.changes, [t('xc_key')]: e.row_key }; })],
+    ['xs_kidlog', kev.map(e => ({ [t('xc_time')]: dt(e.created_at), [t('xc_device')]: e.device_id, [t('nickname')]: kidName[e.kid_id] || '', [t('xc_event')]: evName(e.event), [t('xc_eventcode')]: e.event, [t('xc_detail')]: e.detail, [t('xc_page')]: e.path }))],
+    ['xs_kidsum', (() => { const m = {}; kev.forEach(e => { const x = (m[e.event] ??= { n: 0, d: new Set(), k: new Set() }); x.n++; x.d.add(e.device_id); if (e.kid_id) x.k.add(e.kid_id); });
+      return Object.entries(m).sort((a, b) => b[1].n - a[1].n).map(([ev, x]) => ({ [t('xc_event')]: evName(ev), [t('xc_eventcode')]: ev, [t('xc_count')]: x.n, [t('xc_devices')]: x.d.size, [t('xc_kids')]: x.k.size })); })()],
     ['xs_shop', shop.items.map(i => ({ [t('itemName')]: i.name, [t('xc_points')]: i.price, [t('xc_shown')]: i.active ? '✓' : t('hidden') }))],
   ];
   const wb = XLSX.utils.book_new();
-  for (const [k, data] of sheets.filter(([k]) => !only || only.includes(k))) {
+  for (const [k, data] of sheets.filter(([k]) => only ? only.includes(k) : true)) {
     const ws = XLSX.utils.json_to_sheet(data.length ? data : [{ '-': t('none') }]);
     const cols = Object.keys(data[0] || { '-': 1 });
     ws['!cols'] = cols.map(c => ({ wch: Math.min(50, Math.max(c.length + 2, ...data.map(r => String(r[c] ?? '').length + 2))) }));
@@ -789,6 +864,7 @@ async function render() {
     if (isAdult) { scene?.stop(); return await adultGate(h.split('/')[2]); }
     await ensureScene();
     if (seq !== renderSeq) return;
+    track('view', h === '#/shop' ? 'shop' : h === '#/menu' ? 'menu' : 'ranking');
     if (h === '#/shop') return await kidShop();
     if (h === '#/menu') return await kidMenu();
     if (h.startsWith('#/me') || h === '#/rank') { history.replaceState(null, '', '#/'); }
@@ -800,7 +876,11 @@ window.addEventListener('hashchange', () => {
   if (location.hash === '#/admin/points') pw = { step: 1, skill: null, detail: '', amount: null, sel: new Set() };
   window.scrollTo(0, 0); render();
 });
-api.onAuth?.(() => { if (location.hash.startsWith('#/admin')) render(); });
+// re-draw admin pages only when someone signs in / out (not on token refresh)
+api.onAuth?.((event) => { if (location.hash.startsWith('#/admin') && (!event || event === 'SIGNED_IN' || event === 'SIGNED_OUT')) render(); });
 render();
+track('open_app', `${document.body.dataset.theme} · ${getLang()} · ${matchMedia('(display-mode: standalone)').matches ? 'installed' : 'browser'} · ${innerWidth}x${innerHeight}`);
+let lastTree = 0;
+$('#scene').addEventListener('click', () => { if (Date.now() - lastTree > 3000) { lastTree = Date.now(); track('tree_tap'); } });
 
 if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

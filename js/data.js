@@ -16,7 +16,7 @@ function supabaseApi() {
   const uid = async () => (await sb.auth.getUser()).data.user?.id;
 
   return {
-    onAuth: (cb) => sb.auth.onAuthStateChange(() => cb()),
+    onAuth: (cb) => sb.auth.onAuthStateChange((event) => cb(event)),
     async leaderboard() {
       const [lb, st] = await Promise.all([sb.from('leaderboard').select('*'), sb.from('kid_skill_totals').select('*')]);
       const rows = ok(lb).map(r => ({ ...r, skills: {} })), by = Object.fromEntries(rows.map(r => [r.id, r]));
@@ -112,7 +112,23 @@ function supabaseApi() {
     async sendFeedback(row) { ok(await sb.from('feedback').insert(row)); },
     async feedback() { return ok(await sb.from('feedback').select('*').order('created_at', { ascending: false }).limit(200)); },
     async deleteFeedback(id) { ok(await sb.from('feedback').delete().eq('id', id)); },
+
+    // ---- logs
+    async logEvents(rows) { ok(await sb.from('kid_events').insert(rows)); },
+    async auditLog(limit = 100) { return ok(await sb.from('audit_log').select('*').order('created_at', { ascending: false }).limit(limit)); },
+    async auditAll() { return pageAll((a, b) => sb.from('audit_log').select('*').order('created_at').range(a, b)); },
+    async kidEvents() { return pageAll((a, b) => sb.from('kid_events').select('*').order('created_at').range(a, b)); },
+    async kidEventsSince(iso) { return pageAll((a, b) => sb.from('kid_events').select('event,device_id,kid_id,created_at').gte('created_at', iso).order('created_at').range(a, b)); },
+    async reauth(password) {
+      const email = (await sb.auth.getUser()).data.user?.email;
+      ok(await sb.auth.signInWithPassword({ email, password }));
+    },
+    async clearKidEvents() { return ok(await sb.rpc('clear_kid_events')); },
   };
+  async function pageAll(q) {
+    const out = [];
+    for (let from = 0; ; from += 1000) { const rows = ok(await q(from, from + 999)); out.push(...rows); if (rows.length < 1000) return out; }
+  }
 }
 
 // ---------------------------------------------------------------- Preview (local)
@@ -122,7 +138,10 @@ function previewApi() {
     { kids: [], attendance: [], rounds: [], points: [], money: [], settings: { attendance_points: 10 }, loggedIn: false };
   let db = load();
   db.schedule ??= []; db.items ??= [];
-  db.feedback ??= [];
+  db.feedback ??= []; db.audit ??= []; db.events ??= [];
+  let aid = db.audit.length;
+  const audit = (table_name, op, o, n) => db.audit.push({ id: ++aid, created_at: new Date().toISOString(), actor_email: 'preview@local', table_name, op,
+    row_key: (n || o)?.id || (n || o)?.key || '', old_data: o ? JSON.parse(JSON.stringify(o)) : null, new_data: n ? JSON.parse(JSON.stringify(n)) : null });
   Object.assign(db.settings, { event_dow: 0, event_start: '10:00', event_end: '12:00', fb_dow: 0, fb_start: '12:00', fb_end: '23:59', tip_days: 3, fb_open: false, ...db.settings });
   db.pcats ??= [['music', 'ดนตรี', 'Music', '🎵', '', 'เปียโน\nร้องเพลง\nซ้อมดนตรี'],
     ['english', 'อังกฤษ', 'English', '🔤', ''], ['thai', 'อ่านไทย', 'Thai reading', '📖', ''], ['questions', 'ตอบคำถาม', 'Answering questions', '🙋', ''],
@@ -153,7 +172,11 @@ function previewApi() {
       });
     },
     async pointCats() { return [...db.pcats].sort((a, b) => a.sort - b.sort); },
-    async savePointCat(row, isNew) { if (isNew) db.pcats.push({ active: true, sort: db.pcats.length + 1, ...row }); else Object.assign(db.pcats.find(c => c.key === row.key), row); save(); },
+    async savePointCat(row, isNew) {
+      if (isNew) { const n = { active: true, sort: db.pcats.length + 1, ...row }; db.pcats.push(n); audit('point_categories', 'INSERT', null, n); }
+      else { const r = db.pcats.find(c => c.key === row.key), o = { ...r }; Object.assign(r, row); audit('point_categories', 'UPDATE', o, r); }
+      save();
+    },
     async deletePointCat(key) { if (db.points.some(p => p.skill === key)) throw new Error('in use'); db.pcats = db.pcats.filter(c => c.key !== key); save(); },
     async session() { return db.loggedIn ? { user: { id: 'preview-admin' } } : null; },
     async signIn() { db.loggedIn = true; save(); listeners.forEach(f => f()); },
@@ -163,9 +186,10 @@ function previewApi() {
     async claimAdmin() { return 'ok'; },
 
     async kids() { return [...db.kids].sort((a, b) => a.nickname.localeCompare(b.nickname, 'th')); },
-    async addKid(k) { const r = { id: id(), active: true, grp: '', created_at: now(), ...k }; db.kids.push(r); save(); return r; },
-    async updateKid(kid, patch) { Object.assign(db.kids.find(k => k.id === kid), patch); save(); },
+    async addKid(k) { const r = { id: id(), active: true, grp: '', created_at: now(), ...k }; db.kids.push(r); audit('kids', 'INSERT', null, r); save(); return r; },
+    async updateKid(kid, patch) { const r = db.kids.find(k => k.id === kid), o = { ...r }; Object.assign(r, patch); audit('kids', 'UPDATE', o, r); save(); },
     async deleteKid(kid) {
+      audit('kids', 'DELETE', db.kids.find(k => k.id === kid), null);
       db.kids = db.kids.filter(k => k.id !== kid);
       ['attendance', 'points', 'money'].forEach(t => db[t] = db[t].filter(r => r.kid_id !== kid)); save();
     },
@@ -173,14 +197,15 @@ function previewApi() {
     async attendance(day, session = 'main') { return db.attendance.filter(a => a.day === day && a.session === session); },
     async setAttendance(kid_id, day, status, session = 'main') {
       let row = db.attendance.find(a => a.kid_id === kid_id && a.day === day && a.session === session);
-      if (row) { row.status = status; row.updated_at = now(); }
-      else { row = { id: id(), kid_id, day, session, status, updated_at: now() }; db.attendance.push(row); }
+      if (row) { const o = { ...row }; row.status = status; row.updated_at = now(); audit('attendance', 'UPDATE', o, row); }
+      else { row = { id: id(), kid_id, day, session, status, updated_at: now() }; db.attendance.push(row); audit('attendance', 'INSERT', null, row); }
       syncAtt(row); save();
     },
     async clearAttendance(kid_id, day, session = 'main') {
       const row = db.attendance.find(a => a.kid_id === kid_id && a.day === day && a.session === session);
       if (!row) return;
       db.points = db.points.filter(p => p.attendance_id !== row.id);
+      audit('attendance', 'DELETE', row, null);
       db.attendance = db.attendance.filter(a => a !== row); save();
     },
     async round(day, session = 'main') { return db.rounds.find(r => r.day === day && r.session === session) || null; },
@@ -189,19 +214,19 @@ function previewApi() {
       if (r) r.finished = finished; else db.rounds.push({ day, session, finished }); save();
     },
 
-    async addPoints(rows) { rows.forEach(r => db.points.push({ id: id(), attendance_id: null, created_at: now(), ...r })); save(); },
+    async addPoints(rows) { rows.forEach(r => { const p = { id: id(), attendance_id: null, created_at: now(), ...r }; db.points.push(p); audit('points', 'INSERT', null, p); }); save(); },
     async recentPoints(limit = 30) {
       return db.points.filter(p => !p.attendance_id).sort((a, b) => b.created_at.localeCompare(a.created_at))
         .slice(0, limit).map(p => ({ ...p, kids: kidOf(p.kid_id) }));
     },
-    async deletePoint(pid) { db.points = db.points.filter(p => p.id !== pid); save(); },
+    async deletePoint(pid) { audit('points', 'DELETE', db.points.find(p => p.id === pid), null); db.points = db.points.filter(p => p.id !== pid); save(); },
 
     async money() { return [...db.money].sort((a, b) => b.created_at.localeCompare(a.created_at)); },
     async addMoney(m) { db.money.push({ id: id(), created_at: now(), ...m }); save(); },
     async deleteMoney(mid) { db.money = db.money.filter(m => m.id !== mid); save(); },
 
     async settings() { return db.settings; },
-    async saveSettings(patch) { Object.assign(db.settings, patch); save(); },
+    async saveSettings(patch) { const o = { ...db.settings }; Object.assign(db.settings, patch); audit('settings', 'UPDATE', o, db.settings); save(); },
 
     async pendingUsers() { return []; },
     async staffList() { return [{ user_id: 'preview-admin', email: 'preview@local', display_name: 'Preview', role: 'admin' }]; },
@@ -219,8 +244,13 @@ function previewApi() {
     },
     async saveCategory(row) { const r = row.id && db.cats.find(x => x.id === row.id); r ? Object.assign(r, row) : db.cats.push({ sort: db.cats.length + 1, ...row, id: id() }); save(); },
     async deleteCategory(cid) { db.cats = db.cats.filter(x => x.id !== cid); db.items = db.items.filter(x => x.category_id !== cid); save(); },
-    async saveItem(row) { const r = row.id && db.items.find(x => x.id === row.id); r ? Object.assign(r, row) : db.items.push({ active: true, sort: 0, ...row, id: id() }); save(); },
-    async deleteItem(iid) { db.items = db.items.filter(x => x.id !== iid); save(); },
+    async saveItem(row) {
+      const r = row.id && db.items.find(x => x.id === row.id);
+      if (r) { const o = { ...r }; Object.assign(r, row); audit('shop_items', 'UPDATE', o, r); }
+      else { const n = { active: true, sort: 0, ...row, id: id() }; db.items.push(n); audit('shop_items', 'INSERT', null, n); }
+      save();
+    },
+    async deleteItem(iid) { audit('shop_items', 'DELETE', db.items.find(x => x.id === iid), null); db.items = db.items.filter(x => x.id !== iid); save(); },
 
     async eventInfo() { const { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open } = db.settings; return { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open }; },
     async allPoints() { return db.points.map(p => ({ ...p, kids: kidOf(p.kid_id) })); },
@@ -229,7 +259,15 @@ function previewApi() {
       db.feedback.unshift({ id: id(), created_at: now(), ...row }); save();
     },
     async feedback() { return db.feedback; },
-    async deleteFeedback(fid) { db.feedback = db.feedback.filter(f => f.id !== fid); save(); },
+    async deleteFeedback() { throw new Error('feedback is permanent'); },
+
+    async logEvents(rows) { rows.forEach(r => db.events.push({ id: db.events.length + 1, created_at: now(), ...r })); save(); },
+    async auditLog(limit = 100) { return [...db.audit].reverse().slice(0, limit); },
+    async auditAll() { return db.audit; },
+    async kidEvents() { return db.events; },
+    async kidEventsSince(iso) { return db.events.filter(e => e.created_at >= iso); },
+    async reauth(pw) { if (!pw) throw new Error('password'); },
+    async clearKidEvents() { const n = db.events.length; db.events = []; audit('kid_events', 'CLEAR', null, { rows_deleted: n }); save(); return n; },
   };
 }
 

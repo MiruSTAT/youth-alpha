@@ -218,4 +218,4 @@ create policy staff_admin on public.staff for all    to authenticated using (pub
 grant execute on function public.my_role(), public.claim_admin(text),
                           public.pending_users(), public.staff_list() to authenticated;
 
--- NOTE: after this file, also run 002_schedule_shop.sql, 003_point_categories.sql , 004_music_feedback_event.sql , 005_timings.sql , 006_feedback_switch.sql , 007_bonus_positive.sql , 008_shop_no_categories.sql and 009_feedback_no_delete.sql
+-- NOTE: after this file, also run 002_schedule_shop.sql, 003_point_categories.sql , 004_music_feedback_event.sql , 005_timings.sql , 006_feedback_switch.sql , 007_bonus_positive.sql , 008_shop_no_categories.sql , 009_feedback_no_delete.sql and 010_logs.sql
