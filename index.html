@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Youth Alpha 🎄</title>
+  <meta name="theme-color" content="#0b1030">
+  <meta name="description" content="Youth Alpha — คะแนนและอันดับ คริสต์มาส">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="scene" aria-hidden="true"></canvas>
+  <div id="cssSnow" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#/"><span>🎄</span><span>Youth Alpha</span></a>
+    <div class="top-actions">
+      <button id="langBtn" class="icon-btn" aria-label="Language">EN</button>
+      <button id="musicBtn" class="icon-btn" aria-label="Music">🔇</button>
+    </div>
+  </header>
+
+  <div id="previewBanner" class="preview-banner" hidden></div>
+  <main id="view" tabindex="-1"></main>
+
+  <nav id="kidNav" class="kid-nav">
+    <a href="#/me" data-nav="me"><span>🎅</span><b data-t="me"></b></a>
+    <a href="#/rank" data-nav="rank"><span>🏆</span><b data-t="ranking"></b></a>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="dlg"><form method="dialog" id="dlgForm"></form></dialog>
+
+  <script src="config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
