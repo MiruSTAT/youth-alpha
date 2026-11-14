@@ -468,3 +468,7 @@ body[data-theme="red"] .kbtn { color: #5a0f1c; }
 .dchip.on { border-color: var(--primary); background: var(--primary); color: #fff; }
 .fb-item .mood-i { font-size: 1.6rem; }
 body:not(.adult) #langBtn { display: none; }
+/* update 5 */
+.card h3.sec { font-size: 1.05rem; margin-bottom: 12px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.xl-list { margin: 0 0 16px; padding-left: 22px; color: var(--ink-2); line-height: 1.8; }

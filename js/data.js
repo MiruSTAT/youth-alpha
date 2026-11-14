@@ -102,6 +102,13 @@ function supabaseApi() {
     async deleteItem(id) { ok(await sb.from('shop_items').delete().eq('id', id)); },
 
     async eventInfo() { return ok(await sb.from('event_info').select('*').single()); },
+    async allPoints() {
+      const out = []; // page through in case there are many rows
+      for (let from = 0; ; from += 1000) {
+        const rows = ok(await sb.from('points').select('*, kids(nickname, avatar)').order('created_at').range(from, from + 999));
+        out.push(...rows); if (rows.length < 1000) return out;
+      }
+    },
     async sendFeedback(row) { ok(await sb.from('feedback').insert(row)); },
     async feedback() { return ok(await sb.from('feedback').select('*').order('created_at', { ascending: false }).limit(200)); },
     async deleteFeedback(id) { ok(await sb.from('feedback').delete().eq('id', id)); },
@@ -116,7 +123,7 @@ function previewApi() {
   let db = load();
   db.schedule ??= []; db.items ??= [];
   db.feedback ??= [];
-  Object.assign(db.settings, { event_dow: 0, event_start: '10:00', event_end: '12:00', ...db.settings });
+  Object.assign(db.settings, { event_dow: 0, event_start: '10:00', event_end: '12:00', fb_dow: 0, fb_start: '12:00', fb_end: '23:59', tip_days: 3, ...db.settings });
   db.pcats ??= [['music', 'ดนตรี', 'Music', '🎵', '', 'เปียโน\nร้องเพลง\nซ้อมดนตรี'],
     ['english', 'อังกฤษ', 'English', '🔤', ''], ['thai', 'อ่านไทย', 'Thai reading', '📖', ''], ['questions', 'ตอบคำถาม', 'Answering questions', '🙋', ''],
     ['chores', 'งานบ้าน', 'Chores', '🧽', 'เช่น ล้างจาน'], ['attendance', 'มาร่วม', 'Came', '⛪', 'ได้คะแนนอัตโนมัติทุกครั้งที่มาร่วมกิจกรรม'], ['bonus', 'โบนัส', 'Bonus', '🎁', '']]
@@ -215,9 +222,10 @@ function previewApi() {
     async saveItem(row) { const r = row.id && db.items.find(x => x.id === row.id); r ? Object.assign(r, row) : db.items.push({ active: true, sort: 0, ...row, id: id() }); save(); },
     async deleteItem(iid) { db.items = db.items.filter(x => x.id !== iid); save(); },
 
-    async eventInfo() { const { event_dow, event_start, event_end } = db.settings; return { event_dow, event_start, event_end }; },
+    async eventInfo() { const { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days } = db.settings; return { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days }; },
+    async allPoints() { return db.points.map(p => ({ ...p, kids: kidOf(p.kid_id) })); },
     async sendFeedback(row) {
-      const ev = await this.eventInfo(); if (eventState(ev).phase !== 'feedback') throw new Error('closed');
+      const ev = await this.eventInfo(); if (!eventState(ev).fbOpen) throw new Error('closed');
       db.feedback.unshift({ id: id(), created_at: now(), ...row }); save();
     },
     async feedback() { return db.feedback; },
@@ -236,15 +244,22 @@ export function ranked(rows) {
 }
 
 // ---------------------------------------------------------------- event timing (Thai time)
-// phase: 'live' (event running) | 'feedback' (event day, after end) | 'wait' (until next start)
+// phase: 'live' (activity running) | 'feedback' (feedback window open) | 'wait'
+// fbOpen / fbMins: is the feedback window open, and minutes until it closes (open) or opens (closed)
+// started: it is the activity day and the activity has started
 export function eventState(ev, nowMs = Date.now()) {
-  const d = new Date(nowMs + 7 * 3600e3);
+  const d = new Date(nowMs + 7 * 3600e3), W = 10080;
   const nowMin = d.getUTCDay() * 1440 + d.getUTCHours() * 60 + d.getUTCMinutes();
   const hm = (s) => { const [h, m] = String(s || '0:0').split(':').map(Number); return h * 60 + m; };
   const day = Number(ev?.event_dow ?? 0) * 1440, start = day + hm(ev?.event_start ?? '10:00'), end = day + hm(ev?.event_end ?? '12:00');
-  if (nowMin >= start && nowMin < end) return { phase: 'live', mins: end - nowMin };
-  if (nowMin >= end && nowMin < day + 1440) return { phase: 'feedback', mins: day + 1440 - nowMin };
-  return { phase: 'wait', mins: (start - nowMin + 10080) % 10080 };
+  const fDay = Number(ev?.fb_dow ?? ev?.event_dow ?? 0) * 1440;
+  const fs = fDay + hm(ev?.fb_start ?? ev?.event_end ?? '12:00'), fe = fDay + hm(ev?.fb_end ?? '23:59') + 1;
+  const fbOpen = nowMin >= fs && nowMin < fe;
+  const fbMins = fbOpen ? fe - nowMin : (fs - nowMin + W) % W;
+  const started = nowMin >= start && nowMin < day + 1440;
+  if (nowMin >= start && nowMin < end) return { phase: 'live', mins: end - nowMin, fbOpen, fbMins, started };
+  if (fbOpen) return { phase: 'feedback', mins: fe - nowMin, fbOpen, fbMins, started };
+  return { phase: 'wait', mins: (start - nowMin + W) % W, fbOpen, fbMins, started };
 }
 export function bkkToday() {
   const d = new Date(Date.now() + 7 * 3600e3);
