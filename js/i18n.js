@@ -240,3 +240,47 @@ export function t(key, ...args) {
   return typeof v === 'function' ? v(...args) : v;
 }
 document.documentElement.lang = lang;
+
+// ---- update 16: songs, pictures, feedback QR, short empty messages
+Object.assign(DICT.th, {
+  noKids: 'ยังไม่มีรายชื่อ', emptyShop: 'ยังไม่มีของรางวัล', fbClosed: 'ยังไม่เปิดรับความคิดเห็น',
+  tut_menu: 'เมนู: ความคิดเห็น พระคัมภีร์ และอื่น ๆ', tut_songs: 'เพลงคริสต์มาส: เนื้อเพลง คอร์ด และเครื่องเคาะจังหวะ', tut_theme: 'เปลี่ยนสีแอปได้ที่ปุ่มนี้',
+  songs: 'เพลง', songsTitle: 'เพลงคริสต์มาส', noSongs: 'ยังไม่มีเพลง', noLyrics: 'ยังไม่มีเนื้อเพลง', keyLbl: 'คีย์',
+  sheetLbl: 'แผ่นเพลง', listen: 'ฟังเพลง', openYt: 'เปิดใน YouTube', metro: 'จังหวะ', scroll: 'เลื่อน', speed: 'ความเร็ว',
+  textSize: 'ขนาดตัวอักษร', showChords: 'แสดงคอร์ด', transpose: 'เปลี่ยนคีย์', original: 'คีย์เดิม', songSettings: 'ตั้งค่าการแสดงผล',
+  credits: 'เครดิต', songCredits: 'เครดิตเพลง', songCreditsSub: 'ที่มาของเพลงและวิดีโอ', creditsNote: 'วิดีโอเป็นของเจ้าของช่อง YouTube แต่ละช่อง',
+  goHome: 'กลับหน้าแรก', santaHo: 'โฮ่ โฮ่ โฮ่!', joyTitle: 'Joy to the World!', themeBtn: 'ธีมสี',
+  tab_songs: 'เพลง', m_songs: 'เนื้อเพลง คอร์ด วิดีโอ และเครดิต', g_songs: 'เพลง', addSong: 'เพิ่มเพลง',
+  pvBtn: 'ดูตัวอย่าง', setShort: 'ตั้งค่า', songTitle: 'ชื่อเพลง', songSub: 'ชื่อรอง (ไม่บังคับ)', bpmLbl: 'ความเร็ว (BPM)', beatsLbl: 'จังหวะต่อห้อง',
+  ytLink: 'ลิงก์ YouTube (ไม่บังคับ)', ytStart: 'เริ่มวิดีโอที่วินาที', creditsLbl: 'เครดิต', lyricsLbl: 'เนื้อเพลงและคอร์ด',
+  lyricsHelp: 'ใส่คอร์ดในวงเล็บ เช่น [G]Jingle bells · บรรทัดที่ขึ้นต้นด้วย # คือชื่อท่อน · วางแบบคอร์ดอยู่บรรทัดบนเนื้อก็ได้',
+  sheetsLbl: 'รูปแผ่นเพลง', orderLbl: 'ลำดับ', songSaved: 'บันทึกเพลงแล้ว', removePic: 'เอารูปออก',
+  upload: '📷 อัปโหลดรูป', uploading: 'กำลังอัปโหลด…', uploadFail: 'อัปโหลดไม่สำเร็จ', notImage: 'ไฟล์นี้ไม่ใช่รูปภาพ',
+  photoNote: 'ทุกคนเห็นรูปนี้ได้ ใช้รูปการ์ตูน หรือขออนุญาตผู้ปกครองก่อนใช้รูปจริง',
+  fbQr: 'QR ให้ความคิดเห็น', fbQrSub: 'สแกนแล้วไปที่หน้าเขียนความคิดเห็นทันที', dlQr: 'ดาวน์โหลด QR', qrCaption: 'สแกนเพื่อให้ความคิดเห็น',
+  logsGrp: 'บันทึกการใช้งาน', lt_songs: 'เพลง', g_system: 'ระบบ',
+  ev_songs: 'ดูรายการเพลง', ev_song_open: 'เปิดเพลง', ev_metro: 'เครื่องเคาะจังหวะ', ev_autoscroll: 'เลื่อนอัตโนมัติ', ev_song_speed: 'เปลี่ยนความเร็วเพลง',
+  ev_transpose: 'เปลี่ยนคีย์', ev_yt_play: 'เล่นวิดีโอ', ev_sheet_view: 'ดูแผ่นเพลง', ev_credits: 'ดูเครดิตเพลง', ev_santa_tap: 'แตะซานต้า',
+  ev_festive: 'โหมดพิเศษ (แตะต้นไม้ 5 ครั้ง)', ev_pic_view: 'ดูรูปโปรไฟล์', ev_fb_qr: 'เปิดจาก QR ความคิดเห็น',
+});
+Object.assign(DICT.en, {
+  noKids: 'No names yet', emptyShop: 'No prizes yet', fbClosed: 'Feedback is closed',
+  tut_menu: 'Menu: feedback, Bible and more', tut_songs: 'Christmas songs: lyrics, chords and a metronome', tut_theme: 'Change the app colours here',
+  songs: 'Songs', songsTitle: 'Christmas songs', noSongs: 'No songs yet', noLyrics: 'No lyrics yet', keyLbl: 'Key',
+  sheetLbl: 'Song sheet', listen: 'Listen', openYt: 'Open in YouTube', metro: 'Beat', scroll: 'Scroll', speed: 'Speed',
+  textSize: 'Text size', showChords: 'Show chords', transpose: 'Change key', original: 'Original key', songSettings: 'Display settings',
+  credits: 'Credits', songCredits: 'Song credits', songCreditsSub: 'Where the songs and videos come from', creditsNote: 'Videos belong to their YouTube channels',
+  goHome: 'Back to home', santaHo: 'Ho ho ho!', joyTitle: 'Joy to the World!', themeBtn: 'Theme',
+  tab_songs: 'Songs', m_songs: 'Lyrics, chords, videos and credits', g_songs: 'Songs', addSong: 'Add song',
+  pvBtn: 'Preview', setShort: 'Display', songTitle: 'Song title', songSub: 'Second title (optional)', bpmLbl: 'Tempo (BPM)', beatsLbl: 'Beats per bar',
+  ytLink: 'YouTube link (optional)', ytStart: 'Start video at second', creditsLbl: 'Credits', lyricsLbl: 'Lyrics and chords',
+  lyricsHelp: 'Put chords in brackets, e.g. [G]Jingle bells · a line starting with # is a section name · chords on the line above the words also work',
+  sheetsLbl: 'Song sheet pictures', orderLbl: 'Order', songSaved: 'Song saved', removePic: 'Remove picture',
+  upload: '📷 Upload picture', uploading: 'Uploading…', uploadFail: 'Upload failed', notImage: 'This file is not a picture',
+  photoNote: 'Everyone can see this picture. Use a cartoon, or ask a parent before using a real photo.',
+  fbQr: 'Feedback QR code', fbQrSub: 'Scanning it opens the feedback page directly', dlQr: 'Download QR', qrCaption: 'Scan to give feedback',
+  logsGrp: 'Activity logs', lt_songs: 'Songs', g_system: 'System',
+  ev_songs: 'Viewed song list', ev_song_open: 'Opened a song', ev_metro: 'Metronome', ev_autoscroll: 'Auto-scroll', ev_song_speed: 'Changed song speed',
+  ev_transpose: 'Changed key', ev_yt_play: 'Played video', ev_sheet_view: 'Viewed song sheet', ev_credits: 'Viewed song credits', ev_santa_tap: 'Tapped Santa',
+  ev_festive: 'Special mode (5 tree taps)', ev_pic_view: 'Viewed a profile picture', ev_fb_qr: 'Opened from feedback QR',
+});

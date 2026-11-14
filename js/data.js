@@ -113,6 +113,21 @@ function supabaseApi() {
     async feedback() { return ok(await sb.from('feedback').select('*').order('created_at', { ascending: false }).limit(200)); },
     async deleteFeedback(id) { ok(await sb.from('feedback').delete().eq('id', id)); },
 
+    // ---- songs + pictures
+    async songs() { return ok(await sb.from('songs').select('*').order('sort').order('title')); },
+    async saveSong(row) {
+      const { id, ...d } = row; d.updated_at = new Date().toISOString();
+      return ok(id ? await sb.from('songs').update(d).eq('id', id).select().single() : await sb.from('songs').insert(d).select().single());
+    },
+    async deleteSong(id) { ok(await sb.from('songs').delete().eq('id', id)); },
+    // upload a (already shrunk) picture; returns its public address
+    async uploadImage(blob, folder = 'misc') {
+      const ext = { 'image/png': 'png', 'image/webp': 'webp', 'image/gif': 'gif' }[blob.type] || 'jpg';
+      const path = `${folder}/${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      ok(await sb.storage.from('images').upload(path, blob, { contentType: blob.type || 'image/jpeg', cacheControl: '31536000', upsert: false }));
+      return sb.storage.from('images').getPublicUrl(path).data.publicUrl;
+    },
+
     // ---- logs
     async logEvents(rows) { ok(await sb.from('kid_events').insert(rows)); },
     async auditLog(limit = 100) { return ok(await sb.from('audit_log').select('*').order('created_at', { ascending: false }).limit(limit)); },
@@ -139,6 +154,7 @@ function previewApi() {
   let db = load();
   db.schedule ??= []; db.items ??= [];
   db.feedback ??= []; db.audit ??= []; db.events ??= [];
+  // (db.songs is filled from the seed list the first time songs are read)
   let aid = db.audit.length;
   const audit = (table_name, op, o, n) => db.audit.push({ id: ++aid, created_at: new Date().toISOString(), actor_email: 'preview@local', table_name, op,
     row_key: (n || o)?.id || (n || o)?.key || '', old_data: o ? JSON.parse(JSON.stringify(o)) : null, new_data: n ? JSON.parse(JSON.stringify(n)) : null });
@@ -261,6 +277,19 @@ function previewApi() {
     async feedback() { return db.feedback; },
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
+    async songs() {
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=16'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      return [...db.songs].sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
+    },
+    async saveSong(row) {
+      const r = row.id && db.songs.find(x => x.id === row.id);
+      if (r) { const o = { ...r }; Object.assign(r, row); audit('songs', 'UPDATE', o, r); save(); return r; }
+      const n = { active: true, sort: db.songs.length + 1, sheets: [], ...row, id: id() }; db.songs.push(n); audit('songs', 'INSERT', null, n); save(); return n;
+    },
+    async deleteSong(sid) { audit('songs', 'DELETE', db.songs.find(x => x.id === sid), null); db.songs = db.songs.filter(x => x.id !== sid); save(); },
+    async uploadImage(blob) {
+      return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
+    },
     async logEvents(rows) { rows.forEach(r => db.events.push({ id: db.events.length + 1, created_at: now(), ...r })); save(); },
     async auditLog(limit = 100) { return [...db.audit].reverse().slice(0, limit); },
     async auditAll() { return db.audit; },

@@ -522,3 +522,186 @@ body[data-theme="snow"] .mrow, body[data-theme="snow"] .rank-row, body[data-them
 /* update 10: rounded glow that follows the card corners */
 .menu a.alert { border-radius: 14px; }
 .menu.grouped a.alert + a { border-top: 1px solid var(--line); }
+
+/* =========================================================
+   update 16: pictures, songs, feedback QR, Santa, special mode
+   ========================================================= */
+body.adult #themeBtn { display: none; }
+a.kbtn { text-decoration: none; color: var(--dark-ink); font-weight: 700; }
+
+/* uploaded pictures: same size as the emoji they replace */
+.pic { width: 1.25em; height: 1.25em; border-radius: 50%; object-fit: cover; vertical-align: middle; display: inline-block; background: rgba(255, 255, 255, .5); }
+.rank-row .av, .my-card .av { cursor: zoom-in; display: inline-flex; align-items: center; justify-content: center; min-width: 1.3em; }
+.kid-detail-head .av { border: 0; background: none; padding: 0; cursor: zoom-in; color: inherit; font: inherit; font-size: 3rem; line-height: 1.1; }
+.kid-detail-head .av .pic { width: 1.6em; height: 1.6em; }
+.art-img img { width: 1em; height: 1em; object-fit: cover; border-radius: 18%; display: block; margin: 0 auto; }
+.slot .art-img img { width: 72px; height: 72px; border-radius: 14px; }
+.fly .art-img img { width: 30px; height: 30px; }
+.skill-row .i .pic, .opt .i .pic { width: 1.1em; height: 1.1em; }
+
+/* tap-to-view picture */
+.lightbox { position: fixed; inset: 0; z-index: 60; background: rgba(5, 10, 30, .88); display: grid; place-items: center; padding: 24px; animation: fade .2s; cursor: zoom-out; }
+.lb-inner { text-align: center; max-width: 100%; }
+.lightbox img { max-width: min(92vw, 720px); max-height: 74vh; border-radius: 18px; box-shadow: 0 10px 40px rgba(0, 0, 0, .5); object-fit: contain; background: #fff; }
+.lb-emoji { font-size: min(52vw, 260px); line-height: 1; display: block; animation: popout .5s cubic-bezier(.2, 1.6, .4, 1); }
+.lb-cap { color: #fff; font-size: 1.3rem; font-weight: 700; margin: 14px 0 0; }
+.lb-x { position: fixed; top: calc(14px + env(safe-area-inset-top)); right: 14px; width: 48px; height: 48px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .15); color: #fff; font-size: 1.2rem; cursor: pointer; }
+
+/* upload tile (admin pickers) */
+.up-tile { position: relative; display: grid; place-items: center; overflow: hidden; font-size: 1.4rem !important; background: #e9eefb !important; border: 2px dashed #9aa6c8 !important; }
+.up-tile.on { border: 2px solid var(--primary) !important; }
+.up-tile img { width: 100%; height: 100%; object-fit: cover; }
+.up-tile.busy { opacity: .6; pointer-events: none; }
+.hint { color: var(--ink-2); font-size: .88rem; margin: 6px 2px 0; line-height: 1.5; }
+.pick-row .art-img img, .li .art-img img { width: 1.4em; height: 1.4em; }
+
+/* feedback page (from the QR code) */
+.fb-done.big { font-size: 1.8rem; font-weight: 700; padding: 40px 8px; }
+#fbPage .fb-done + .kbtn { margin-top: 4px; }
+
+/* ---------------- songs list */
+.song-list { display: flex; flex-direction: column; gap: 10px; }
+.song-card { display: flex; align-items: center; gap: 14px; min-height: 72px; padding: 10px 16px; border-radius: var(--r); background: var(--card);
+  border: 1px solid var(--line-d); color: inherit; text-decoration: none; }
+.song-card .no { width: 36px; height: 36px; flex: 0 0 auto; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: #fff; font-weight: 700; }
+.song-card .st { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.song-card .st b { font-size: 1.12rem; line-height: 1.35; overflow-wrap: anywhere; }
+.song-card .st span { color: var(--text-d2); font-size: .92rem; }
+.song-card .meta { display: flex; align-items: center; gap: 6px; }
+.kchip { min-width: 40px; padding: 2px 8px; border-radius: 8px; border: 2px solid var(--pt); color: var(--pt); font-weight: 700; text-align: center; font-size: .95rem; }
+.yt-dot { width: 30px; height: 22px; border-radius: 6px; background: #e62117; color: #fff; display: grid; place-items: center; font-size: .7rem; }
+
+/* ---------------- song player */
+body.song-page .kid-nav, body.song-page #musicBtn { display: none; }
+.sheet.song-sheet { margin-top: 10px; min-height: calc(100vh - 70px); padding-bottom: calc(150px + var(--safe-b)); border-radius: 22px 22px 0 0; }
+.song-head { display: flex; align-items: center; gap: 12px; }
+.back.k { flex: 0 0 auto; width: 48px; height: 48px; padding: 0; justify-content: center; font-size: 1.8rem; border-radius: 50%; background: var(--card); border: 1px solid var(--line-d); color: var(--k-text); }
+.song-head .st { flex: 1; min-width: 0; }
+.song-head h1 { font-size: 1.4rem; line-height: 1.3; overflow-wrap: anywhere; }
+.song-head p { margin: 0; color: var(--text-d2); }
+.song-meta { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 14px; }
+.song-meta .chip { padding: 4px 12px; border-radius: 999px; background: var(--card); border: 1px solid var(--line-d); font-size: .95rem; }
+.song-meta .chip.key { border: 2px solid var(--pt); }
+.song-meta .chip.key b { color: var(--pt); }
+.yt { position: relative; width: 100%; aspect-ratio: 16 / 9; border-radius: 16px; overflow: hidden; background: #000; margin-bottom: 18px; }
+.yt iframe, .yt #ytFrame { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.yt-poster { position: absolute; inset: 0; width: 100%; border: 0; background: #111 center / cover no-repeat; cursor: pointer; color: #fff; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.yt-poster::before { content: ''; position: absolute; inset: 0; background: rgba(0, 0, 0, .35); }
+.yt-play { position: relative; width: 74px; height: 52px; border-radius: 14px; background: #e62117; display: grid; place-items: center; font-size: 1.4rem; }
+.yt-lbl { position: relative; font-weight: 700; font-size: 1.15rem; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
+.yt .kbtn { position: absolute; inset: auto 16px 16px; width: auto; }
+
+/* lyrics + chords: big, clear, chords sit right above their word */
+.lyrics { --fs: 1.25; font-size: calc(var(--fs) * 1rem); line-height: 1.45; }
+.lyrics .sec { display: inline-block; margin: 18px 0 6px; padding: 2px 12px; border-radius: 8px; background: var(--card); color: var(--text-d2);
+  font-size: .72em; font-weight: 700; letter-spacing: .02em; }
+.lyrics .sec:first-child { margin-top: 2px; }
+.lyrics .gap { height: .6em; }
+.lyrics .ln { display: flex; flex-wrap: wrap; align-items: flex-end; padding: 2px 6px; margin: 0 -6px; border-radius: 10px; transition: background .3s; }
+.lyrics .ln.here { background: rgba(246, 196, 69, .22); }
+.lyrics .sg { display: inline-flex; flex-direction: column; white-space: pre-wrap; max-width: 100%; }
+.lyrics .ch { min-height: 1.2em; padding-right: .3em; color: var(--chord, #d93a4a); font-weight: 700; font-size: .82em; line-height: 1.3; white-space: nowrap; }
+.lyrics .ly { white-space: pre-wrap; }
+.lyrics .ln.plain { display: block; white-space: pre-wrap; }
+.lyrics .chords-only { gap: .55em; align-items: baseline; padding-top: 4px; }
+.lyrics .chords-only .ch { min-height: 0; padding: 2px 10px; border-radius: 8px; background: var(--card); }
+.lyrics .sep { color: var(--text-d2); }
+body:not([data-theme="snow"]) .lyrics { --chord: #ffd25e; }
+body[data-theme="snow"] .lyrics { --chord: #c8102e; }
+.admin-pv { --chord: #c8102e; border: 1px solid var(--line); border-radius: 12px; padding: 12px; margin-top: 12px; color: var(--ink); }
+.admin-pv .sec, .admin-pv .chords-only .ch { background: var(--bg); color: var(--ink-2); }
+
+.sheet-h { font-size: 1.1rem; margin: 26px 0 10px; }
+.sheets { display: flex; flex-direction: column; gap: 12px; }
+.sheet-img { padding: 0; border: 1px solid var(--line-d); border-radius: 14px; overflow: hidden; background: #fff; cursor: zoom-in; }
+.sheet-img img { display: block; width: 100%; height: auto; }
+.song-credit { margin: 22px 0 0; color: var(--text-d2); font-size: .9rem; line-height: 1.6; }
+
+/* player controls at the bottom */
+.song-dock { position: fixed; z-index: 12; left: 0; right: 0; bottom: 0; background: var(--navy); border-top: 1px solid var(--line-d);
+  padding: 6px 10px calc(8px + var(--safe-b)); box-shadow: 0 -6px 20px rgba(0, 0, 0, .15); }
+body[data-theme="snow"] .song-dock { background: #fff; }
+.song-dock .beats { display: flex; justify-content: center; gap: 10px; height: 16px; align-items: center; margin-bottom: 4px; }
+.song-dock .beats i { width: 12px; height: 12px; border-radius: 50%; background: var(--line-d); transition: transform .08s, background .08s; }
+.song-dock .beats i.on { background: var(--pt); transform: scale(1.35); }
+.song-dock .beats i.on.one { background: var(--accent); }
+.dock-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; max-width: 520px; margin: 0 auto; }
+.dk { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60px; border-radius: 14px; border: 1px solid var(--line-d);
+  background: var(--card); color: var(--k-text); cursor: pointer; font: inherit; padding: 4px; }
+.dk span { font-size: 1.35rem; line-height: 1.2; font-weight: 700; }
+.dk b { font-size: .82rem; font-weight: 600; color: var(--text-d2); }
+.dk.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.dk.on b { color: #fff; }
+
+/* song display settings (bottom sheet) */
+.set-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; border-bottom: 1px solid var(--line-d); font-size: 1.05rem; }
+.stepper { display: flex; align-items: center; gap: 10px; }
+.stepper button { width: 52px; height: 48px; border-radius: 12px; border: 1px solid var(--line-d); background: var(--card); color: var(--k-text); font: inherit; font-weight: 700; font-size: 1.1rem; cursor: pointer; }
+.stepper b { min-width: 58px; text-align: center; font-size: 1.15rem; }
+
+/* song credits (menu) */
+.credit { padding: 12px 0; border-bottom: 1px solid var(--line-d); }
+.credit p { margin: 4px 0 0; color: var(--text-d2); font-size: .92rem; line-height: 1.55; }
+.credit a { display: inline-block; margin-top: 6px; color: var(--k-text); font-weight: 600; }
+.muted-k { color: var(--text-d2); font-size: .92rem; }
+.credit-note { color: var(--text-d2); font-size: .85rem; margin: 14px 0 0; }
+
+/* admin: song editor, QR */
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.grid3 .field { margin-bottom: 0; min-width: 0; }
+.mono { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, 'Noto Sans Thai', monospace; font-size: .92rem; height: auto; padding: 12px; line-height: 1.55; white-space: pre; overflow-x: auto; }
+textarea.input { height: auto; padding: 12px; }
+.sheet-thumbs { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.sheet-thumbs .th { position: relative; width: 92px; height: 120px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: #fff; }
+.sheet-thumbs .th img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.sheet-thumbs .x { position: absolute; top: 4px; right: 4px; width: 30px; height: 30px; border-radius: 50%; border: 0; background: rgba(0, 0, 0, .6); color: #fff; cursor: pointer; }
+.row-btns { display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 12px; }
+.qr-row { display: flex; align-items: center; gap: 16px; }
+.qr-row canvas { width: 112px; height: 112px; flex: 0 0 auto; border-radius: 8px; border: 1px solid var(--line); image-rendering: pixelated; }
+
+/* ---------------- Santa peeking in from the edge */
+.santa { position: fixed; z-index: 9; border: 0; background: none; padding: 0; cursor: pointer; font: inherit; }
+.santa .s-face { display: block; font-size: 64px; line-height: 1; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .3)); }
+.santa .s-bubble { position: absolute; white-space: nowrap; padding: 4px 12px; border-radius: 14px; background: #fff; color: #c8102e; font-weight: 700; font-size: .95rem;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, .2); opacity: 0; animation: bubble 4.4s ease forwards; }
+.santa.from-left { left: 0; animation: peekL 4.4s ease forwards; }
+.santa.from-left .s-bubble { left: 56px; top: -18px; }
+.santa.from-right { right: 0; animation: peekR 4.4s ease forwards; }
+.santa.from-right .s-bubble { right: 56px; top: -18px; }
+.santa.from-bottom { bottom: calc(60px + var(--safe-b)); animation: peekB 4.4s ease forwards; }
+.santa.from-bottom .s-bubble { left: 50%; top: -34px; transform: translateX(-50%); }
+.santa.tapped .s-face { animation: wiggle .5s; }
+@keyframes peekL { 0% { transform: translateX(-110%) rotate(25deg); } 14%, 80% { transform: translateX(-28%) rotate(20deg); } 100% { transform: translateX(-110%) rotate(25deg); } }
+@keyframes peekR { 0% { transform: translateX(110%) rotate(-25deg); } 14%, 80% { transform: translateX(28%) rotate(-20deg); } 100% { transform: translateX(110%) rotate(-25deg); } }
+@keyframes peekB { 0% { transform: translateY(110%); } 14%, 80% { transform: translateY(18%); } 100% { transform: translateY(110%); } }
+@keyframes bubble { 0%, 18% { opacity: 0; } 26%, 74% { opacity: 1; } 84%, 100% { opacity: 0; } }
+
+/* ---------------- special mode (5 taps on the tree) */
+.cutscene { position: fixed; inset: 0; z-index: 35; pointer-events: none; overflow: hidden; }
+.cutscene .flash { position: absolute; inset: 0; background: radial-gradient(circle at var(--x) var(--y), rgba(255, 236, 160, .95), rgba(255, 200, 60, .45) 25%, transparent 60%); animation: flash 1.6s ease-out forwards; }
+.cutscene .gift { position: absolute; font-size: calc(34px * var(--s)); transform: translate(-50%, -50%); animation: giftFly 2.6s cubic-bezier(.12, .8, .3, 1) both; }
+.cutscene .joy-title { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); white-space: nowrap; font-size: clamp(1.6rem, 8vw, 3rem); font-weight: 700;
+  color: #fff6cc; text-shadow: 0 0 18px rgba(255, 190, 40, .95), 0 3px 0 #b8860b; animation: joyIn 3.6s ease forwards; }
+@keyframes flash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes giftFly { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.2); } 10% { opacity: 1; }
+  70% { opacity: 1; } 100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) rotate(var(--r)) scale(1); } }
+@keyframes joyIn { 0%, 20% { opacity: 0; transform: translate(-50%, -50%) scale(.6); } 34% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
+  42%, 78% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -60%) scale(1); } }
+
+body.festive:not(.adult) :is(.sheet, .rank-row, .my-card, .mrow, .slot, .song-card, .kbtn, .icon-btn, .dk, .kid-nav) {
+  animation: festiveGlow 2.4s ease-in-out infinite; }
+body.festive:not(.adult) :is(.rank-row, .mrow, .song-card):nth-child(3n+2) { animation-delay: -.8s; }
+body.festive:not(.adult) :is(.rank-row, .mrow, .song-card):nth-child(3n) { animation-delay: -1.6s; }
+body.festive:not(.adult) .brand-tree { display: inline-block; animation: wiggle 1.2s infinite; }
+@keyframes festiveGlow {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(255, 205, 60, .9), 0 0 16px rgba(255, 190, 40, .6); }
+  50% { box-shadow: 0 0 0 2px rgba(255, 110, 110, .9), 0 0 22px rgba(255, 80, 80, .55); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.festive:not(.adult) * { animation: none !important; }
+  .santa { display: none; }
+}
+body.song-page #snow { display: none; }
+a.btn { text-decoration: none; }
+body.song-page #scene { visibility: hidden; }
+.song-meta .chip .q { font-size: 1.25em; line-height: 1; }

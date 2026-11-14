@@ -3,6 +3,7 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.m
 
 let renderer, scene, camera, tree, star, snow, gifts = [], ornaments = [], sparks = [];
 let running = false, raf = 0, spinVel = 0.004, dragging = false, lastX = 0, litCount = 0;
+let festive = false, flash = 0, camKick = 0, baseZ = 11, party = [], partyLight = null;
 let canvas;
 const clock = new THREE.Clock();
 
@@ -111,7 +112,8 @@ function resize() {
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   // keep the tree fully visible on narrow phones
-  camera.position.z = w / h < 0.9 ? 12.5 : 11;
+  baseZ = w / h < 0.9 ? 12.5 : 11;
+  camera.position.z = baseZ - camKick * 1.6;
   camera.updateProjectionMatrix();
 }
 
@@ -138,11 +140,21 @@ function tick() {
   const dt = Math.min(clock.getDelta(), 0.05), time = clock.elapsedTime;
   if (!dragging) { spinVel += (0.004 - spinVel) * 0.03; tree.rotation.y += spinVel; }
   star.rotation.y = time * 1.5;
-  star.material.emissiveIntensity = 1 + Math.sin(time * 3) * 0.4;
+  star.material.emissiveIntensity = 1 + Math.sin(time * 3) * 0.4 + flash * 5;
+  star.scale.setScalar(1 + flash * 0.9 + (festive ? 0.15 + Math.sin(time * 4) * 0.08 : 0));
+  flash *= 0.96;
   ornaments.forEach((o, i) => {
+    if (festive) {                                   // special mode: every light on, colours chasing round the tree
+      o.material.emissive.setHSL(((time * 0.25 + i / ornaments.length) % 1), 1, 0.55);
+      o.material.emissiveIntensity = 1.3 + Math.sin(time * 6 + i) * 0.6;
+      return;
+    }
     const target = i < litCount ? 1.2 + Math.sin(time * 2.5 + i) * 0.5 : 0;
     o.material.emissiveIntensity += (target - o.material.emissiveIntensity) * 0.05;
   });
+  if (camKick > 0.001) { camKick *= 0.97; camera.position.z = baseZ - camKick * 1.6; camera.position.y = 3.2 + camKick * 0.8; camera.lookAt(0, 2.4, 0); }
+  if (partyLight) { partyLight.color.setHSL((time * 0.2) % 1, 1, 0.6); partyLight.intensity = 25 + Math.sin(time * 5) * 10; }
+  stepParty(dt);
   gifts.forEach(g => { g.position.y = g.userData.baseY + Math.abs(Math.sin(time * 1.6 + g.userData.phase)) * 0.12; });
   const p = snow.geometry.attributes.position;
   for (let i = 0; i < p.count; i++) {
@@ -162,3 +174,60 @@ function tick() {
 export function start() { if (!renderer || running || document.hidden) return; running = true; clock.getDelta(); tick(); }
 export function stop() { running = false; cancelAnimationFrame(raf); }
 export function refresh() { resize(); }
+
+// ------------------------------------------------------------- special mode (5 quick taps on the tree)
+const GIFT_COLS = [[0xd93a4a, 0xf6c445], [0x2a7de1, 0xffffff], [0x27a55c, 0xd93a4a], [0xf6c445, 0xd93a4a], [0x9b4dca, 0xf6c445], [0xffffff, 0x27a55c]];
+function makeGift(i) {
+  const s = 0.32 + Math.random() * 0.3, [c1, c2] = GIFT_COLS[i % GIFT_COLS.length];
+  const g = new THREE.Group();
+  const rib = new THREE.MeshStandardMaterial({ color: c2, roughness: 0.3, metalness: 0.3 });
+  g.add(new THREE.Mesh(new THREE.BoxGeometry(s, s, s), new THREE.MeshStandardMaterial({ color: c1, roughness: 0.4 })),
+    new THREE.Mesh(new THREE.BoxGeometry(s * 1.02, s * 1.02, s * 0.16), rib),
+    new THREE.Mesh(new THREE.BoxGeometry(s * 0.16, s * 1.02, s * 1.02), rib));
+  const bow = new THREE.Mesh(new THREE.TorusGeometry(s * 0.18, s * 0.06, 6, 12), rib); bow.position.y = s * 0.55; g.add(bow);
+  g.userData.half = s / 2;
+  return g;
+}
+// presents burst out of the tree and land all around it
+export function celebrate() {
+  if (!scene) return;
+  festive = true; flash = 1; camKick = 1; spinVel = 0.45;
+  if (!partyLight) { partyLight = new THREE.PointLight(0xffffff, 25, 14); partyLight.position.set(0, 6, 3); scene.add(partyLight); }
+  for (let i = 0; i < 26; i++) {
+    const g = makeGift(i), a = Math.random() * Math.PI * 2, sp = 2.2 + Math.random() * 2.6;
+    g.position.set(Math.cos(a) * 0.6, 2 + Math.random() * 2.4, Math.sin(a) * 0.6);
+    g.userData.v = new THREE.Vector3(Math.cos(a) * sp, 3 + Math.random() * 4, Math.sin(a) * sp);
+    g.userData.spin = new THREE.Vector3(Math.random() * 6 - 3, Math.random() * 6 - 3, Math.random() * 6 - 3);
+    g.userData.delay = i * 0.04; g.visible = false;
+    party.push(g); scene.add(g);
+  }
+  burst(120);
+}
+export function calm() {
+  festive = false;
+  party.forEach(g => { g.userData.leaving = 1; });
+  if (partyLight) { scene.remove(partyLight); partyLight = null; }
+  ornaments.forEach(o => o.material.emissive.setHex(o.userData.color));
+}
+function stepParty(dt) {
+  for (let i = party.length - 1; i >= 0; i--) {
+    const g = party[i], u = g.userData;
+    if (u.leaving) {
+      u.leaving -= dt * 1.5; g.scale.setScalar(Math.max(0.001, u.leaving));
+      if (u.leaving <= 0) { scene.remove(g); g.traverse(m => { m.geometry?.dispose(); m.material?.dispose(); }); party.splice(i, 1); }
+      continue;
+    }
+    if (u.delay > 0) { u.delay -= dt; continue; }
+    g.visible = true;
+    if (u.rest) continue;
+    u.v.y -= 9.8 * dt;
+    g.position.addScaledVector(u.v, dt);
+    g.rotation.x += u.spin.x * dt; g.rotation.y += u.spin.y * dt; g.rotation.z += u.spin.z * dt;
+    const r = Math.hypot(g.position.x, g.position.z);
+    if (r > 6.3) { g.position.x *= 6.3 / r; g.position.z *= 6.3 / r; u.v.x *= -0.3; u.v.z *= -0.3; }
+    if (g.position.y < u.half) {
+      g.position.y = u.half; u.v.y *= -0.35; u.v.x *= 0.6; u.v.z *= 0.6; u.spin.multiplyScalar(0.5);
+      if (Math.abs(u.v.y) < 0.6) { u.rest = true; g.rotation.x = 0; g.rotation.z = 0; }
+    }
+  }
+}

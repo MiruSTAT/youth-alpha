@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=15">
+  <link rel="stylesheet" href="css/style.css?v=16">
 </head>
 <body>
   <canvas id="scene" aria-hidden="true"></canvas>
@@ -27,6 +27,7 @@
     </div>
     <div class="top-actions">
       <button id="langBtn" class="icon-btn" aria-label="Language">EN</button>
+      <button id="themeBtn" class="icon-btn" aria-label="Theme">🎨</button>
       <button id="musicBtn" class="icon-btn" aria-label="Music">🔇</button>
     </div>
   </header>
@@ -36,6 +37,7 @@
 
   <nav id="kidNav" class="kid-nav">
     <a href="#/" data-nav="rank"><span>🏆</span><b data-t="ranking"></b></a>
+    <a href="#/songs" data-nav="songs"><span>🎵</span><b data-t="songs"></b></a>
     <a href="#/shop" data-nav="shop"><span>🎁</span><b data-t="shop"></b></a>
     <a href="#/menu" data-nav="menu"><span>☰</span><b data-t="menu"></b></a>
   </nav>
@@ -45,8 +47,8 @@
   <div id="kidSheet" class="kid-sheet" hidden></div>
   <div id="tour" class="tour" hidden></div>
 
-  <script src="config.js?v=15"></script>
+  <script src="config.js?v=16"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
-  <script type="module" src="js/app.js?v=15"></script>
+  <script type="module" src="js/app.js?v=16"></script>
 </body>
 </html>

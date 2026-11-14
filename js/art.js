@@ -11,9 +11,18 @@ const SVG = {
 };
 export const SPECIAL = { chipbag: 'ถุงขนม', chips: 'มันฝรั่งแผ่น' };
 
-// returns HTML for an icon value (emoji text or a special keyword)
+// an uploaded picture is stored as its address (or, in preview mode, as a data: URL)
+export const isImg = (v) => typeof v === 'string' && /^(https:\/\/|data:image\/|sheets\/)/.test(v);
+
+// avatar / small icon: emoji text, or a round picture the size of the emoji
+export function pic(val, cls = '') {
+  return isImg(val) ? `<img class="pic ${cls}" src="${esc(val)}" alt="" loading="lazy" decoding="async">` : esc(val);
+}
+
+// returns HTML for an icon value (emoji text, an uploaded picture, or a special keyword)
 export function art(val, cls = '') {
   if (SVG[val]) return `<span class="art art-svg ${cls}">${SVG[val]}</span>`;
+  if (isImg(val)) return `<span class="art art-img ${cls}"><img src="${esc(val)}" alt="" loading="lazy" decoding="async"></span>`;
   return `<span class="art ${cls}">${esc(val || '🎁')}</span>`;
 }
 
@@ -32,4 +41,20 @@ export function burst(el, val, count = 10) {
     document.body.appendChild(p);
     setTimeout(() => p.remove(), 1300 + i * 25);
   }
+}
+
+// Shrink a picture in the browser before uploading (smaller, faster, and strips camera location data).
+export async function shrinkImage(file, max = 512, quality = 0.85) {
+  if (!file || !/^image\//.test(file.type)) throw new Error('not an image');
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * k)), h = Math.max(1, Math.round(img.naturalHeight * k));
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0, w, h);
+    const blob = await new Promise(res => c.toBlob(res, 'image/webp', quality));
+    if (blob && blob.type === 'image/webp') return blob;
+    return await new Promise(res => { g.globalCompositeOperation = 'destination-over'; g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); c.toBlob(res, 'image/jpeg', quality); });
+  } finally { URL.revokeObjectURL(url); }
 }
