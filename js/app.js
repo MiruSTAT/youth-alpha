@@ -1,11 +1,11 @@
-import { t, getLang, setLang } from './i18n.js?v=17';
-import { api, MODE, ranked, today, bkkToday } from './data.js?v=17';
-import { music } from './music.js?v=17';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=17';
-import { snow } from './snow.js?v=17';
-import { track } from './track.js?v=17';
-import { metro } from './metronome.js?v=17';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=17';
+import { t, getLang, setLang } from './i18n.js?v=18';
+import { api, MODE, ranked, today, bkkToday } from './data.js?v=18';
+import { music } from './music.js?v=18';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=18';
+import { snow } from './snow.js?v=18';
+import { track } from './track.js?v=18';
+import { metro } from './metronome.js?v=18';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=18';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -86,7 +86,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=17');
+    const m = await import('./scene3d.js?v=18');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -344,7 +344,7 @@ function parseSong(content) {
   while (out.length && out[out.length - 1].k === 'gap') out.pop();
   // which language each part is in (Thai letters = Thai), and a number for every line (for karaoke timing)
   let part = [], parts = [part], li = 0;
-  out.forEach(x => { if (x.k === 'sec') { part = [x]; parts.push(part); } else part.push(x); });
+  out.forEach(x => { if (x.k === 'sec' || x.k === 'gap') { part = [x]; parts.push(part); } else part.push(x); });
   parts.forEach(items => {
     const words = items.filter(x => x.k === 'line').map(x => x.segs.map(g => g.ly).join('')).join(' ');
     const lang = /[\u0E00-\u0E7F]/.test(words) ? 'th' : /[A-Za-z]/.test(words) ? 'en' : 'any';
@@ -378,6 +378,61 @@ function renderSong(parsed, { by = 0, flats = false, chords = true, lang = 'all'
     if (!has) return `<div class="ln plain" data-li="${x.li}">${esc(x.segs.map(s => s.ly).join(''))}</div>`;
     return `<div class="ln" data-li="${x.li}">${x.segs.map(s => `<span class="sg"><b class="ch">${s.ch ? tc(s.ch) : ''}</b><span class="ly">${esc(s.ly) || '&nbsp;'}</span></span>`).join('')}</div>`;
   }).join('');
+}
+// Text copied from a Word / Google Docs song sheet: the chord line sits over the words using spaces in a
+// proportional font. Measure both lines in that kind of font and put each chord in [brackets] right before
+// the letter it sits over, so it stays in place on every screen.
+const measureCtx = document.createElement('canvas').getContext('2d');
+const SHEET_FONT = '16px Tahoma, "Leelawadee UI", "Noto Sans Thai", sans-serif';
+function chordsIntoWords(text) {
+  measureCtx.font = SHEET_FONT;
+  const TAB = 36;                                               // a Word tab stop (half an inch) at this size
+  const w = (str) => { let x = 0; str.split('\t').forEach((part, j) => { if (j) x = (Math.floor(x / TAB) + 1) * TAB; x += measureCtx.measureText(part).width; }); return x; };
+  const lines = String(text || '').replace(/\r/g, '').replace(/\u00a0/g, ' ').split('\n'), out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i], next = lines[i + 1];
+    const isLyric = (l) => l != null && l.trim() && !isChordLine(l) && !/^\s*#/.test(l) && !/\[[^\]]+\]/.test(l);
+    if (!/\[[^\]]+\]/.test(line) && isChordLine(line) && isLyric(next)) {
+      const marks = [], re = /\S+/g; let m;
+      while ((m = re.exec(line))) if (CHORD_TOKEN.test(m[0])) marks.push({ x: w(line.slice(0, m.index)), ch: m[0].replace(/[()]/g, '') });
+      const lyric = next, at = [];
+      marks.forEach(({ x }) => {
+        let best = 0, bestD = Infinity;
+        for (let k = 0; k <= lyric.length; k++) { const d = Math.abs(w(lyric.slice(0, k)) - x); if (d < bestD) { bestD = d; best = k; } }
+        while (best < lyric.length && ZERO_W.test(lyric[best])) best++;         // never split a letter from its vowel/tone mark
+        at.push(best);
+      });
+      let res = lyric;
+      for (let j = marks.length - 1; j >= 0; j--) {
+        const pos = Math.max(at[j], j < marks.length - 1 ? 0 : 0);
+        if (pos >= res.length) res = res.replace(/\s*$/, '') + ' [' + marks[j].ch + ']';
+        else res = res.slice(0, pos) + '[' + marks[j].ch + ']' + res.slice(pos);
+      }
+      out.push(res.replace(/\t/g, ' ').trim()); i++; continue;
+    }
+    out.push(/^\s*#/.test(line) || isChordLine(line) ? line.trim() : line.replace(/\t/g, ' ').trim());
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+// A whole song sheet pasted at once -> one piece of text per song, found by the song titles
+function splitSheet(text, songs) {
+  const norm = (x) => String(x || '').replace(/[์\s'’".,!]/g, '').toLowerCase();
+  const byTitle = new Map(songs.map(x => [norm(x.title), x]));
+  const lines = String(text || '').replace(/\r/g, '').split('\n');
+  const found = new Map(), preamble = new Set();
+  let cur = null, justTitled = false;
+  for (const line of lines) {
+    const n = norm(line);
+    const hit = n && byTitle.get(n);
+    if (hit) { cur = hit; found.set(hit.id, []); justTitled = true; continue; }
+    if (!cur) { if (n) preamble.add(n); continue; }
+    if (n && preamble.has(n)) continue;                                     // page header repeated on every page
+    if (justTitled && n && (n === norm(cur.subtitle) || n === norm(cur.title))) continue;   // second title line ("Joy to the world")
+    if (n) justTitled = false;
+    found.get(cur.id).push(line);
+  }
+  return [...found.entries()].map(([id, ls]) => ({ song: songs.find(x => x.id === id), content: chordsIntoWords(ls.join('\n')) }))
+    .filter(x => x.content.trim());
 }
 const ytId = (u) => { const m = /(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/.exec(u || '') || /^([\w-]{11})$/.exec(String(u || '').trim()); return m ? m[1] : ''; };
 let songCache = { at: 0, list: [] };
@@ -1094,10 +1149,29 @@ const KEYS = ['C', 'C#', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'Ab', 'A', 
 async function pSongs() {
   const list = await songList(true);
   view.innerHTML = `${pageHead(t('tab_songs'))}
-    <a class="btn primary wide" href="#/admin/song/new" style="margin-bottom:12px">+ ${t('addSong')}</a>
+    <a class="btn primary wide" href="#/admin/song/new" style="margin-bottom:10px">+ ${t('addSong')}</a>
+    <button class="btn wide" id="pasteAll" style="margin-bottom:12px">📋 ${t('pasteAll')}</button>
     <div class="card"><div class="list">${list.map((x, i) => `<a class="li click" href="#/admin/song/${x.id}" style="text-decoration:none;color:inherit"><span class="av" style="font-size:1.1rem;font-weight:700">${i + 1}</span>
       <span class="grow">${esc(x.title)}<span class="sub">${[x.song_key && t('keyLbl') + ' ' + x.song_key, '♩ ' + x.bpm, ytId(x.youtube) && '▶ YouTube', syncState(x).beats && '🔗', (x.sheets || []).length && '📄 ' + x.sheets.length, x.content.trim() ? '' : t('noLyrics'), x.active ? '' : t('hidden')].filter(Boolean).map(esc).join(' · ')}</span></span>
       <span class="muted">${t('edit')} ›</span></a>`).join('') || `<p class="muted">${t('noSongs')}</p>`}</div></div>`;
+  $('#pasteAll').onclick = () => pasteWholeSheet(list);
+}
+async function pasteWholeSheet(list) {
+  const r = await modal('📋 ' + t('pasteAll'), `<p class="hint" style="margin:0 0 10px">${t('pasteAllHow')}</p>
+    <textarea class="input" name="sheet" rows="14" spellcheck="false" required style="white-space:pre;overflow-x:auto;font-family:Tahoma,'Leelawadee UI','Noto Sans Thai',sans-serif;font-size:.9rem"></textarea>`, { okText: t('next') });
+  if (!(r instanceof FormData)) return;
+  const parts = splitSheet(r.get('sheet'), list);
+  if (!parts.length) { await confirmBox(t('pasteNone'), t('ok'), false); return; }
+  const missing = list.filter(x => !parts.some(p => p.song.id === x.id)).map(x => x.title);
+  const ok = await modal('⚠️ ' + t('warnTitle'), `<p style="white-space:pre-line;font-size:1.05rem;margin-top:0">${esc(t('pasteFound', parts.length))}</p>
+    <div class="list">${parts.map(p => `<div class="li"><span class="grow"><b>${esc(p.song.title)}</b><span class="sub">${t('linesN', p.content.split('\n').filter(l => l.trim()).length)}</span></span><span class="c-here">✓</span></div>`).join('')}</div>
+    ${missing.length ? `<p class="muted">${esc(t('pasteMissing'))} ${missing.map(esc).join(', ')}</p>` : ''}
+    <p style="white-space:pre-line;margin-bottom:0">${esc(t('pasteReplaceWarn'))}</p>`, { okText: t('save'), danger: true });
+  if (!(ok instanceof FormData)) return;
+  try {
+    for (const p of parts) await api.saveSong({ id: p.song.id, content: p.content });
+    songCache.at = 0; toast(t('pasteDone', parts.length)); pSongs();
+  } catch (e) { fail(e); }
 }
 async function pSongEdit(id) {
   const list = await songList(true), x = list.find(v => v.id === id);
@@ -1155,6 +1229,13 @@ async function pSongEdit(id) {
   };
   $('#pv').onclick = () => { const box = $('#pvBox'); box.hidden = !box.hidden; if (!box.hidden) box.innerHTML = renderSong(parseSong(form.content.value)) || `<p class="muted">${t('noLyrics')}</p>`; };
   form.content.oninput = () => { const box = $('#pvBox'); if (!box.hidden) box.innerHTML = renderSong(parseSong(form.content.value)); };
+  form.content.addEventListener('paste', (e) => {
+    const txt = e.clipboardData?.getData('text/plain'); if (!txt || !txt.includes('\n')) return;
+    e.preventDefault();
+    const ta = form.content, a = ta.selectionStart, b = ta.selectionEnd;
+    ta.value = ta.value.slice(0, a) + chordsIntoWords(txt) + ta.value.slice(b);
+    ta.dispatchEvent(new Event('input'));
+  });
   form.onsubmit = async (e) => {
     e.preventDefault();
     const f = new FormData(form), num = (k, lo, hi, d) => Math.max(lo, Math.min(hi, Math.trunc(Number(f.get(k))) || d));

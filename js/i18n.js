@@ -306,3 +306,21 @@ Object.assign(DICT.en, {
   tapHowLine: '1) Press ▶ on the video  2) Press ⏭ each time a new line starts (for a repeated part, tap that line)  3) Press 💾 to save',
   nextLine: 'Next line', undoMark: 'Undo', ytFail: "Couldn't load the video", ev_song_lang: 'Changed lyric language',
 });
+
+// ---- update 18: paste the whole song sheet
+Object.assign(DICT.th, {
+  pasteAll: 'วางเนื้อเพลงทั้งแผ่น', ok: 'ตกลง', linesN: (n) => `${n} บรรทัด`,
+  pasteAllHow: 'เปิดไฟล์แผ่นเพลง (Word หรือ Google Docs) กด Ctrl+A แล้ว Ctrl+C จากนั้นวางในช่องนี้ แอปจะแยกเป็นแต่ละเพลงตามชื่อเพลง และวางคอร์ดไว้เหนือคำให้เหมือนต้นฉบับ',
+  pasteNone: 'ไม่พบชื่อเพลงในข้อความที่วาง ลองตรวจว่าชื่อเพลงในแผ่นตรงกับชื่อเพลงในแอป',
+  pasteFound: (n) => `พบ ${n} เพลง`, pasteMissing: 'ไม่พบในข้อความ:',
+  pasteReplaceWarn: 'เนื้อเพลงเดิมในแอปของเพลงเหล่านี้จะถูกแทนที่\nเพลงที่ซิงก์บรรทัดเนื้อเพลงไว้แล้วต้องซิงก์บรรทัดใหม่',
+  pasteDone: (n) => `ใส่เนื้อเพลงแล้ว ${n} เพลง`,
+});
+Object.assign(DICT.en, {
+  pasteAll: 'Paste the whole song sheet', ok: 'OK', linesN: (n) => `${n} lines`,
+  pasteAllHow: 'Open the song sheet file (Word or Google Docs), press Ctrl+A then Ctrl+C, and paste here. The app splits it into songs by title and keeps each chord over the right word, like the original.',
+  pasteNone: 'No song titles found in the pasted text. Check that the titles on the sheet match the song titles in the app.',
+  pasteFound: (n) => `Found ${n} songs`, pasteMissing: 'Not found in the text:',
+  pasteReplaceWarn: "These songs' current lyrics in the app will be replaced.\nSongs whose lyric lines were synced will need the line sync again.",
+  pasteDone: (n) => `Lyrics added to ${n} songs`,
+});
