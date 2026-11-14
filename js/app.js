@@ -1,11 +1,11 @@
-import { t, getLang, setLang } from './i18n.js?v=20';
-import { api, MODE, ranked, today, bkkToday } from './data.js?v=20';
-import { music } from './music.js?v=20';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=20';
-import { snow } from './snow.js?v=20';
-import { track } from './track.js?v=20';
-import { metro } from './metronome.js?v=20';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=20';
+import { t, getLang, setLang } from './i18n.js?v=21';
+import { api, MODE, ranked, today, bkkToday } from './data.js?v=21';
+import { music } from './music.js?v=21';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=21';
+import { snow } from './snow.js?v=21';
+import { track } from './track.js?v=21';
+import { metro } from './metronome.js?v=21';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=21';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -70,10 +70,12 @@ async function eventInfo(force = false) {
 // music switches set by the admin (everything is on unless switched off)
 const MUSIC_OPTS = [
   ['ms_app', [['bgMusic', '🔔'], ['songsTab', '🎵'], ['festive', '🎄'], ['festiveSfx', '✨']]],
-  ['ms_player', [['video', '▶️'], ['metro', '🥁'], ['beatDots', '🔴'], ['scroll', '⏬'], ['speed', '🐢'], ['beatSync', '🔗'], ['lineSync', '🎤'],
+  ['ms_player', [['lyrics', '📝'], ['video', '▶️'], ['metro', '🥁'], ['beatDots', '🔴'], ['scroll', '⏬'], ['speed', '🐢'], ['beatSync', '🔗'], ['lineSync', '🎤'],
     ['chords', '🎸'], ['transpose', '♯'], ['textSize', 'Aa'], ['langSwitch', '🌐'], ['origSheet', '📄']]],
 ];
-const mo = (k) => evCache?.music?.[k] !== false;
+let songOpts = {};                                                  // switches for the open song (set by an admin per song)
+const moApp = (k) => evCache?.music?.[k] !== false;
+const mo = (k) => moApp(k) && songOpts[k] !== false;
 function applyAppOpts() {
   document.body.classList.toggle('no-bgm', !mo('bgMusic'));
   document.body.classList.toggle('no-songs', !mo('songsTab'));
@@ -100,7 +102,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=20');
+    const m = await import('./scene3d.js?v=21');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -484,7 +486,7 @@ const savePrefs = () => { try { localStorage.setItem('ya_song', JSON.stringify(s
 let player = null;                  // the open song (stopped when leaving the page)
 function stopPlayer() {
   if (!player) return;
-  player.stop(); player = null;
+  player.stop(); player = null; songOpts = {};
   document.body.classList.remove('song-page', 'no-dock'); $('#songDock')?.remove();
   music.hold(false);
 }
@@ -497,8 +499,10 @@ async function kidSong(id) {
   document.body.classList.add('song-page'); music.hold(true); scene?.stop();
   document.querySelectorAll('.santa').forEach(x => x.remove());
   await eventInfo(true);
+  songOpts = s.opts || {};
   const parsed = parseSong(s.content), vid = mo('video') ? ytId(s.youtube) : '', sheets = mo('origSheet') && Array.isArray(s.sheets) ? s.sheets : [];
-  const langs = mo('langSwitch') ? songLangs(parsed) : new Set();
+  const showLyrics = mo('lyrics');
+  const langs = showLyrics && mo('langSwitch') ? songLangs(parsed) : new Set();
   // timings recorded by an admin for this video (beats) and these words (lines)
   const sync = s.sync && s.sync.video === vid ? s.sync : null;
   const beatMap = mo('beatSync') && sync?.beats?.length > 8 ? sync.beats : null;
@@ -515,14 +519,14 @@ async function kidSong(id) {
       <span class="yt-play">▶</span><span class="yt-lbl">${t('listen')}</span></button></div>
       ${beatMap || lineMap ? `<p class="sync-note">🔗 ${t(lineMap ? 'syncedAll' : 'syncedBeat')}</p>` : ''}` : ''}
     ${langs.size > 1 ? `<div class="lang-sw" role="tablist">${[['all', t('langAll')], ['th', 'ไทย'], ['en', 'English']].map(([k, l]) => `<button data-lg="${k}" class="${st.lang === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}
-    <div class="lyrics" id="lyrics" style="--fs:${st.fs}"></div>
-    ${sheets.length ? `<details class="orig" id="orig"><summary><span class="ot">📄 ${t('origSheet')}</span><span class="orig-key" id="origKey" hidden></span><span class="chev">›</span></summary>
+    <div class="lyrics" id="lyrics" style="--fs:${st.fs}" ${showLyrics ? '' : 'hidden'}></div>
+    ${sheets.length ? `<details class="orig" id="orig" ${showLyrics ? '' : 'open'}><summary><span class="ot">📄 ${t('origSheet')}</span><span class="orig-key" id="origKey" hidden></span><span class="chev">›</span></summary>
       <div class="sheets">${sheets.map((u, i) => `<button class="sheet-img" data-sh="${i}"><img src="${esc(u)}" alt="${t('sheetLbl')} ${i + 1}" loading="lazy"></button>`).join('')}</div></details>` : ''}
     ${s.credits ? `<p class="song-credit">🎵 ${t('credits')}: ${esc(s.credits)}</p>` : ''}
   </section>`;
   const dock = document.createElement('div');
   dock.id = 'songDock'; dock.className = 'song-dock';
-  const hasAa = mo('chords') || mo('transpose') || mo('textSize');
+  const hasAa = showLyrics && (mo('chords') || mo('transpose') || mo('textSize'));
   const btns = [mo('metro') && `<button id="dMetro" class="dk"><span>🥁</span><b>${t('metro')}</b></button>`,
     mo('scroll') && `<button id="dScroll" class="dk"><span>⏬</span><b>${t('scroll')}</b></button>`,
     mo('speed') && `<button id="dSpeed" class="dk"><span id="spdTxt">1×</span><b>${t('speed')}</b></button>`,
@@ -1223,11 +1227,22 @@ async function pSongEdit(id) {
         </div>
         <div class="field"><label>${t('creditsLbl')}</label><textarea class="input" name="credits" rows="3" maxlength="600">${esc(v.credits)}</textarea></div>
       </div>
+      ${x ? songSwitches(x) : ''}
       ${x && ytId(x.youtube) ? syncCard(x) : ''}
       ${x ? `<div class="row-btns"><button type="button" class="btn small" id="hideSong">${x.active ? t('hidden') : t('show')}</button><button type="button" class="btn small danger" id="delSong">${t('del')}</button></div>` : ''}
       <div class="bottom-bar"><button class="btn primary" id="saveSong">${t('save')}</button></div>
     </form>`;
   const form = $('#sf');
+  view.querySelectorAll('[data-so]').forEach(b => b.onclick = async () => {
+    const k = b.dataset.so, on = !b.classList.contains('on'), opts = { ...(x.opts || {}), [k]: on };
+    b.disabled = true;
+    try {
+      await api.saveSong({ id: x.id, opts }); x.opts = opts; songCache.at = 0;
+      b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on));
+      toast(`${t('mo_' + k)} · ${on ? t('moOn') : t('moOff')}`);
+    } catch (e) { fail(e); }
+    b.disabled = false;
+  });
   const drawThumbs = () => {
     $('#thumbs').innerHTML = sheets.map((u, i) => `<div class="th"><img src="${esc(u)}" alt=""><button type="button" class="x" data-rm="${i}" aria-label="${t('removePic')}">✕</button>
       <button type="button" class="read" data-read="${i}">✨ ${t('readPic')}</button></div>`).join('');
@@ -1240,7 +1255,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=20');
+      const { readSheet } = await import('./ocr.js?v=21');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1287,6 +1302,16 @@ async function pSongEdit(id) {
     if (!(await confirmBox(t('delWarn', x.title)))) return;
     try { await api.deleteSong(x.id); songCache.at = 0; location.hash = '#/admin/songs'; } catch (e) { fail(e); }
   });
+}
+
+// ---------------- What kids see in this one song (switches like the feedback switch)
+function songSwitches(x) {
+  const items = MUSIC_OPTS.find(([g]) => g === 'ms_player')[1], o = x.opts || {};
+  return `<div class="card toggles"><b style="display:block;padding:12px 0 4px">👀 ${t('songSw')}</b>
+    <p class="muted" style="margin:0 0 4px">${t('songSwSub')}</p>
+    ${items.map(([k, i]) => { const off = !moApp(k); return `<div class="tg-row"><span class="tg-i">${i}</span>
+      <span class="tg-t"><b>${t('mo_' + k)}</b>${off ? `<span>${t('songSwOff')}</span>` : ''}</span>
+      <button type="button" class="switch ${o[k] !== false ? 'on' : ''}" data-so="${k}" role="switch" aria-checked="${o[k] !== false}" aria-label="${t('mo_' + k)}" ${off ? 'disabled' : ''}><span></span></button></div>`; }).join('')}</div>`;
 }
 
 // ---------------- Tap-along: match the beat and the lyric lines to the video (admin)

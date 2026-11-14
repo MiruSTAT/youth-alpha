@@ -278,13 +278,13 @@ function previewApi() {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=20'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=21'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {
       const r = row.id && db.songs.find(x => x.id === row.id);
       if (r) { const o = { ...r }; Object.assign(r, row); audit('songs', 'UPDATE', o, r); save(); return r; }
-      const n = { active: true, sort: db.songs.length + 1, sheets: [], ...row, id: id() }; db.songs.push(n); audit('songs', 'INSERT', null, n); save(); return n;
+      const n = { active: true, sort: db.songs.length + 1, sheets: [], opts: {}, ...row, id: id() }; db.songs.push(n); audit('songs', 'INSERT', null, n); save(); return n;
     },
     async deleteSong(sid) { audit('songs', 'DELETE', db.songs.find(x => x.id === sid), null); db.songs = db.songs.filter(x => x.id !== sid); save(); },
     async uploadImage(blob) {
