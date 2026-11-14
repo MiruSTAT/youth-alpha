@@ -1,10 +1,11 @@
-import { t, getLang, setLang } from './i18n.js?v=16';
-import { api, MODE, ranked, today, bkkToday } from './data.js?v=16';
-import { music } from './music.js?v=16';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=16';
-import { snow } from './snow.js?v=16';
-import { track } from './track.js?v=16';
-import { metro } from './metronome.js?v=16';
+import { t, getLang, setLang } from './i18n.js?v=17';
+import { api, MODE, ranked, today, bkkToday } from './data.js?v=17';
+import { music } from './music.js?v=17';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=17';
+import { snow } from './snow.js?v=17';
+import { track } from './track.js?v=17';
+import { metro } from './metronome.js?v=17';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=17';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -85,7 +86,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=16');
+    const m = await import('./scene3d.js?v=17');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -341,8 +342,18 @@ function parseSong(content) {
     out.push({ k: 'line', segs: segs.filter(s => s.ch || s.ly) });
   }
   while (out.length && out[out.length - 1].k === 'gap') out.pop();
+  // which language each part is in (Thai letters = Thai), and a number for every line (for karaoke timing)
+  let part = [], parts = [part], li = 0;
+  out.forEach(x => { if (x.k === 'sec') { part = [x]; parts.push(part); } else part.push(x); });
+  parts.forEach(items => {
+    const words = items.filter(x => x.k === 'line').map(x => x.segs.map(g => g.ly).join('')).join(' ');
+    const lang = /[\u0E00-\u0E7F]/.test(words) ? 'th' : /[A-Za-z]/.test(words) ? 'en' : 'any';
+    items.forEach(x => { x.lang = lang; });
+  });
+  out.forEach(x => { if (x.k === 'line' || x.k === 'chords') x.li = li++; });
   return out;
 }
+const songLangs = (parsed) => new Set(parsed.map(x => x.lang).filter(l => l === 'th' || l === 'en'));
 const SHARPS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'], FLATS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 const noteIdx = (n) => { const i = SHARPS.indexOf(n); return i >= 0 ? i : FLATS.indexOf(n); };
 const FLAT_KEYS = new Set(['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Dm', 'Gm', 'Cm', 'Fm', 'Bbm', 'Ebm']);
@@ -356,15 +367,16 @@ function keyAfter(key, by) {
   const sharpName = shiftNote(m[1], by, false) + m[2], flatName = shiftNote(m[1], by, true) + m[2];
   return FLAT_KEYS.has(flatName) ? flatName : sharpName;
 }
-function renderSong(parsed, { by = 0, flats = false, chords = true } = {}) {
+function renderSong(parsed, { by = 0, flats = false, chords = true, lang = 'all' } = {}) {
   const tc = (c) => esc(transposeChord(c, by, flats));
   return parsed.map(x => {
+    if (lang !== 'all' && x.lang !== 'any' && x.lang !== lang) return '';
     if (x.k === 'sec') return `<div class="sec">${esc(x.text)}</div>`;
     if (x.k === 'gap') return '<div class="gap"></div>';
-    if (x.k === 'chords') return chords ? `<div class="ln chords-only">${x.text.split(/(\s+)/).map(tok => CHORD_TOKEN.test(tok) ? `<b class="ch">${tc(tok.replace(/[()]/g, ''))}</b>` : tok.trim() ? `<span class="sep">${esc(tok)}</span>` : ' ').join('')}</div>` : '';
+    if (x.k === 'chords') return chords ? `<div class="ln chords-only" data-li="${x.li}">${x.text.split(/(\s+)/).map(tok => CHORD_TOKEN.test(tok) ? `<b class="ch">${tc(tok.replace(/[()]/g, ''))}</b>` : tok.trim() ? `<span class="sep">${esc(tok)}</span>` : ' ').join('')}</div>` : '';
     const has = chords && x.segs.some(s => s.ch);
-    if (!has) return `<div class="ln plain">${esc(x.segs.map(s => s.ly).join(''))}</div>`;
-    return `<div class="ln">${x.segs.map(s => `<span class="sg"><b class="ch">${s.ch ? tc(s.ch) : ''}</b><span class="ly">${esc(s.ly) || '&nbsp;'}</span></span>`).join('')}</div>`;
+    if (!has) return `<div class="ln plain" data-li="${x.li}">${esc(x.segs.map(s => s.ly).join(''))}</div>`;
+    return `<div class="ln" data-li="${x.li}">${x.segs.map(s => `<span class="sg"><b class="ch">${s.ch ? tc(s.ch) : ''}</b><span class="ly">${esc(s.ly) || '&nbsp;'}</span></span>`).join('')}</div>`;
   }).join('');
 }
 const ytId = (u) => { const m = /(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/.exec(u || '') || /^([\w-]{11})$/.exec(String(u || '').trim()); return m ? m[1] : ''; };
@@ -416,7 +428,13 @@ async function kidSong(id) {
   document.body.classList.add('song-page'); music.hold(true); scene?.stop();
   document.querySelectorAll('.santa').forEach(x => x.remove());
   const parsed = parseSong(s.content), vid = ytId(s.youtube), sheets = Array.isArray(s.sheets) ? s.sheets : [];
-  const st = { by: songPrefs['t_' + s.id] || 0, chords: songPrefs.chords !== false, fs: songPrefs.fs || 1.25, speed: 1, metro: false, scroll: false };
+  const langs = songLangs(parsed);
+  // timings recorded by an admin for this video (beats) and these words (lines)
+  const sync = s.sync && s.sync.video === vid ? s.sync : null;
+  const beatMap = sync?.beats?.length > 8 ? sync.beats : null;
+  const lineMap = sync?.lines?.length && sync.linesHash === hashText(s.content || '') ? [...sync.lines].sort((x, y) => x[0] - y[0]) : null;
+  const st = { by: songPrefs['t_' + s.id] || 0, chords: songPrefs.chords !== false, fs: songPrefs.fs || 1.25, speed: 1, metro: false, scroll: false,
+    lang: langs.size > 1 ? (songPrefs.lang || 'all') : 'all' };
   const flats = () => FLAT_KEYS.has(keyAfter(s.song_key, st.by));
   view.innerHTML = `<section class="sheet song-sheet">
     <div class="song-head"><a class="back k" href="#/songs" aria-label="${t('back')}">‹</a>
@@ -424,14 +442,17 @@ async function kidSong(id) {
     <div class="song-meta">${s.song_key ? `<span class="chip key">${t('keyLbl')} <b id="keyNow">${esc(keyAfter(s.song_key, st.by))}</b></span>` : ''}
       <span class="chip"><span class="q">♩</span> = <b id="bpmNow">${s.bpm}</b></span><span class="chip">${s.beats}/4</span></div>
     ${vid ? `<div class="yt" id="yt"><button class="yt-poster" id="ytGo" style="background-image:url('https://i.ytimg.com/vi/${vid}/hqdefault.jpg')" aria-label="${t('listen')}">
-      <span class="yt-play">▶</span><span class="yt-lbl">${t('listen')}</span></button></div>` : ''}
+      <span class="yt-play">▶</span><span class="yt-lbl">${t('listen')}</span></button></div>
+      ${beatMap || lineMap ? `<p class="sync-note">🔗 ${t(lineMap ? 'syncedAll' : 'syncedBeat')}</p>` : ''}` : ''}
+    ${langs.size > 1 ? `<div class="lang-sw" role="tablist">${[['all', t('langAll')], ['th', 'ไทย'], ['en', 'English']].map(([k, l]) => `<button data-lg="${k}" class="${st.lang === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}
     <div class="lyrics" id="lyrics" style="--fs:${st.fs}"></div>
-    ${sheets.length ? `<h2 class="sheet-h">📄 ${t('sheetLbl')}</h2><div class="sheets">${sheets.map((u, i) => `<button class="sheet-img" data-sh="${i}"><img src="${esc(u)}" alt="${t('sheetLbl')} ${i + 1}" loading="lazy"></button>`).join('')}</div>` : ''}
+    ${sheets.length ? `<details class="orig" id="orig"><summary><span class="ot">📄 ${t('origSheet')}</span><span class="orig-key" id="origKey" hidden></span><span class="chev">›</span></summary>
+      <div class="sheets">${sheets.map((u, i) => `<button class="sheet-img" data-sh="${i}"><img src="${esc(u)}" alt="${t('sheetLbl')} ${i + 1}" loading="lazy"></button>`).join('')}</div></details>` : ''}
     ${s.credits ? `<p class="song-credit">🎵 ${t('credits')}: ${esc(s.credits)}</p>` : ''}
   </section>`;
   const dock = document.createElement('div');
   dock.id = 'songDock'; dock.className = 'song-dock';
-  dock.innerHTML = `<div class="beats" id="beats">${Array.from({ length: s.beats }, () => '<i></i>').join('')}</div>
+  dock.innerHTML = `<div class="beats" id="beats"><span class="follow" id="followPill" hidden>🔗 ${t('withVideo')}</span>${Array.from({ length: s.beats }, () => '<i></i>').join('')}</div>
     <div class="dock-row">
       <button id="dMetro" class="dk"><span>🥁</span><b>${t('metro')}</b></button>
       <button id="dScroll" class="dk"><span>⏬</span><b>${t('scroll')}</b></button>
@@ -440,31 +461,46 @@ async function kidSong(id) {
     </div>`;
   document.body.appendChild(dock);
   const lyr = $('#lyrics');
+  let curLine = -1;
   const draw = () => {
-    lyr.innerHTML = parsed.length ? renderSong(parsed, { by: st.by, flats: flats(), chords: st.chords }) : (sheets.length ? '' : `<p class="empty">${t('noLyrics')}</p>`);
+    lyr.innerHTML = parsed.length ? renderSong(parsed, { by: st.by, flats: flats(), chords: st.chords, lang: st.lang }) : `<p class="empty">${t('noLyrics')}</p>`;
     lyr.style.setProperty('--fs', st.fs);
     const k = $('#keyNow'); if (k) k.textContent = keyAfter(s.song_key, st.by);
+    const ok = $('#origKey'); if (ok) { ok.hidden = !st.by; ok.textContent = `${t('original')} ${s.song_key}`; }
+    if (curLine >= 0) lyr.querySelector(`[data-li="${curLine}"]`)?.classList.add('here');
   };
   draw();
+  view.querySelectorAll('[data-lg]').forEach(b => b.onclick = () => {
+    st.lang = b.dataset.lg; songPrefs.lang = st.lang; savePrefs(); track('song_lang', st.lang);
+    view.querySelectorAll('[data-lg]').forEach(x => x.classList.toggle('on', x === b)); draw();
+  });
+  $('#orig')?.addEventListener('toggle', (e) => { if (e.target.open) track('sheet_view', s.title); });
 
-  // --- beat dots + metronome
+  // --- beat dots
   const dots = [...dock.querySelectorAll('#beats i')];
-  metro.onBeat = (b) => dots.forEach((d, i) => { d.classList.toggle('on', i === b); d.classList.toggle('one', i === b && b === 0); });
+  const showBeat = (b) => dots.forEach((d, i) => { d.classList.toggle('on', i === b); d.classList.toggle('one', i === b && b === 0); });
+  metro.onBeat = showBeat;
   const bpmNow = () => Math.round(s.bpm * st.speed);
-  // --- auto-scroll: about 8 beats per lyric line, slower/faster with the speed button
+  let yt = null, clock = null, karaoke = 0;
+  const linked = () => !!(clock && beatMap);              // beat follows the video
+  const lyricLinked = () => !!(clock && lineMap);          // lines follow the video
+
+  // --- auto-scroll (free): about 8 beats per lyric line, slower/faster with the speed button
   let raf = 0, lastT = 0, acc = 0, wake = null;
   const lineH = () => { const ls = lyr.querySelectorAll('.ln'); if (!ls.length) return 60; let h = 0; ls.forEach(l => h += l.offsetHeight); return h / ls.length; };
   const pxPerSec = () => parsed.length ? lineH() / (8 * 60 / bpmNow()) : Math.max(12, (document.documentElement.scrollHeight - innerHeight) / (150 / st.speed));
   const stepScroll = (now) => {
     if (!st.scroll) return;
     const dt = Math.min(0.1, (now - (lastT || now)) / 1000); lastT = now;
-    acc += pxPerSec() * dt;
-    if (acc >= 1) { const d = Math.floor(acc); acc -= d; window.scrollBy(0, d); }
-    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2) { setScroll(false); return; }
+    if (!(lyricLinked() && clock.playing)) {                // when the video leads, the lines do the scrolling
+      acc += pxPerSec() * dt;
+      if (acc >= 1) { const d = Math.floor(acc); acc -= d; window.scrollBy(0, d); }
+      if (innerHeight + scrollY >= document.documentElement.scrollHeight - 2) { setScroll(false); return; }
+    }
     raf = requestAnimationFrame(stepScroll);
   };
   const keepAwake = async () => {
-    const need = st.scroll || st.metro;
+    const need = st.scroll || st.metro || clock?.playing;
     try { if (need && !wake && navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); else if (!need && wake) { wake.release(); wake = null; } } catch {}
   };
   const setScroll = (on) => {
@@ -476,15 +512,17 @@ async function kidSong(id) {
   };
   const setMetro = (on) => {
     st.metro = on; $('#dMetro').classList.toggle('on', on);
-    on ? metro.start(bpmNow(), s.beats) : metro.stop();
+    if (linked()) metro.setSound(on);
+    else on ? metro.start(bpmNow(), s.beats) : metro.stop();
     keepAwake();
   };
-  $('#dMetro').onclick = () => { setMetro(!st.metro); track('metro', st.metro ? 'on' : 'off'); };
-  $('#dScroll').onclick = () => { setScroll(!st.scroll); track('autoscroll', st.scroll ? 'on' : 'off'); };
+  $('#dMetro').onclick = () => { setMetro(!st.metro); track('metro', (st.metro ? 'on' : 'off') + (linked() ? ' video' : '')); };
+  $('#dScroll').onclick = () => { setScroll(!st.scroll); track('autoscroll', (st.scroll ? 'on' : 'off') + (lyricLinked() ? ' video' : '')); };
   $('#dSpeed').onclick = () => {
     st.speed = SPEEDS[(SPEEDS.indexOf(st.speed) + 1) % SPEEDS.length];
     $('#spdTxt').textContent = st.speed + '×'; $('#bpmNow').textContent = bpmNow();
-    metro.setBpm(bpmNow()); yt?.setPlaybackRate?.(st.speed);
+    if (!linked()) metro.setBpm(bpmNow());
+    try { yt?.setPlaybackRate?.(st.speed); } catch {}
     track('song_speed', String(st.speed));
   };
   $('#dSet').onclick = () => songSettings(s, st, () => { draw(); songPrefs['t_' + s.id] = st.by; songPrefs.chords = st.chords; songPrefs.fs = st.fs; savePrefs(); });
@@ -494,10 +532,22 @@ async function kidSong(id) {
     lyr.querySelectorAll('.ln.here').forEach(x => x.classList.remove('here')); ln.classList.add('here');
     window.scrollTo({ top: scrollY + ln.getBoundingClientRect().top - innerHeight * 0.3, behavior: 'smooth' });
   };
-  view.querySelectorAll('[data-sh]').forEach(b => b.onclick = () => { track('sheet_view', s.title); openPic(sheets[b.dataset.sh], s.title); });
+  view.querySelectorAll('[data-sh]').forEach(b => b.onclick = () => openPic(sheets[b.dataset.sh], s.title));
 
-  // --- the official video (loads only when tapped; speed follows the speed button)
-  let yt = null;
+  // --- karaoke: the line being sung lights up (and the page follows it while ⏬ is on)
+  const followLines = () => {
+    if (!clock?.playing) return;
+    const v = clock.now() + 0.12, i = lowerBound(lineMap, v, (e) => e[0]) - 1, li = i >= 0 ? lineMap[i][1] : -1;
+    if (li === curLine) return;
+    curLine = li;
+    lyr.querySelectorAll('.ln.here').forEach(x => x.classList.remove('here'));
+    const el = lyr.querySelector(`[data-li="${li}"]`);
+    if (!el) return;
+    el.classList.add('here');
+    if (st.scroll) window.scrollTo({ top: scrollY + el.getBoundingClientRect().top - innerHeight * 0.3, behavior: 'smooth' });
+  };
+
+  // --- the official video (loads only when tapped); beat, lines and speed follow it
   $('#ytGo')?.addEventListener('click', async () => {
     track('yt_play', s.title);
     const box = $('#yt'); box.innerHTML = '<div id="ytFrame"></div>';
@@ -506,11 +556,20 @@ async function kidSong(id) {
       yt = new YT.Player('ytFrame', {
         host: 'https://www.youtube-nocookie.com', videoId: vid,
         playerVars: { autoplay: 1, playsinline: 1, rel: 0, start: s.yt_start || 0 },
-        events: { onReady: (e) => { e.target.setPlaybackRate(st.speed); e.target.playVideo(); }, onError: () => ytFallback(box, vid) },
+        events: {
+          onReady: (e) => {
+            e.target.setPlaybackRate(st.speed); e.target.playVideo();
+            clock = videoClock(e.target);
+            if (beatMap) { metro.follow({ clock, beats: beatMap, perBar: s.beats, offset: sync.offset || 0, sound: st.metro, onBeat: showBeat }); $('#followPill').hidden = false; }
+            if (lineMap) { karaoke = setInterval(followLines, 80); if (!st.scroll) setScroll(true); }
+          },
+          onStateChange: () => keepAwake(),
+          onError: () => ytFallback(box, vid),
+        },
       });
     } catch { ytFallback(box, vid); }
   });
-  player = { stop: () => { setScroll(false); setMetro(false); try { yt?.destroy?.(); } catch {} metro.onBeat = null; } };
+  player = { stop: () => { setScroll(false); metro.stop(); clearInterval(karaoke); clock?.stop(); try { yt?.destroy?.(); } catch {} metro.onBeat = null; wake?.release?.(); } };
 }
 function ytFallback(box, vid) {
   box.innerHTML = `<a class="kbtn" href="https://www.youtube.com/watch?v=${vid}" target="_blank" rel="noopener noreferrer">▶ ${t('openYt')} ↗</a>`;
@@ -623,7 +682,7 @@ function startFestive() {
   const box = document.createElement('div'); box.className = 'cutscene';
   const things = ['🎁', '🎁', '🎁', '🎀', '⭐', '✨', '🎁', '🍬', '🧸', '🎄'];
   box.innerHTML = `<div class="flash" style="--x:${cx}px;--y:${cy}px"></div><div class="joy-title">✨ ${t('joyTitle')} ✨</div>` +
-    Array.from({ length: 44 }, (_, i) => {
+    Array.from({ length: 32 }, (_, i) => {
       const a = Math.random() * Math.PI * 2, d = 0.45 + Math.random() * 0.75, dx = Math.cos(a) * innerWidth * d, dy = Math.sin(a) * innerHeight * d * 0.9;
       return `<span class="gift" style="left:${cx}px;top:${cy}px;--dx:${dx.toFixed(0)}px;--dy:${dy.toFixed(0)}px;--r:${(Math.random() * 720 - 360).toFixed(0)}deg;--s:${(0.8 + Math.random() * 0.9).toFixed(2)};animation-delay:${(i * 22)}ms">${things[i % things.length]}</span>`;
     }).join('');
@@ -651,7 +710,7 @@ async function adultGate(page) {
   adult.role = await api.myRole(); adult.myId = await api.myId();
   if (adult.role === 'pending') return pendingView();
   const pages = { attendance: pAttendance, attsum: pAttSummary, points: pPoints, history: pHistory, kids: pKids, shop: pShop, pcats: pPcats, feedback: pFeedback, export: pExport,
-    songs: pSongs, song: pSongEdit, ...(adult.role === 'admin' ? { settings: pSettings } : {}) };
+    songs: pSongs, song: pSongEdit, sync: pSync, ...(adult.role === 'admin' ? { settings: pSettings } : {}) };
   if (!pages[page]) return adultHome();
   await pages[page](location.hash.split('/')[3]);
 }
@@ -1037,7 +1096,7 @@ async function pSongs() {
   view.innerHTML = `${pageHead(t('tab_songs'))}
     <a class="btn primary wide" href="#/admin/song/new" style="margin-bottom:12px">+ ${t('addSong')}</a>
     <div class="card"><div class="list">${list.map((x, i) => `<a class="li click" href="#/admin/song/${x.id}" style="text-decoration:none;color:inherit"><span class="av" style="font-size:1.1rem;font-weight:700">${i + 1}</span>
-      <span class="grow">${esc(x.title)}<span class="sub">${[x.song_key && t('keyLbl') + ' ' + x.song_key, '♩ ' + x.bpm, ytId(x.youtube) && '▶ YouTube', (x.sheets || []).length && '📄 ' + x.sheets.length, x.content.trim() ? '' : t('noLyrics'), x.active ? '' : t('hidden')].filter(Boolean).map(esc).join(' · ')}</span></span>
+      <span class="grow">${esc(x.title)}<span class="sub">${[x.song_key && t('keyLbl') + ' ' + x.song_key, '♩ ' + x.bpm, ytId(x.youtube) && '▶ YouTube', syncState(x).beats && '🔗', (x.sheets || []).length && '📄 ' + x.sheets.length, x.content.trim() ? '' : t('noLyrics'), x.active ? '' : t('hidden')].filter(Boolean).map(esc).join(' · ')}</span></span>
       <span class="muted">${t('edit')} ›</span></a>`).join('') || `<p class="muted">${t('noSongs')}</p>`}</div></div>`;
 }
 async function pSongEdit(id) {
@@ -1074,6 +1133,7 @@ async function pSongEdit(id) {
         </div>
         <div class="field"><label>${t('creditsLbl')}</label><textarea class="input" name="credits" rows="3" maxlength="600">${esc(v.credits)}</textarea></div>
       </div>
+      ${x && ytId(x.youtube) ? syncCard(x) : ''}
       ${x ? `<div class="row-btns"><button type="button" class="btn small" id="hideSong">${x.active ? t('hidden') : t('show')}</button><button type="button" class="btn small danger" id="delSong">${t('del')}</button></div>` : ''}
       <div class="bottom-bar"><button class="btn primary" id="saveSong">${t('save')}</button></div>
     </form>`;
@@ -1111,6 +1171,114 @@ async function pSongEdit(id) {
     try { await api.deleteSong(x.id); songCache.at = 0; location.hash = '#/admin/songs'; } catch (e) { fail(e); }
   });
 }
+
+// ---------------- Tap-along: match the beat and the lyric lines to the video (admin)
+function syncState(x) {
+  const ok = x.sync && x.sync.video === ytId(x.youtube);
+  return { beats: ok && x.sync.beats?.length > 8 ? x.sync.beats.length : 0, lines: ok && x.sync.lines?.length ? x.sync.lines.length : 0,
+    linesOld: ok && x.sync.lines?.length && x.sync.linesHash !== hashText(x.content || '') };
+}
+function syncCard(x) {
+  const st = syncState(x);
+  return `<div class="card"><b>🎯 ${t('syncTitle')}</b>
+    <p class="muted" style="margin:4px 0 10px">${t('syncSub')}</p>
+    <div class="sync-stat"><span>🥁 ${t('syncBeats')}</span><b class="${st.beats ? 'c-here' : 'muted'}">${st.beats ? '✓ ' + t('syncN', st.beats) : t('syncNone')}</b></div>
+    <div class="sync-stat"><span>🎤 ${t('syncLines')}</span><b class="${st.lines && !st.linesOld ? 'c-here' : 'muted'}">${st.linesOld ? '⚠️ ' + t('syncRedo') : st.lines ? '✓ ' + t('syncN', st.lines) : t('syncNone')}</b></div>
+    <a class="btn wide" href="#/admin/sync/${x.id}" style="margin-top:10px">🎯 ${t('syncOpen')}</a></div>`;
+}
+async function pSync(id) {
+  const x = (await songList(true)).find(v => v.id === id);
+  if (!x) { location.hash = '#/admin/songs'; return; }
+  const vid = ytId(x.youtube);
+  if (!vid) { location.hash = '#/admin/song/' + id; return; }
+  const parsed = parseSong(x.content);
+  const old = x.sync && x.sync.video === vid ? x.sync : {};
+  const sync = { video: vid, beats: old.beats || [], offset: old.offset || 0, lines: old.lines || [], linesHash: old.linesHash || '' };
+  let mode = 'beats', taps = [], marks = [], next = 0, yt = null, clock = null, preview = 0, testing = false;
+  view.innerHTML = `${pageHead('🎯 ' + t('syncTitle'), '#/admin/song/' + id)}
+    <p class="muted" style="margin:-8px 2px 10px">${esc(x.title)}</p>
+    <div class="seg" id="seg"><button data-mode="beats" class="on">🥁 ${t('syncBeats')}</button><button data-mode="lines">🎤 ${t('syncLines')}</button></div>
+    <div class="yt sync-yt"><div id="syncFrame"></div></div>
+    <div id="syncBody"></div>`;
+  const stop = () => { clearInterval(preview); metro.stop(); };
+  const body = () => $('#syncBody');
+  const drawBeats = () => {
+    const have = sync.beats.length > 8;
+    body().innerHTML = `<p class="hint" style="margin:0 2px 10px">${t('tapHowBeat')}</p>
+      <button class="tap-big" id="tap"><span>${t('tapHere')}</span><b id="tapN">${taps.length}</b><small id="tapBpm">${taps.length > 4 ? '♩ ' + bpmOf(cleanBeats(taps)) : ''}</small></button>
+      <div class="row-btns" style="justify-content:space-between"><button class="btn small" id="redo">↺ ${t('startOver')}</button><button class="btn small primary" id="saveB" ${taps.length >= 8 ? '' : 'disabled'}>💾 ${t('save')}</button></div>
+      ${have ? `<div class="card"><b>✓ ${t('syncN', sync.beats.length)} · ♩ ${bpmOf(sync.beats)}</b>
+        <p class="muted" style="margin:4px 0 10px">${t('testHow')}</p>
+        <button class="btn wide ${testing ? 'primary' : ''}" id="testB">🎧 ${testing ? t('testing') : t('testBeat')}</button>
+        <div class="nudge"><button class="btn small" data-nudge="-0.02">− ${t('earlier')}</button><b id="offNow">${Math.round(sync.offset * 1000)} ms</b><button class="btn small" data-nudge="0.02">+ ${t('later')}</button></div></div>` : ''}`;
+    const tap = $('#tap');
+    tap.onpointerdown = (e) => {
+      e.preventDefault();
+      if (!clock?.playing) { toast(t('pressPlay')); return; }
+      taps.push(clock.now()); tap.classList.remove('hit'); void tap.offsetWidth; tap.classList.add('hit');
+      $('#tapN').textContent = taps.length;
+      if (taps.length > 4) $('#tapBpm').textContent = '♩ ' + bpmOf(cleanBeats(taps));
+      $('#saveB').disabled = taps.length < 8;
+    };
+    $('#redo').onclick = () => { taps = []; try { yt?.seekTo(x.yt_start || 0, true); yt?.pauseVideo(); } catch {} drawBeats(); };
+    $('#saveB').onclick = async () => {
+      sync.beats = cleanBeats(taps);
+      try { await api.saveSong({ id, sync, bpm: Math.max(30, Math.min(240, bpmOf(sync.beats))) }); songCache.at = 0; taps = []; toast(t('saved')); drawBeats(); } catch (e) { fail(e); }
+    };
+    $('#testB')?.addEventListener('click', () => {
+      testing = !testing;
+      testing && clock ? metro.follow({ clock, beats: sync.beats, perBar: x.beats, offset: sync.offset, sound: true }) : metro.stop();
+      drawBeats();
+    });
+    view.querySelectorAll('[data-nudge]').forEach(b => b.onclick = async () => {
+      sync.offset = Math.round((sync.offset + Number(b.dataset.nudge)) * 1000) / 1000; metro.setOffset(sync.offset);
+      $('#offNow').textContent = Math.round(sync.offset * 1000) + ' ms';
+      clearTimeout(b._t); b._t = setTimeout(async () => { try { await api.saveSong({ id, sync }); songCache.at = 0; } catch (e) { fail(e); } }, 700);
+    });
+  };
+  const drawLines = () => {
+    if (!marks.length && sync.lines.length && sync.linesHash === hashText(x.content || '')) marks = sync.lines.map(m => [...m]);
+    const lines = parsed.filter(p => p.k === 'line' || p.k === 'chords');
+    body().innerHTML = `<p class="hint" style="margin:0 2px 10px">${t('tapHowLine')}</p>
+      <div class="lyrics admin-pv sync-lines" id="sl">${renderSong(parsed)}</div>
+      <div class="sync-bar"><button class="btn small" id="undo">↩ ${t('undoMark')}</button><button class="btn small" id="redoL">↺</button>
+        <button class="btn primary" id="nextL">⏭ ${t('nextLine')}</button><button class="btn small primary" id="saveL" ${marks.length ? '' : 'disabled'}>💾</button></div>`;
+    const sl = $('#sl');
+    const paint = () => {
+      sl.querySelectorAll('.ln').forEach(el => { const li = Number(el.dataset.li); el.classList.toggle('done', marks.some(m => m[1] === li)); el.classList.toggle('next', li === next); });
+      $('#saveL').disabled = !marks.length;
+      sl.querySelector('.ln.next')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    };
+    const mark = (li) => {
+      if (!clock?.playing) { toast(t('pressPlay')); return; }
+      marks.push([Math.round(clock.now() * 1000) / 1000, li]); next = Math.min(lines.length - 1, li + 1); paint();
+    };
+    $('#nextL').onclick = () => mark(next);
+    sl.onclick = (e) => { const el = e.target.closest('.ln'); if (el) mark(Number(el.dataset.li)); };
+    $('#undo').onclick = () => { const m = marks.pop(); if (m) next = m[1]; paint(); };
+    $('#redoL').onclick = () => { marks = []; next = 0; try { yt?.seekTo(x.yt_start || 0, true); yt?.pauseVideo(); } catch {} paint(); };
+    $('#saveL').onclick = async () => {
+      sync.lines = [...marks].sort((a, b) => a[0] - b[0]); sync.linesHash = hashText(x.content || '');
+      try { await api.saveSong({ id, sync }); songCache.at = 0; toast(t('saved')); } catch (e) { fail(e); }
+    };
+    paint();
+  };
+  const draw = () => { stop(); testing = false; mode === 'beats' ? drawBeats() : drawLines(); };
+  view.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { mode = b.dataset.mode; view.querySelectorAll('[data-mode]').forEach(z => z.classList.toggle('on', z === b)); draw(); });
+  document.addEventListener('keydown', function key(e) {
+    if (!document.body.contains($('#syncBody'))) { document.removeEventListener('keydown', key); return; }
+    if (e.code === 'Space' && mode === 'beats') { e.preventDefault(); $('#tap')?.onpointerdown(e); }
+    if (e.code === 'Space' && mode === 'lines') { e.preventDefault(); $('#nextL')?.click(); }
+  });
+  draw();
+  try {
+    const YT = await loadYT();
+    yt = new YT.Player('syncFrame', { host: 'https://www.youtube-nocookie.com', videoId: vid,
+      playerVars: { playsinline: 1, rel: 0, start: x.yt_start || 0 }, events: { onReady: (e) => { clock = videoClock(e.target); } } });
+    syncCleanup = () => { stop(); clock?.stop(); try { yt?.destroy?.(); } catch {} };
+  } catch { $('.sync-yt').innerHTML = `<p class="muted" style="padding:16px;color:#fff">${t('ytFail')}</p>`; }
+}
+let syncCleanup = null;
 
 // ---------------- Kids' feedback
 async function pFeedback() {
@@ -1225,7 +1393,7 @@ function describeLog(e, kidName) {
   return { item, changes, op: t('op_' + e.op) || e.op, area: t(TBL[e.table_name] || '') || e.table_name };
 }
 const EVT_TH = ['open_app', 'view', 'tap_kid', 'tap_my_card', 'set_me', 'not_me', 'cat_info', 'shop_tap', 'bible_open', 'bible_link', 'theme_open', 'theme', 'lang', 'music', 'help_open', 'tour_next', 'tour_skip', 'tour_done', 'fb_pill', 'fb_open', 'fb_send', 'tree_tap',
-  'songs', 'song_open', 'metro', 'autoscroll', 'song_speed', 'transpose', 'yt_play', 'sheet_view', 'credits', 'santa_tap', 'festive', 'pic_view', 'fb_qr'];
+  'songs', 'song_open', 'metro', 'autoscroll', 'song_speed', 'transpose', 'yt_play', 'sheet_view', 'credits', 'santa_tap', 'festive', 'pic_view', 'fb_qr', 'song_lang'];
 const evName = (e) => EVT_TH.includes(e) ? t('ev_' + e) : e;
 
 async function pExport() {
@@ -1303,6 +1471,7 @@ async function render() {
   $('#kidSheet').hidden = true;
   document.querySelectorAll('.lightbox').forEach(x => x.remove());
   stopPlayer();                                                   // leaving a song: stop scrolling / metronome / video
+  syncCleanup?.(); syncCleanup = null;
   isAdult ? snow.stop() : snow.start();
   paintChrome();
   try {

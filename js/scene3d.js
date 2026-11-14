@@ -1,7 +1,7 @@
 // Interactive 3D Christmas scene (Three.js). Drag to spin the tree, tap for sparkles.
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js';
 
-let renderer, scene, camera, tree, star, snow, gifts = [], ornaments = [], sparks = [];
+let renderer, scene, camera, tree, star, snow, gifts = [], ornaments = [], sparks = null, sparkPos, sparkCol, sparkVel, sparkLife, sparkNext = 0;
 let running = false, raf = 0, spinVel = 0.004, dragging = false, lastX = 0, litCount = 0;
 let festive = false, flash = 0, camKick = 0, baseZ = 11, party = [], partyLight = null;
 let canvas;
@@ -66,18 +66,30 @@ export function initScene(el) {
   });
 
   // gifts
-  const giftCols = [[0xd93a4a, 0xf6c445], [0xf4f4f4, 0xd93a4a]];
+  // presents: every box shares the same few shapes and colours, so the special mode can add
+  // many more of them without the phone having to build anything new (no stutter)
+  GIFT_COLS.forEach(([c1, c2]) => GIFT_MATS.push([new THREE.MeshStandardMaterial({ color: c1, roughness: 0.4 }), new THREE.MeshStandardMaterial({ color: c2, roughness: 0.3, metalness: 0.3 })]));
   [[-2.4, 1.6], [2.3, 1.4]].forEach(([x, z], i) => {
     const s = 0.55 + (i % 2) * 0.2;
-    const g = new THREE.Group();
-    const box = new THREE.Mesh(new THREE.BoxGeometry(s, s, s), new THREE.MeshStandardMaterial({ color: giftCols[i][0], roughness: 0.4 }));
-    const rib = new THREE.MeshStandardMaterial({ color: giftCols[i][1], roughness: 0.3, metalness: 0.3 });
-    const r1 = new THREE.Mesh(new THREE.BoxGeometry(s * 1.02, s * 1.02, s * 0.16), rib);
-    const r2 = new THREE.Mesh(new THREE.BoxGeometry(s * 0.16, s * 1.02, s * 1.02), rib);
-    g.add(box, r1, r2); g.position.set(x, s / 2, z); g.rotation.y = i;
+    const g = makeGift(i === 0 ? 0 : 5, s);
+    g.position.set(x, s / 2, z); g.rotation.y = i;
     g.userData.baseY = s / 2; g.userData.phase = i * 1.3;
     gifts.push(g); scene.add(g);
   });
+  for (let i = 0; i < 26; i++) { const g = makeGift(i, 0.32 + Math.random() * 0.3); g.visible = false; party.push(g); scene.add(g); }
+  // light for the special mode: always there (switched off), so turning it on does not rebuild the shaders
+  partyLight = new THREE.PointLight(0xffffff, 0, 14); partyLight.position.set(0, 6, 3); scene.add(partyLight);
+  // sparkles: one reusable particle cloud
+  const SP = 400;
+  sparkPos = new Float32Array(SP * 3).fill(-999); sparkCol = new Float32Array(SP * 3); sparkVel = new Float32Array(SP * 3); sparkLife = new Float32Array(SP);
+  const spg = new THREE.BufferGeometry();
+  spg.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3)); spg.setAttribute('color', new THREE.BufferAttribute(sparkCol, 3));
+  const dotC = document.createElement('canvas'); dotC.width = dotC.height = 32;
+  const dg = dotC.getContext('2d'), grad = dg.createRadialGradient(16, 16, 0, 16, 16, 16);
+  grad.addColorStop(0, 'rgba(255,255,255,1)'); grad.addColorStop(0.35, 'rgba(255,255,255,.8)'); grad.addColorStop(1, 'rgba(255,255,255,0)');
+  dg.fillStyle = grad; dg.fillRect(0, 0, 32, 32);
+  sparks = new THREE.Points(spg, new THREE.PointsMaterial({ size: 0.26, map: new THREE.CanvasTexture(dotC), vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+  sparks.frustumCulled = false; scene.add(sparks);
 
   // snow
   const COUNT = 300, pos = new Float32Array(COUNT * 3);
@@ -117,14 +129,15 @@ function resize() {
   camera.updateProjectionMatrix();
 }
 
+const SPARK_COLS = [[1, 0.83, 0.3], [0.95, 0.25, 0.3], [1, 1, 1]];
 export function burst(count = 40) {
-  if (!scene) return;
-  const geo = new THREE.SphereGeometry(0.06, 6, 4);
-  for (let i = 0; i < count; i++) {
-    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: [0xf6c445, 0xd93a4a, 0xffffff][i % 3], transparent: true }));
-    m.position.set(0, 5.2, 0);
-    m.userData.v = new THREE.Vector3((Math.random() - 0.5) * 0.25, Math.random() * 0.22 + 0.05, (Math.random() - 0.5) * 0.25);
-    m.userData.life = 1; sparks.push(m); scene.add(m);
+  if (!sparks) return;
+  for (let k = 0; k < count; k++) {
+    const i = sparkNext; sparkNext = (sparkNext + 1) % sparkLife.length;
+    sparkPos.set([0, 5.2, 0], i * 3);
+    sparkVel.set([(Math.random() - 0.5) * 15, Math.random() * 13 + 3, (Math.random() - 0.5) * 15], i * 3);
+    sparkLife[i] = 1;
+    sparkCol.set(SPARK_COLS[k % 3], i * 3);
   }
 }
 
@@ -153,7 +166,7 @@ function tick() {
     o.material.emissiveIntensity += (target - o.material.emissiveIntensity) * 0.05;
   });
   if (camKick > 0.001) { camKick *= 0.97; camera.position.z = baseZ - camKick * 1.6; camera.position.y = 3.2 + camKick * 0.8; camera.lookAt(0, 2.4, 0); }
-  if (partyLight) { partyLight.color.setHSL((time * 0.2) % 1, 1, 0.6); partyLight.intensity = 25 + Math.sin(time * 5) * 10; }
+  if (partyLight && festive) { partyLight.color.setHSL((time * 0.2) % 1, 1, 0.6); partyLight.intensity = 25 + Math.sin(time * 5) * 10; }
   stepParty(dt);
   gifts.forEach(g => { g.position.y = g.userData.baseY + Math.abs(Math.sin(time * 1.6 + g.userData.phase)) * 0.12; });
   const p = snow.geometry.attributes.position;
@@ -163,10 +176,19 @@ function tick() {
     p.setY(i, y); p.setX(i, p.getX(i) + Math.sin(time + i) * 0.002);
   }
   p.needsUpdate = true;
-  for (let i = sparks.length - 1; i >= 0; i--) {
-    const s = sparks[i]; s.userData.v.y -= 0.006; s.position.add(s.userData.v);
-    s.userData.life -= 0.015; s.material.opacity = s.userData.life;
-    if (s.userData.life <= 0) { scene.remove(s); s.material.dispose(); sparks.splice(i, 1); }
+  if (sparks) {
+    let any = false;
+    for (let i = 0; i < sparkLife.length; i++) {
+      if (sparkLife[i] <= 0) continue;
+      any = true; const j = i * 3;
+      sparkVel[j + 1] -= 21 * dt;
+      sparkPos[j] += sparkVel[j] * dt; sparkPos[j + 1] += sparkVel[j + 1] * dt; sparkPos[j + 2] += sparkVel[j + 2] * dt;
+      sparkLife[i] -= dt * 0.9;
+      const f = Math.max(0, sparkLife[i]) / Math.max(0.001, sparkLife[i] + dt * 0.9);   // fade out (additive: darker = see-through)
+      sparkCol[j] *= f; sparkCol[j + 1] *= f; sparkCol[j + 2] *= f;
+      if (sparkLife[i] <= 0) sparkPos[j + 1] = -999;
+    }
+    if (any || sparks.userData.dirty) { sparks.geometry.attributes.position.needsUpdate = true; sparks.geometry.attributes.color.needsUpdate = true; sparks.userData.dirty = any; }
   }
   renderer.render(scene, camera);
 }
@@ -176,45 +198,45 @@ export function stop() { running = false; cancelAnimationFrame(raf); }
 export function refresh() { resize(); }
 
 // ------------------------------------------------------------- special mode (5 quick taps on the tree)
-const GIFT_COLS = [[0xd93a4a, 0xf6c445], [0x2a7de1, 0xffffff], [0x27a55c, 0xd93a4a], [0xf6c445, 0xd93a4a], [0x9b4dca, 0xf6c445], [0xffffff, 0x27a55c]];
-function makeGift(i) {
-  const s = 0.32 + Math.random() * 0.3, [c1, c2] = GIFT_COLS[i % GIFT_COLS.length];
-  const g = new THREE.Group();
-  const rib = new THREE.MeshStandardMaterial({ color: c2, roughness: 0.3, metalness: 0.3 });
-  g.add(new THREE.Mesh(new THREE.BoxGeometry(s, s, s), new THREE.MeshStandardMaterial({ color: c1, roughness: 0.4 })),
-    new THREE.Mesh(new THREE.BoxGeometry(s * 1.02, s * 1.02, s * 0.16), rib),
-    new THREE.Mesh(new THREE.BoxGeometry(s * 0.16, s * 1.02, s * 1.02), rib));
-  const bow = new THREE.Mesh(new THREE.TorusGeometry(s * 0.18, s * 0.06, 6, 12), rib); bow.position.y = s * 0.55; g.add(bow);
-  g.userData.half = s / 2;
+const GIFT_COLS = [[0xd93a4a, 0xf6c445], [0x2a7de1, 0xffffff], [0x27a55c, 0xd93a4a], [0xf6c445, 0xd93a4a], [0x9b4dca, 0xf6c445], [0xf4f4f4, 0xd93a4a]];
+const GIFT_MATS = [];
+const GEO = {};
+function makeGift(i, s) {
+  GEO.box ??= new THREE.BoxGeometry(1, 1, 1); GEO.r1 ??= new THREE.BoxGeometry(1.02, 1.02, 0.16); GEO.r2 ??= new THREE.BoxGeometry(0.16, 1.02, 1.02);
+  GEO.bow ??= new THREE.TorusGeometry(0.18, 0.06, 6, 12);
+  const [m1, m2] = GIFT_MATS[i % GIFT_MATS.length], g = new THREE.Group(), inner = new THREE.Group();
+  const bow = new THREE.Mesh(GEO.bow, m2); bow.position.y = 0.55;
+  inner.add(new THREE.Mesh(GEO.box, m1), new THREE.Mesh(GEO.r1, m2), new THREE.Mesh(GEO.r2, m2), bow);
+  inner.scale.setScalar(s); g.add(inner);
+  g.userData.half = s / 2; g.userData.size = s;
   return g;
 }
 // presents burst out of the tree and land all around it
 export function celebrate() {
   if (!scene) return;
   festive = true; flash = 1; camKick = 1; spinVel = 0.45;
-  if (!partyLight) { partyLight = new THREE.PointLight(0xffffff, 25, 14); partyLight.position.set(0, 6, 3); scene.add(partyLight); }
-  for (let i = 0; i < 26; i++) {
-    const g = makeGift(i), a = Math.random() * Math.PI * 2, sp = 2.2 + Math.random() * 2.6;
-    g.position.set(Math.cos(a) * 0.6, 2 + Math.random() * 2.4, Math.sin(a) * 0.6);
-    g.userData.v = new THREE.Vector3(Math.cos(a) * sp, 3 + Math.random() * 4, Math.sin(a) * sp);
-    g.userData.spin = new THREE.Vector3(Math.random() * 6 - 3, Math.random() * 6 - 3, Math.random() * 6 - 3);
-    g.userData.delay = i * 0.04; g.visible = false;
-    party.push(g); scene.add(g);
-  }
-  burst(120);
+  party.forEach((g, i) => {
+    const a = Math.random() * Math.PI * 2, sp = 2.2 + Math.random() * 2.6, u = g.userData;
+    g.position.set(Math.cos(a) * 0.6, 2 + Math.random() * 2.4, Math.sin(a) * 0.6); g.rotation.set(0, 0, 0); g.scale.setScalar(1);
+    u.v = new THREE.Vector3(Math.cos(a) * sp, 3 + Math.random() * 4, Math.sin(a) * sp);
+    u.spin = new THREE.Vector3(Math.random() * 6 - 3, Math.random() * 6 - 3, Math.random() * 6 - 3);
+    u.delay = i * 0.04; u.rest = false; u.leaving = 0; u.on = true; g.visible = false;
+  });
+  burst(150);
 }
 export function calm() {
   festive = false;
-  party.forEach(g => { g.userData.leaving = 1; });
-  if (partyLight) { scene.remove(partyLight); partyLight = null; }
+  party.forEach(g => { if (g.userData.on) g.userData.leaving = 1; });
+  if (partyLight) partyLight.intensity = 0;
   ornaments.forEach(o => o.material.emissive.setHex(o.userData.color));
 }
 function stepParty(dt) {
-  for (let i = party.length - 1; i >= 0; i--) {
-    const g = party[i], u = g.userData;
-    if (u.leaving) {
+  for (const g of party) {
+    const u = g.userData;
+    if (!u.on) continue;
+    if (u.leaving > 0) {
       u.leaving -= dt * 1.5; g.scale.setScalar(Math.max(0.001, u.leaving));
-      if (u.leaving <= 0) { scene.remove(g); g.traverse(m => { m.geometry?.dispose(); m.material?.dispose(); }); party.splice(i, 1); }
+      if (u.leaving <= 0) { u.on = false; g.visible = false; }
       continue;
     }
     if (u.delay > 0) { u.delay -= dt; continue; }

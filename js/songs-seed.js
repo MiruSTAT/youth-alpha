@@ -2,7 +2,8 @@
 // see supabase/011_images_songs.sql). English words of Jingle Bells and Joy to the World are public domain.
 export const SEED_SONGS = [
   { title: 'ความสุขวันคริสต์มาส', subtitle: 'May the Joy of Christmas Day', song_key: 'D', bpm: 105, beats: 4, youtube: '', yt_start: 0,
-    credits: 'เพลงคริสต์มาสไทย · คอร์ดจากแผ่นเพลง Youth Alpha 2026', content: '', sheets: ['sheets/joy-of-christmas-day.jpg'], sort: 1 },
+    credits: 'เพลงคริสต์มาสไทย · คอร์ดจากแผ่นเพลง Youth Alpha 2026',
+    content: '# ท่อนแรก\nD F#m\nG D\nBm G A7 D\nD F#m G D\nBm A D\n\n# ท่อนรับ *\nD Bm\nG A D\nD Bm\nG A D\n\n# ท่อน B\nG A D G A D', sheets: ['sheets/joy-of-christmas-day.jpg'], sort: 1 },
   { title: 'Jingle Bells', subtitle: 'จิงเกิลเบลส์', song_key: 'G', bpm: 120, beats: 4, youtube: '', yt_start: 0,
     credits: 'James Lord Pierpont (1857) · public domain · เนื้อไทยและคอร์ดจากแผ่นเพลง Youth Alpha 2026',
     content: `# Verse 1
@@ -55,7 +56,8 @@ Re[G]peat the sounding joy
 Re[C]peat, re[F]peat, the [C]sound[G]ing [C]joy`, sheets: ['sheets/joy-to-the-world.jpg'], sort: 3 },
   { title: 'คริสต์มาสเป็นเวลา', subtitle: 'Christmas Is a Time to Love', song_key: 'C', bpm: 96, beats: 4, youtube: 'https://www.youtube.com/watch?v=8LbzDUxtsYA', yt_start: 0,
     credits: 'Original: "Christmas Is a Time to Love" — Debby Kerner Rettino · ฉบับภาษาไทย · วิดีโอ: แพรว คณิตกุล · คอร์ดจากแผ่นเพลง Youth Alpha 2026',
-    content: '# Intro\nC Am/F G C', sheets: ['sheets/christmas-is-a-time.jpg'], sort: 4 },
-  { title: 'เปี่ยมรัก', subtitle: '', song_key: 'Em', bpm: 76, beats: 4, youtube: 'https://www.youtube.com/watch?v=h9jua5pIU00', yt_start: 0,
-    credits: 'Liberty Worship · วิดีโอ: BFC Choir · คอร์ดจากแผ่นเพลง Youth Alpha 2026', content: '', sheets: ['sheets/piam-rak.jpg'], sort: 5 },
+    content: '# Intro\nC Am/F G C\n\n# ท่อนรับ (x2)\nC Em Am C\nF G C G7\n\n# ท่อน *\nF C\nDm C\nF C G\nF C Dm C\nF G C', sheets: ['sheets/christmas-is-a-time.jpg'], sort: 4 },
+  { title: 'เปี่ยมรัก', subtitle: '', song_key: 'Em', bpm: 76, beats: 4, youtube: 'https://www.youtube.com/watch?v=U0gsICTn1-Q', yt_start: 0,
+    credits: 'Liberty Worship · วิดีโอ: ยิ้มนี้เพื่อเธอ · คอร์ดจากแผ่นเพลง Youth Alpha 2026',
+    content: '# ท่อน 1\nEm C\nD Em\nC\nD Em\n\n# ท่อนรับ *\nC D Bm Em\nC D G B7\nC D Bm Em\nC D Em\n\n# ท่อน 2\nEm C\nD Em\nC\nD Em', sheets: ['sheets/piam-rak.jpg'], sort: 5 },
 ];

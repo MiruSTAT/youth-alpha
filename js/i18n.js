@@ -284,3 +284,25 @@ Object.assign(DICT.en, {
   ev_transpose: 'Changed key', ev_yt_play: 'Played video', ev_sheet_view: 'Viewed song sheet', ev_credits: 'Viewed song credits', ev_santa_tap: 'Tapped Santa',
   ev_festive: 'Special mode (5 tree taps)', ev_pic_view: 'Viewed a profile picture', ev_fb_qr: 'Opened from feedback QR',
 });
+
+// ---- update 17: video sync, Thai/English switch, original sheet
+Object.assign(DICT.th, {
+  syncedAll: 'จังหวะและเนื้อเพลงจะตามวิดีโอ', syncedBeat: 'จังหวะจะตามวิดีโอ', langAll: 'ทั้งหมด', origSheet: 'แผ่นเพลงต้นฉบับ', withVideo: 'ตามวิดีโอ',
+  syncTitle: 'ซิงก์กับวิดีโอ', syncSub: 'แตะตามเพลงครั้งเดียว แล้วจังหวะและเนื้อเพลงในแอปจะตามวิดีโอเอง',
+  syncBeats: 'จังหวะ', syncLines: 'บรรทัดเนื้อเพลง', syncN: (n) => `${n} จุด`, syncNone: 'ยังไม่ได้ทำ', syncRedo: 'เนื้อเพลงเปลี่ยน ต้องทำใหม่', syncOpen: 'เริ่มแตะตามเพลง',
+  tapHowBeat: '1) กด ▶ ที่วิดีโอ  2) แตะปุ่มใหญ่ทุกจังหวะ เริ่มที่จังหวะแรกของห้อง  3) แตะไปจนจบเพลง แล้วกดบันทึก (บนคอมกด Space ได้)',
+  tapHere: 'แตะตามจังหวะ', startOver: 'เริ่มใหม่', testHow: 'เล่นวิดีโอแล้วฟังเสียงเคาะ ถ้าเร็วหรือช้าไปนิด ปรับได้ที่นี่',
+  testing: 'กำลังลองฟัง (แตะเพื่อหยุด)', testBeat: 'ลองฟังเสียงเคาะกับวิดีโอ', earlier: 'เร็วขึ้น', later: 'ช้าลง', pressPlay: 'กด ▶ ที่วิดีโอก่อน',
+  tapHowLine: '1) กด ▶ ที่วิดีโอ  2) กด ⏭ ทุกครั้งที่เริ่มร้องบรรทัดใหม่ (ท่อนที่ร้องซ้ำ แตะที่บรรทัดนั้นได้เลย)  3) กด 💾 บันทึก',
+  nextLine: 'บรรทัดถัดไป', undoMark: 'ย้อน', ytFail: 'โหลดวิดีโอไม่ได้', ev_song_lang: 'เปลี่ยนภาษาเนื้อเพลง',
+});
+Object.assign(DICT.en, {
+  syncedAll: 'Beat and lyrics follow the video', syncedBeat: 'The beat follows the video', langAll: 'All', origSheet: 'Original song sheet', withVideo: 'with video',
+  syncTitle: 'Sync with the video', syncSub: "Tap along once, then the app's beat and lyrics follow the video",
+  syncBeats: 'Beat', syncLines: 'Lyric lines', syncN: (n) => `${n} marks`, syncNone: 'Not done yet', syncRedo: 'Lyrics changed — redo', syncOpen: 'Start tap-along',
+  tapHowBeat: '1) Press ▶ on the video  2) Tap the big button on every beat, starting on the first beat of a bar  3) Keep tapping to the end, then Save (Space works on a computer)',
+  tapHere: 'Tap the beat', startOver: 'Start over', testHow: 'Play the video and listen to the clicks; nudge them if slightly early or late',
+  testing: 'Testing (tap to stop)', testBeat: 'Test the clicks with the video', earlier: 'earlier', later: 'later', pressPlay: 'Press ▶ on the video first',
+  tapHowLine: '1) Press ▶ on the video  2) Press ⏭ each time a new line starts (for a repeated part, tap that line)  3) Press 💾 to save',
+  nextLine: 'Next line', undoMark: 'Undo', ytFail: "Couldn't load the video", ev_song_lang: 'Changed lyric language',
+});
