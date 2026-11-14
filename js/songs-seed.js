@@ -1,11 +1,11 @@
 // Starting song list for PREVIEW mode only (the live site reads the same songs from the database,
 // see supabase/011_images_songs.sql). English words of Jingle Bells and Joy to the World are public domain.
 export const SEED_SONGS = [
-  { title: 'ความสุขวันคริสต์มาส', subtitle: 'May the Joy of Christmas Day', song_key: 'D', bpm: 105, beats: 4, youtube: '', yt_start: 0,
-    credits: 'เพลงคริสต์มาสไทย · คอร์ดจากแผ่นเพลง Youth Alpha 2026',
+  { title: 'ความสุขวันคริสต์มาส', subtitle: 'May the Joy of Christmas Day', song_key: 'D', bpm: 105, beats: 4, youtube: 'https://www.youtube.com/watch?v=ximjFpXxtQk', yt_start: 0,
+    credits: 'เพลงคริสต์มาสไทย · วิดีโอ: BFC Choir · คอร์ดจากแผ่นเพลง Youth Alpha 2026',
     content: '# ท่อนแรก\nD F#m\nG D\nBm G A7 D\nD F#m G D\nBm A D\n\n# ท่อนรับ *\nD Bm\nG A D\nD Bm\nG A D\n\n# ท่อน B\nG A D G A D', sheets: ['sheets/joy-of-christmas-day.jpg'], sort: 1 },
-  { title: 'Jingle Bells', subtitle: 'จิงเกิลเบลส์', song_key: 'G', bpm: 120, beats: 4, youtube: '', yt_start: 0,
-    credits: 'James Lord Pierpont (1857) · public domain · เนื้อไทยและคอร์ดจากแผ่นเพลง Youth Alpha 2026',
+  { title: 'Jingle Bells', subtitle: 'จิงเกิลเบลส์', song_key: 'G', bpm: 120, beats: 4, youtube: 'https://www.youtube.com/watch?v=3CWJNqyub3o', yt_start: 0,
+    credits: 'James Lord Pierpont (1857) · public domain · วิดีโอ: Christmas Songs and Carols - Love to Sing · เนื้อไทยและคอร์ดจากแผ่นเพลง Youth Alpha 2026',
     content: `# Verse 1
 [G]Dashing through the snow
 In a one-horse open [C]sleigh

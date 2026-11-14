@@ -63,3 +63,11 @@ where title = 'เปี่ยมรัก' and content = '';
 update public.songs set youtube = 'https://www.youtube.com/watch?v=U0gsICTn1-Q',
   credits = 'Liberty Worship · วิดีโอ: ยิ้มนี้เพื่อเธอ · คอร์ดจากแผ่นเพลง Youth Alpha 2026'
 where title = 'เปี่ยมรัก';
+
+-- videos chosen by the Youth Alpha team
+update public.songs set youtube = 'https://www.youtube.com/watch?v=ximjFpXxtQk',
+  credits = 'เพลงคริสต์มาสไทย · วิดีโอ: BFC Choir · คอร์ดจากแผ่นเพลง Youth Alpha 2026'
+where title = 'ความสุขวันคริสต์มาส';
+update public.songs set youtube = 'https://www.youtube.com/watch?v=3CWJNqyub3o',
+  credits = 'James Lord Pierpont (1857) · public domain · วิดีโอ: Christmas Songs and Carols - Love to Sing · เนื้อไทยและคอร์ดจากแผ่นเพลง Youth Alpha 2026'
+where title = 'Jingle Bells';
