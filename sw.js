@@ -1,5 +1,5 @@
 // Network-first: always tries fresh files, falls back to cache when offline.
-const C = 'ya-v18';
+const C = 'ya-v19';
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', e => {

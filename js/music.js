@@ -82,7 +82,7 @@ function buildJoy() {
 const JOY_TL = buildJoy();
 
 let ctx = null, master = null, bus = null, rev = null, playing = false, timer = null, nextTime = 0, idx = 0, beatPos = 0;
-let track = 'jingle', joyStart = 0, joyIdx = 0, held = false, resumeAfter = false;
+let track = 'jingle', joyStart = 0, joyIdx = 0, held = false, resumeAfter = false, allowed = true;
 
 function out(dry = 1, wet = 0) {   // a voice's output: dry to the bus, some to the reverb
   const g = ctx.createGain(); g.gain.value = dry; g.connect(bus);
@@ -214,6 +214,7 @@ export const music = {
   get playing() { return playing; },
   get track() { return track; },
   start() {
+    if (!allowed) return;                            // background music switched off by an admin
     if (held) { resumeAfter = true; return; }        // the song player is open: stay quiet
     if (playing || !ensureCtx()) return;
     ctx.resume();
@@ -242,6 +243,7 @@ export const music = {
     if (on) { resumeAfter = playing; if (playing) this.stop(false); }
     else if (resumeAfter) { resumeAfter = false; this.start(); }
   },
+  setAllowed(on) { allowed = on; if (!on && playing) this.stop(false); },
   // little "ding" when points pop
   ding() {
     if (!ctx || !playing) return;
@@ -250,7 +252,8 @@ export const music = {
   },
   // special mode: magic sparkle on every tap
   sfx() {
-    if (!ctx || !playing) return;
+    if (!this.wantsMusic() || !ensureCtx()) return;     // the kid muted sounds
+    ctx.resume();
     const t = ctx.currentTime;
     ['A5', 'D6', 'F#6', 'A6'].forEach((n, i) => bell(hz(n) / 2, t + i * 0.045, 0.25, 0.09, master));
     const buf = noise(0.35, 3);

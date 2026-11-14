@@ -1,11 +1,11 @@
-import { t, getLang, setLang } from './i18n.js?v=18';
-import { api, MODE, ranked, today, bkkToday } from './data.js?v=18';
-import { music } from './music.js?v=18';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=18';
-import { snow } from './snow.js?v=18';
-import { track } from './track.js?v=18';
-import { metro } from './metronome.js?v=18';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=18';
+import { t, getLang, setLang } from './i18n.js?v=19';
+import { api, MODE, ranked, today, bkkToday } from './data.js?v=19';
+import { music } from './music.js?v=19';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=19';
+import { snow } from './snow.js?v=19';
+import { track } from './track.js?v=19';
+import { metro } from './metronome.js?v=19';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=19';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -64,7 +64,21 @@ document.body.dataset.theme = localStorage.getItem('ya_theme') || 'snow';
 let evCache = null;
 async function eventInfo(force = false) {
   if (!evCache || force) evCache = await api.eventInfo().catch(() => ({ event_dow: 0, event_start: '10:00', event_end: '12:00' }));
+  applyAppOpts();
   return evCache;
+}
+// music switches set by the admin (everything is on unless switched off)
+const MUSIC_OPTS = [
+  ['ms_app', [['bgMusic', '🔔'], ['songsTab', '🎵'], ['festive', '🎄'], ['festiveSfx', '✨']]],
+  ['ms_player', [['video', '▶️'], ['metro', '🥁'], ['beatDots', '🔴'], ['scroll', '⏬'], ['speed', '🐢'], ['beatSync', '🔗'], ['lineSync', '🎤'],
+    ['chords', '🎸'], ['transpose', '♯'], ['textSize', 'Aa'], ['langSwitch', '🌐'], ['origSheet', '📄']]],
+];
+const mo = (k) => evCache?.music?.[k] !== false;
+function applyAppOpts() {
+  document.body.classList.toggle('no-bgm', !mo('bgMusic'));
+  document.body.classList.toggle('no-songs', !mo('songsTab'));
+  music.setAllowed(mo('bgMusic'));
+  if (typeof paintChrome === 'function') paintChrome();
 }
 
 // ------------------------------------------------------------- top bar
@@ -86,7 +100,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=18');
+    const m = await import('./scene3d.js?v=19');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -471,7 +485,7 @@ let player = null;                  // the open song (stopped when leaving the p
 function stopPlayer() {
   if (!player) return;
   player.stop(); player = null;
-  document.body.classList.remove('song-page'); $('#songDock')?.remove();
+  document.body.classList.remove('song-page', 'no-dock'); $('#songDock')?.remove();
   music.hold(false);
 }
 
@@ -482,13 +496,14 @@ async function kidSong(id) {
   setNav('songs');
   document.body.classList.add('song-page'); music.hold(true); scene?.stop();
   document.querySelectorAll('.santa').forEach(x => x.remove());
-  const parsed = parseSong(s.content), vid = ytId(s.youtube), sheets = Array.isArray(s.sheets) ? s.sheets : [];
-  const langs = songLangs(parsed);
+  await eventInfo(true);
+  const parsed = parseSong(s.content), vid = mo('video') ? ytId(s.youtube) : '', sheets = mo('origSheet') && Array.isArray(s.sheets) ? s.sheets : [];
+  const langs = mo('langSwitch') ? songLangs(parsed) : new Set();
   // timings recorded by an admin for this video (beats) and these words (lines)
   const sync = s.sync && s.sync.video === vid ? s.sync : null;
-  const beatMap = sync?.beats?.length > 8 ? sync.beats : null;
-  const lineMap = sync?.lines?.length && sync.linesHash === hashText(s.content || '') ? [...sync.lines].sort((x, y) => x[0] - y[0]) : null;
-  const st = { by: songPrefs['t_' + s.id] || 0, chords: songPrefs.chords !== false, fs: songPrefs.fs || 1.25, speed: 1, metro: false, scroll: false,
+  const beatMap = mo('beatSync') && sync?.beats?.length > 8 ? sync.beats : null;
+  const lineMap = mo('lineSync') && sync?.lines?.length && sync.linesHash === hashText(s.content || '') ? [...sync.lines].sort((x, y) => x[0] - y[0]) : null;
+  const st = { by: mo('transpose') ? songPrefs['t_' + s.id] || 0 : 0, chords: mo('chords') && songPrefs.chords !== false, fs: mo('textSize') ? songPrefs.fs || 1.25 : 1.25, speed: 1, metro: false, scroll: false,
     lang: langs.size > 1 ? (songPrefs.lang || 'all') : 'all' };
   const flats = () => FLAT_KEYS.has(keyAfter(s.song_key, st.by));
   view.innerHTML = `<section class="sheet song-sheet">
@@ -507,14 +522,14 @@ async function kidSong(id) {
   </section>`;
   const dock = document.createElement('div');
   dock.id = 'songDock'; dock.className = 'song-dock';
-  dock.innerHTML = `<div class="beats" id="beats"><span class="follow" id="followPill" hidden>🔗 ${t('withVideo')}</span>${Array.from({ length: s.beats }, () => '<i></i>').join('')}</div>
-    <div class="dock-row">
-      <button id="dMetro" class="dk"><span>🥁</span><b>${t('metro')}</b></button>
-      <button id="dScroll" class="dk"><span>⏬</span><b>${t('scroll')}</b></button>
-      <button id="dSpeed" class="dk"><span id="spdTxt">1×</span><b>${t('speed')}</b></button>
-      <button id="dSet" class="dk"><span>Aa</span><b>${t('setShort')}</b></button>
-    </div>`;
-  document.body.appendChild(dock);
+  const hasAa = mo('chords') || mo('transpose') || mo('textSize');
+  const btns = [mo('metro') && `<button id="dMetro" class="dk"><span>🥁</span><b>${t('metro')}</b></button>`,
+    mo('scroll') && `<button id="dScroll" class="dk"><span>⏬</span><b>${t('scroll')}</b></button>`,
+    mo('speed') && `<button id="dSpeed" class="dk"><span id="spdTxt">1×</span><b>${t('speed')}</b></button>`,
+    hasAa && `<button id="dSet" class="dk"><span>Aa</span><b>${t('setShort')}</b></button>`].filter(Boolean);
+  dock.innerHTML = `${mo('beatDots') ? `<div class="beats" id="beats"><span class="follow" id="followPill" hidden>🔗 ${t('withVideo')}</span>${Array.from({ length: s.beats }, () => '<i></i>').join('')}</div>` : ''}
+    ${btns.length ? `<div class="dock-row" style="grid-template-columns:repeat(${btns.length},1fr)">${btns.join('')}</div>` : ''}`;
+  if (btns.length || mo('beatDots')) document.body.appendChild(dock); else document.body.classList.add('no-dock');
   const lyr = $('#lyrics');
   let curLine = -1;
   const draw = () => {
@@ -532,7 +547,7 @@ async function kidSong(id) {
   $('#orig')?.addEventListener('toggle', (e) => { if (e.target.open) track('sheet_view', s.title); });
 
   // --- beat dots
-  const dots = [...dock.querySelectorAll('#beats i')];
+  const dots = [...dock.querySelectorAll('#beats i')];   // (none when the beat dots are switched off)
   const showBeat = (b) => dots.forEach((d, i) => { d.classList.toggle('on', i === b); d.classList.toggle('one', i === b && b === 0); });
   metro.onBeat = showBeat;
   const bpmNow = () => Math.round(s.bpm * st.speed);
@@ -559,28 +574,28 @@ async function kidSong(id) {
     try { if (need && !wake && navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); else if (!need && wake) { wake.release(); wake = null; } } catch {}
   };
   const setScroll = (on) => {
-    st.scroll = on; $('#dScroll').classList.toggle('on', on);
-    $('#dScroll span').textContent = on ? '⏸' : '⏬';
+    st.scroll = on; $('#dScroll')?.classList.toggle('on', on);
+    const ic = $('#dScroll span'); if (ic) ic.textContent = on ? '⏸' : '⏬';
     cancelAnimationFrame(raf); lastT = 0; acc = 0;
     if (on) raf = requestAnimationFrame(stepScroll);
     keepAwake();
   };
   const setMetro = (on) => {
-    st.metro = on; $('#dMetro').classList.toggle('on', on);
+    st.metro = on; $('#dMetro')?.classList.toggle('on', on);
     if (linked()) metro.setSound(on);
     else on ? metro.start(bpmNow(), s.beats) : metro.stop();
     keepAwake();
   };
-  $('#dMetro').onclick = () => { setMetro(!st.metro); track('metro', (st.metro ? 'on' : 'off') + (linked() ? ' video' : '')); };
-  $('#dScroll').onclick = () => { setScroll(!st.scroll); track('autoscroll', (st.scroll ? 'on' : 'off') + (lyricLinked() ? ' video' : '')); };
-  $('#dSpeed').onclick = () => {
+  $('#dMetro')?.addEventListener('click', () => { setMetro(!st.metro); track('metro', (st.metro ? 'on' : 'off') + (linked() ? ' video' : '')); });
+  $('#dScroll')?.addEventListener('click', () => { setScroll(!st.scroll); track('autoscroll', (st.scroll ? 'on' : 'off') + (lyricLinked() ? ' video' : '')); });
+  $('#dSpeed')?.addEventListener('click', () => {
     st.speed = SPEEDS[(SPEEDS.indexOf(st.speed) + 1) % SPEEDS.length];
     $('#spdTxt').textContent = st.speed + '×'; $('#bpmNow').textContent = bpmNow();
     if (!linked()) metro.setBpm(bpmNow());
     try { yt?.setPlaybackRate?.(st.speed); } catch {}
     track('song_speed', String(st.speed));
-  };
-  $('#dSet').onclick = () => songSettings(s, st, () => { draw(); songPrefs['t_' + s.id] = st.by; songPrefs.chords = st.chords; songPrefs.fs = st.fs; savePrefs(); });
+  });
+  $('#dSet')?.addEventListener('click', () => songSettings(s, st, () => { draw(); songPrefs['t_' + s.id] = st.by; songPrefs.chords = st.chords; songPrefs.fs = st.fs; savePrefs(); }));
   // tap a lyric line: it moves up to the reading spot
   lyr.onclick = (e) => {
     const ln = e.target.closest('.ln'); if (!ln) return;
@@ -615,8 +630,8 @@ async function kidSong(id) {
           onReady: (e) => {
             e.target.setPlaybackRate(st.speed); e.target.playVideo();
             clock = videoClock(e.target);
-            if (beatMap) { metro.follow({ clock, beats: beatMap, perBar: s.beats, offset: sync.offset || 0, sound: st.metro, onBeat: showBeat }); $('#followPill').hidden = false; }
-            if (lineMap) { karaoke = setInterval(followLines, 80); if (!st.scroll) setScroll(true); }
+            if (beatMap) { metro.follow({ clock, beats: beatMap, perBar: s.beats, offset: sync.offset || 0, sound: st.metro, onBeat: showBeat }); const fp = $('#followPill'); if (fp) fp.hidden = false; }
+            if (lineMap) { karaoke = setInterval(followLines, 80); if (!st.scroll && mo('scroll')) setScroll(true); }
           },
           onStateChange: () => keepAwake(),
           onError: () => ytFallback(box, vid),
@@ -642,18 +657,18 @@ function loadYT() {
 }
 function songSettings(s, st, apply) {
   const p = kidSheet(`<div class="panel-head"><h2>Aa ${t('songSettings')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
-    <div class="set-row"><span>${t('textSize')}</span><div class="stepper"><button data-fs="-1" aria-label="−">A−</button><b id="fsNow">${Math.round(st.fs * 100)}%</b><button data-fs="1" aria-label="+">A+</button></div></div>
-    <div class="set-row"><span>${t('showChords')}</span><button class="switch ${st.chords ? 'on' : ''}" id="chSw" role="switch" aria-checked="${st.chords}"><span></span></button></div>
-    ${s.song_key ? `<div class="set-row"><span>${t('transpose')}</span><div class="stepper"><button data-tr="-1" aria-label="♭">♭</button><b id="trNow">${esc(keyAfter(s.song_key, st.by))}</b><button data-tr="1" aria-label="♯">♯</button></div></div>
+    ${mo('textSize') ? `<div class="set-row"><span>${t('textSize')}</span><div class="stepper"><button data-fs="-1" aria-label="−">A−</button><b id="fsNow">${Math.round(st.fs * 100)}%</b><button data-fs="1" aria-label="+">A+</button></div></div>` : ''}
+    ${mo('chords') ? `<div class="set-row"><span>${t('showChords')}</span><button class="switch ${st.chords ? 'on' : ''}" id="chSw" role="switch" aria-checked="${st.chords}"><span></span></button></div>` : ''}
+    ${s.song_key && mo('transpose') ? `<div class="set-row"><span>${t('transpose')}</span><div class="stepper"><button data-tr="-1" aria-label="♭">♭</button><b id="trNow">${esc(keyAfter(s.song_key, st.by))}</b><button data-tr="1" aria-label="♯">♯</button></div></div>
     <button class="text-btn" id="trReset" ${st.by ? '' : 'hidden'}>${t('original')}: ${esc(s.song_key)}</button>` : ''}`);
   const upd = () => {
-    p.querySelector('#fsNow').textContent = Math.round(st.fs * 100) + '%';
+    const fn = p.querySelector('#fsNow'); if (fn) fn.textContent = Math.round(st.fs * 100) + '%';
     const tr = p.querySelector('#trNow'); if (tr) tr.textContent = keyAfter(s.song_key, st.by);
     const rs = p.querySelector('#trReset'); if (rs) rs.hidden = !st.by;
     apply();
   };
   p.querySelectorAll('[data-fs]').forEach(b => b.onclick = () => { st.fs = Math.max(0.9, Math.min(2, Math.round((st.fs + Number(b.dataset.fs) * 0.1) * 100) / 100)); upd(); });
-  p.querySelector('#chSw').onclick = (e) => { st.chords = !st.chords; e.currentTarget.classList.toggle('on', st.chords); e.currentTarget.setAttribute('aria-checked', String(st.chords)); upd(); };
+  p.querySelector('#chSw')?.addEventListener('click', (e) => { st.chords = !st.chords; e.currentTarget.classList.toggle('on', st.chords); e.currentTarget.setAttribute('aria-checked', String(st.chords)); upd(); });
   p.querySelectorAll('[data-tr]').forEach(b => b.onclick = () => { st.by = ((st.by + Number(b.dataset.tr) + 17) % 12) - 5; track('transpose', String(st.by)); upd(); });
   p.querySelector('#trReset')?.addEventListener('click', () => { st.by = 0; upd(); });
 }
@@ -724,7 +739,7 @@ let festive = false, tapTimes = [];
 function treeTapped() {
   const now = Date.now();
   tapTimes = tapTimes.filter(x => now - x < 2500); tapTimes.push(now);
-  if (tapTimes.length < 5 || document.body.classList.contains('adult')) return;
+  if (tapTimes.length < 5 || document.body.classList.contains('adult') || (!festive && !mo('festive'))) return;
   tapTimes = [];
   festive ? endFestive() : startFestive();
 }
@@ -752,7 +767,7 @@ function endFestive() {
 }
 // in special mode every tap makes a magic sound (kids only)
 document.addEventListener('click', (e) => {
-  if (!festive || document.body.classList.contains('adult')) return;
+  if (!festive || document.body.classList.contains('adult') || !mo('festiveSfx')) return;
   if (e.target.closest('button, a, [role="button"], .rank-row, .slot')) music.sfx();
 }, true);
 
@@ -765,7 +780,7 @@ async function adultGate(page) {
   adult.role = await api.myRole(); adult.myId = await api.myId();
   if (adult.role === 'pending') return pendingView();
   const pages = { attendance: pAttendance, attsum: pAttSummary, points: pPoints, history: pHistory, kids: pKids, shop: pShop, pcats: pPcats, feedback: pFeedback, export: pExport,
-    songs: pSongs, song: pSongEdit, sync: pSync, ...(adult.role === 'admin' ? { settings: pSettings } : {}) };
+    songs: pSongs, song: pSongEdit, sync: pSync, ...(adult.role === 'admin' ? { settings: pSettings, musicset: pMusicSet } : {}) };
   if (!pages[page]) return adultHome();
   await pages[page](location.hash.split('/')[3]);
 }
@@ -775,7 +790,7 @@ function adultHome() {
     ['g_daily', [['attendance', '✅'], ['points', '⭐']]],
     ['g_kids', [['kids', '👧'], ['feedback', '💬']]],
     ['g_rewards', [['pcats', '🏷️'], ['shop', '🎁']]],
-    ['g_songs', [['songs', '🎵']]],
+    ['g_songs', [['songs', '🎵'], ...(adult.role === 'admin' ? [['musicset', '🎛️']] : [])]],
     ['g_system', [['export', '📥'], ...(adult.role === 'admin' ? [['settings', '⚙️']] : [])]],
   ];
   view.innerHTML = `
@@ -1197,7 +1212,8 @@ async function pSongEdit(id) {
       </div>
       <div class="card">
         <div class="field"><label>${t('sheetsLbl')}</label><div class="sheet-thumbs" id="thumbs"></div>
-          <button type="button" class="btn small" id="addSheet">${t('upload')}</button><input type="file" id="sheetFile" accept="image/*" multiple hidden></div>
+          <button type="button" class="btn small" id="addSheet">${t('upload')}</button><input type="file" id="sheetFile" accept="image/*" multiple hidden>
+          <p class="hint" id="readStatus" hidden></p><p class="hint">✨ ${t('readHint')}</p></div>
       </div>
       <div class="card">
         <div class="field"><label>${t('ytLink')}</label><input class="input" name="youtube" maxlength="200" inputmode="url" placeholder="https://www.youtube.com/watch?v=…" value="${esc(v.youtube)}"></div>
@@ -1213,19 +1229,39 @@ async function pSongEdit(id) {
     </form>`;
   const form = $('#sf');
   const drawThumbs = () => {
-    $('#thumbs').innerHTML = sheets.map((u, i) => `<div class="th"><img src="${esc(u)}" alt=""><button type="button" class="x" data-rm="${i}" aria-label="${t('removePic')}">✕</button></div>`).join('');
+    $('#thumbs').innerHTML = sheets.map((u, i) => `<div class="th"><img src="${esc(u)}" alt=""><button type="button" class="x" data-rm="${i}" aria-label="${t('removePic')}">✕</button>
+      <button type="button" class="read" data-read="${i}">✨ ${t('readPic')}</button></div>`).join('');
     $('#thumbs').querySelectorAll('[data-rm]').forEach(b => b.onclick = () => { sheets.splice(Number(b.dataset.rm), 1); drawThumbs(); });
+    $('#thumbs').querySelectorAll('[data-read]').forEach(b => b.onclick = () => readInto(sheets[b.dataset.read]));
+  };
+  // fill the lyrics box from a sheet picture (words + chords over them)
+  const readInto = async (url) => {
+    if (form.content.value.trim() && !(await confirmBox(t('readReplace'), t('readGo')))) return;
+    const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
+    view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
+    try {
+      const { readSheet } = await import('./ocr.js?v=19');
+      const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
+      if (!txt.trim()) { st.textContent = t('readNothing'); return; }
+      form.content.value = txt; form.content.dispatchEvent(new Event('input'));
+      const box = $('#pvBox'); box.hidden = false; box.innerHTML = renderSong(parseSong(txt));
+      st.textContent = '✓ ' + t('readDone');
+      form.content.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    } catch (e) { console.error(e); st.textContent = t('readFail'); }
+    finally { view.querySelectorAll('[data-read]').forEach(b => b.disabled = false); }
   };
   drawThumbs();
   $('#addSheet').onclick = () => $('#sheetFile').click();
   $('#sheetFile').onchange = async (e) => {
     const files = [...e.target.files]; e.target.value = '';
     const b = $('#addSheet'); b.disabled = true; b.textContent = t('uploading');
+    let first = null;
     for (const f of files) {
       if (!/^image\//.test(f.type)) { toast(t('notImage')); continue; }
-      try { sheets.push(await api.uploadImage(await shrinkImage(f, 1600, 0.85), 'sheets')); drawThumbs(); } catch (err) { console.error(err); toast(t('uploadFail')); }
+      try { const u = await api.uploadImage(await shrinkImage(f, 2000, 0.9), 'sheets'); sheets.push(u); first ??= u; drawThumbs(); } catch (err) { console.error(err); toast(t('uploadFail')); }
     }
     b.disabled = false; b.textContent = t('upload');
+    if (first) readInto(first);                                   // new picture: read the words and chords straight away
   };
   $('#pv').onclick = () => { const box = $('#pvBox'); box.hidden = !box.hidden; if (!box.hidden) box.innerHTML = renderSong(parseSong(form.content.value)) || `<p class="muted">${t('noLyrics')}</p>`; };
   form.content.oninput = () => { const box = $('#pvBox'); if (!box.hidden) box.innerHTML = renderSong(parseSong(form.content.value)); };
@@ -1288,6 +1324,8 @@ async function pSync(id) {
     body().innerHTML = `<p class="hint" style="margin:0 2px 10px">${t('tapHowBeat')}</p>
       <button class="tap-big" id="tap"><span>${t('tapHere')}</span><b id="tapN">${taps.length}</b><small id="tapBpm">${taps.length > 4 ? '♩ ' + bpmOf(cleanBeats(taps)) : ''}</small></button>
       <div class="row-btns" style="justify-content:space-between"><button class="btn small" id="redo">↺ ${t('startOver')}</button><button class="btn small primary" id="saveB" ${taps.length >= 8 ? '' : 'disabled'}>💾 ${t('save')}</button></div>
+      <button class="btn wide" id="autoB" style="margin-bottom:12px" ${taps.length >= 8 || have ? '' : 'disabled'}>✨ ${t('autoFill')}</button>
+      <p class="hint" style="margin:-6px 2px 12px">${t('autoFillHint')}</p>
       ${have ? `<div class="card"><b>✓ ${t('syncN', sync.beats.length)} · ♩ ${bpmOf(sync.beats)}</b>
         <p class="muted" style="margin:4px 0 10px">${t('testHow')}</p>
         <button class="btn wide ${testing ? 'primary' : ''}" id="testB">🎧 ${testing ? t('testing') : t('testBeat')}</button>
@@ -1299,7 +1337,19 @@ async function pSync(id) {
       taps.push(clock.now()); tap.classList.remove('hit'); void tap.offsetWidth; tap.classList.add('hit');
       $('#tapN').textContent = taps.length;
       if (taps.length > 4) $('#tapBpm').textContent = '♩ ' + bpmOf(cleanBeats(taps));
-      $('#saveB').disabled = taps.length < 8;
+      $('#saveB').disabled = taps.length < 8; $('#autoB').disabled = taps.length < 8 && !have;
+    };
+    // fill the rest of the song: keep going at the tempo of the last beats until the video ends
+    $('#autoB').onclick = async () => {
+      const base = taps.length >= 8 ? cleanBeats(taps) : [...sync.beats];
+      let end = 0; try { end = Number(yt?.getDuration?.()) || 0; } catch {}
+      if (!end) { toast(t('pressPlay')); return; }
+      const tail = base.slice(-9), period = (tail[tail.length - 1] - tail[0]) / (tail.length - 1);
+      if (!(period > 0.2 && period < 2.5)) { toast(t('errGeneric')); return; }
+      const out = [...base];
+      for (let tm = out[out.length - 1] + period; tm < end - 0.05; tm += period) out.push(Math.round(tm * 1000) / 1000);
+      sync.beats = out;
+      try { await api.saveSong({ id, sync, bpm: Math.max(30, Math.min(240, bpmOf(base))) }); songCache.at = 0; taps = []; toast(t('autoFilled', out.length - base.length)); drawBeats(); } catch (e) { fail(e); }
     };
     $('#redo').onclick = () => { taps = []; try { yt?.seekTo(x.yt_start || 0, true); yt?.pauseVideo(); } catch {} drawBeats(); };
     $('#saveB').onclick = async () => {
@@ -1421,6 +1471,26 @@ function drawQR(canvas, text, qrcode, poster) {
   g.font = '700 64px "Noto Sans Thai", sans-serif'; g.fillText('💬 ' + t('qrCaption'), W / 2, 110);
   g.font = '700 46px "Noto Sans Thai", sans-serif'; g.fillText('🎄 Youth Alpha', W / 2, top + size + 80);
   g.font = '400 28px "Noto Sans Thai", sans-serif'; g.fillStyle = '#5a6a8f'; g.fillText(text, W / 2, top + size + 135);
+}
+
+// ---------------- Music switches (admin): turn each music feature on or off for the kids
+async function pMusicSet() {
+  const cur = { ...((await api.settings()).music || {}) };
+  view.innerHTML = `${pageHead(t('tab_musicset'))}
+    ${MUSIC_OPTS.map(([g, items]) => `<h2 class="grp">${t(g)}</h2><div class="card toggles">${items.map(([k, i]) => `<div class="tg-row">
+      <span class="tg-i">${i}</span><span class="tg-t"><b>${t('mo_' + k)}</b>${t('mos_' + k) !== 'mos_' + k ? `<span>${t('mos_' + k)}</span>` : ''}</span>
+      <button class="switch ${cur[k] !== false ? 'on' : ''}" data-mo="${k}" role="switch" aria-checked="${cur[k] !== false}" aria-label="${t('mo_' + k)}"><span></span></button></div>`).join('')}</div>`).join('')}
+    <p class="muted" style="margin:6px 4px 0">${t('moNote')}</p>`;
+  view.querySelectorAll('[data-mo]').forEach(b => b.onclick = async () => {
+    const k = b.dataset.mo, on = cur[k] === false;
+    b.disabled = true;
+    try {
+      cur[k] = on; await api.saveSettings({ music: cur }); evCache = null;
+      b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on));
+      toast(`${t('mo_' + k)} · ${on ? t('moOn') : t('moOff')}`);
+    } catch (e) { cur[k] = !on; fail(e); }
+    b.disabled = false;
+  });
 }
 
 // ---------------- Settings (admin): all timings in one place
@@ -1557,12 +1627,13 @@ async function render() {
   paintChrome();
   try {
     if (isAdult) { scene?.stop(); return await adultGate(h.split('/')[2]); }
-    await ensureScene();
+    await Promise.all([ensureScene(), eventInfo()]);             // eventInfo: the admin's music switches
     if (seq !== renderSeq) return;
     const page = h === '#/shop' ? 'shop' : h === '#/menu' ? 'menu' : h.startsWith('#/songs') ? 'songs' : h === '#/feedback' ? 'feedback' : 'ranking';
     track('view', page);
     if (h === '#/shop') return await kidShop();
     if (h === '#/menu') return await kidMenu();
+    if (h.startsWith('#/songs')) { await eventInfo(); if (!mo('songsTab')) { location.hash = '#/'; return; } }
     if (h === '#/songs') return await kidSongs();
     if (h.startsWith('#/songs/')) return await kidSong(h.split('/')[2]);
     if (h === '#/feedback') return await kidFeedbackPage();
@@ -1578,6 +1649,7 @@ window.addEventListener('hashchange', () => {
 // re-draw admin pages only when someone signs in / out (not on token refresh)
 api.onAuth?.((event) => { if (location.hash.startsWith('#/admin') && (!event || event === 'SIGNED_IN' || event === 'SIGNED_OUT')) render(); });
 render();
+eventInfo().catch(() => {});                                    // admin music switches (background music, songs tab…)
 if (location.hash === '#/feedback') track('fb_qr');
 santaSoon(true);
 track('open_app', `${document.body.dataset.theme} · ${getLang()} · ${matchMedia('(display-mode: standalone)').matches ? 'installed' : 'browser'} · ${innerWidth}x${innerHeight}`);

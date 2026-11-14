@@ -745,3 +745,16 @@ body.song-page #scene { visibility: hidden; }
 .sync-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 12; display: flex; gap: 8px; align-items: center; justify-content: center;
   padding: 10px 12px calc(10px + var(--safe-b)); background: var(--white); border-top: 1px solid var(--line); }
 .sync-bar #nextL { flex: 1; max-width: 300px; }
+
+/* ---------------- update 19: admin music switches */
+body.no-bgm #musicBtn { display: none; }
+body.no-songs .kid-nav [data-nav="songs"] { display: none; }
+body.no-dock .sheet.song-sheet { padding-bottom: calc(40px + var(--safe-b)); }
+.toggles { padding: 4px 16px; }
+.tg-row { display: flex; align-items: center; gap: 12px; min-height: 64px; border-bottom: 1px solid var(--line); }
+.tg-row:last-child { border-bottom: 0; }
+.tg-i { width: 30px; text-align: center; font-size: 1.25rem; flex: 0 0 auto; }
+.tg-t { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.tg-t span { color: var(--ink-2); font-size: .88rem; }
+.sheet-thumbs .th .read { position: absolute; left: 4px; right: 4px; bottom: 4px; min-height: 30px; border-radius: 8px; border: 0; background: rgba(27, 42, 92, .88); color: #fff; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; }
+.sheet-thumbs .th .read:disabled { opacity: .5; }

@@ -268,7 +268,7 @@ function previewApi() {
     },
     async deleteItem(iid) { audit('shop_items', 'DELETE', db.items.find(x => x.id === iid), null); db.items = db.items.filter(x => x.id !== iid); save(); },
 
-    async eventInfo() { const { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open } = db.settings; return { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open }; },
+    async eventInfo() { const { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open, music = {} } = db.settings; return { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open, music }; },
     async allPoints() { return db.points.map(p => ({ ...p, kids: kidOf(p.kid_id) })); },
     async sendFeedback(row) {
       if (!db.settings.fb_open) throw new Error('closed');
@@ -278,7 +278,7 @@ function previewApi() {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=18'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=19'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {
