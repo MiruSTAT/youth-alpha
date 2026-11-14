@@ -94,11 +94,13 @@ export function initScene(el) {
     if (performance.now() - tapStart < 250 && Math.abs(e.clientX - tapX) < 8) { burst(); spinVel = 0.12; }
   });
   window.addEventListener('resize', resize);
+  window.visualViewport?.addEventListener('resize', resize);
+  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas);
   document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
   resize();
   return true;
 }
-let tapStart = 0, tapX = 0;
+let tapStart = 0, tapX = 0, lastW = 0, lastH = 0;
 
 function resize() {
   if (!renderer) return;
@@ -106,6 +108,7 @@ function resize() {
   // skip, otherwise the tree gets the wrong shape (stretched) until refresh.
   const w = canvas.clientWidth, h = canvas.clientHeight;
   if (!w || !h) return;
+  lastW = w; lastH = h;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
   // keep the tree fully visible on narrow phones
@@ -132,6 +135,7 @@ export function setGlow(fraction) {
 function tick() {
   if (!running) return;
   raf = requestAnimationFrame(tick);
+  if (canvas.clientWidth !== lastW || canvas.clientHeight !== lastH) resize();
   const dt = Math.min(clock.getDelta(), 0.05), time = clock.elapsedTime;
   if (!dragging) { spinVel += (0.004 - spinVel) * 0.03; tree.rotation.y += spinVel; }
   star.rotation.y = time * 1.5;

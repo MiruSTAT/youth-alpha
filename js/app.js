@@ -1,6 +1,6 @@
-import { t, getLang, setLang } from './i18n.js';
-import { api, MODE, SKILL_ICON, ranked, today } from './data.js';
-import { music } from './music.js';
+import { t, getLang, setLang } from './i18n.js?v=5';
+import { api, MODE, SKILL_ICON, ranked, today } from './data.js?v=5';
+import { music } from './music.js?v=5';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -60,7 +60,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js');
+    const m = await import('./scene3d.js?v=5');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
