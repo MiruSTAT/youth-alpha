@@ -1,8 +1,6 @@
-// Fill these two values from Supabase > Project Settings > API.
-// The "anon public" key is SAFE to put here — the database security rules
-// (supabase/schema.sql) decide what visitors can see.
-// Leave both empty to run in PREVIEW mode (data saved only on this device).
+// Supabase connection. The "publishable" key is SAFE to be public —
+// the database security rules (supabase/schema.sql) decide what visitors can see.
 window.YA_CONFIG = {
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: ''
+  SUPABASE_URL: 'https://zzjoxshqatkzqsnjvlwn.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_dy3Gn8xK8JhMX2frKxc4Rg_qJpn_f6A'
 };
