@@ -140,6 +140,18 @@ function supabaseApi() {
     },
     async clearKidEvents() { return ok(await sb.rpc('clear_kid_events')); },
 
+    // ---- super admin (two steps: username + password, then the emailed sign-in link). See supabase/017_superadmin.sql
+    async superStart(username, password) { return ok(await sb.rpc('superadmin_start', { p_username: username, p_password: password })); },
+    async superSendLink(email) {
+      const r = await sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: location.origin + location.pathname } });
+      if (r.error) throw r.error;
+    },
+    async superUnlock() { return ok(await sb.rpc('superadmin_unlock')); },
+    async superClaim(username, password) { return ok(await sb.rpc('superadmin_claim', { p_username: username, p_password: password })); },
+    async superLock() { ok(await sb.rpc('superadmin_lock')); },
+    async superInfo() { return ok(await sb.rpc('superadmin_info')); },
+    async superSet(key, value) { ok(await sb.rpc('superadmin_set', { p_key: key, p_value: value })); },
+
     // ---- prizes given, announcement + verse, weekly summary
     async redemptions(limit = 1000) { return ok(await sb.from('redemptions').select('*, kids(nickname, avatar)').order('created_at', { ascending: false }).limit(limit)); },
     async redeem(row) { ok(await sb.from('redemptions').insert(row)); },
@@ -202,10 +214,19 @@ function previewApi() {
     },
     async deletePointCat(key) { if (db.points.some(p => p.skill === key)) throw new Error('in use'); db.pcats = db.pcats.filter(c => c.key !== key); save(); },
     async session() { return db.loggedIn ? { user: { id: 'preview-admin' } } : null; },
-    async signIn() { db.loggedIn = true; save(); listeners.forEach(f => f()); },
+    async signIn(email) {
+      // the preview super admin has no normal account (like the real one): its name goes to the two-step sign-in
+      if (db.sa?.user && String(email).startsWith(db.sa.user.username.toLowerCase() + '@')) throw new Error('Invalid login credentials');
+      db.loggedIn = true; save(); listeners.forEach(f => f());
+    },
     async signUp() { return {}; },
-    async signOut() { db.loggedIn = false; save(); listeners.forEach(f => f()); },
-    async myRole() { return db.loggedIn ? 'admin' : null; },
+    async signOut() { db.loggedIn = false; if (db.sa) { db.sa.asSuper = false; db.sa.unlocked = false; } save(); listeners.forEach(f => f()); },
+    async myRole() {
+      if (!db.loggedIn) return null;
+      const sa = db.sa || {};
+      if (sa.asSuper) return sa.unlocked ? 'superadmin' : (sa.user ? 'superlocked' : 'superclaim');
+      return 'admin';
+    },
     async claimAdmin() { return 'ok'; },
 
     async kids() { return [...db.kids].sort((a, b) => a.nickname.localeCompare(b.nickname, 'th')); },
@@ -285,7 +306,7 @@ function previewApi() {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=24'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=25'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {
@@ -303,6 +324,30 @@ function previewApi() {
     async kidEvents() { return db.events; },
     async kidEventsSince(iso) { return db.events.filter(e => e.created_at >= iso); },
     async reauth(pw) { if (!pw) throw new Error('password'); },
+    // super admin, preview copy: the test puts { user: { username, pw } } in db.sa; the "email link" opens straight away
+    async superStart(username, password) {
+      const sa = (db.sa ??= {});
+      if (!sa.user || sa.user.username.toLowerCase() !== String(username).trim().toLowerCase() || sa.user.pw !== password) return { ok: false, reason: 'wrong' };
+      sa.pwOk = Date.now(); save(); return { ok: true, email: 'preview-owner@example.com' };
+    },
+    async superSendLink() { const sa = (db.sa ??= {}); sa.linkSent = Date.now(); save(); },
+    async superUnlock() {
+      const sa = (db.sa ??= {});
+      if (!sa.pwOk || Date.now() - sa.pwOk > 20 * 6e4) return { ok: false, reason: 'need_password' };
+      sa.unlocked = true; sa.pwOk = 0; sa.until = new Date(Date.now() + 12 * 3600e3).toISOString(); save();
+      return { ok: true, username: sa.user.username, until: sa.until };
+    },
+    async superClaim(username, password) {
+      const sa = (db.sa ??= {});
+      if (sa.user) return { ok: false, reason: 'exists' };
+      if (!/^[A-Za-z0-9_.-]{2,30}$/.test(username)) return { ok: false, reason: 'bad_username' };
+      if (String(password).length < 4) return { ok: false, reason: 'short_password' };
+      sa.user = { username, pw: password }; sa.unlocked = true; sa.until = new Date(Date.now() + 12 * 3600e3).toISOString(); save();
+      return { ok: true, username };
+    },
+    async superLock() { if (db.sa) db.sa.unlocked = false; save(); },
+    async superInfo() { return db.sa?.unlocked ? { username: db.sa.user?.username, until: db.sa.until } : null; },
+    async superSet(key, value) { if (key !== 'install_on') throw new Error('unknown setting'); db.settings.install_on = !!value; save(); },
     async clearKidEvents() { const n = db.events.length; db.events = []; audit('kid_events', 'CLEAR', null, { rows_deleted: n }); save(); return n; },
 
     async redemptions(limit = 1000) { return [...db.redemptions].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit).map(r => ({ ...r, kids: kidOf(r.kid_id) })); },

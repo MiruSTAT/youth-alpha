@@ -80,7 +80,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
   - the YouTube IFrame API
   - `vendor/qrcode.js` (local copy) for QR codes
   - Google font **Noto Sans Thai**
-- **Versioning:** every import and asset carries `?v=N`. **The current version is `24`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
+- **Versioning:** every import and asset carries `?v=N`. **The current version is `25`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
 - **Service worker** (`sw.js`) makes the app work offline and open fast on weak Wi-Fi:
   - Files with `?v=` and same-origin pictures are served from the phone first (cache `ya-v<N>`, replaced on each version).
   - The page itself tries the internet first for 3.5 s, then uses the saved copy.
@@ -100,7 +100,10 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
 | `js/version.js` | ~260 | `VERSION`, `AREAS`, and `UPDATES`: update groups → versions → items `{a: area, th, en}`, newest first, with the commit id. `CHANGELOG` is the flat list. Admins see it at `#/admin/about` (grouped, collapsible) and can export it to Excel. Rules for adding entries are at the top of the file |
 | `icons/` | — | PNG app icons (192, 512, maskable 512, Apple 180) made from `icon.svg` with `rsvg-convert`; listed in `manifest.json` |
 | `tests/` | — | Playwright test scripts and `tests/README.md` (how to run them against a preview copy) |
-| `HANDOFF.md` | — | This file. Kept in the repo and copied to the owner's Desktop folder on every release |
+| `HANDOFF.md` | — | This file. Kept in the repo, shown on the super admin page as "Details for AI" (fetched live, so it is current as soon as a release is published), and copied to the owner's Desktop folder on every release |
+| `AGENTS.md`, `CLAUDE.md` | — | Rules every AI must follow when changing the app (version, detailed change log, detailed HANDOFF.md, tests, Desktop copy). `CLAUDE.md` points to `AGENTS.md` |
+| `js/songtext.js` | ~140 | Moved out of app.js in v25: song text functions (`parseSong`, `renderSong`, `transposeChord`, `keyAfter`, `FLAT_KEYS`, `chordsIntoWords`, `splitSheet`, `isChordLine`, `CHORD_TOKEN`, `ytId`, …). Pure functions, no app state |
+| `js/superadmin.js` | ~170 | Super admin screens, loaded with `import()` only when needed: `startFromLogin`, `superGate` (unlock / ask again), first-time `claimView`, and `pSuper` (the page). Gets app.js helpers through a context object `c` (see `saCtx()` in app.js) |
 | `js/i18n.js` | 368 | `t(key, ...args)`, `getLang()`, `setLang()`, `bkkToday()`; dictionary `th` and `en` (about 330 keys each). **Every UI string goes here in both languages** |
 | `js/track.js` | 34 | `track(event, detail)`: kid activity events, batched and sent every 15 s or when the app is hidden. Skipped on admin pages |
 | `js/music.js` | 269 | Background music made live with Web Audio (no audio files). "Jingle Bells" (1857, public domain) with bells; in festive mode an exact SATB **Joy to the World** (from hymnary MusicXML, 92 bpm, 4 verses). `music.start/stop/toggle/setTrack('joy'/'jingle')/hold(on)/setAllowed(on)/ding()/sfx()/wantsMusic()` |
@@ -112,7 +115,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
 | `js/ocr.js` | 394 | `readSheet(src, {onProgress, skipTitles, key})`: reads a song-sheet picture into the `[C]lyrics` format (see 8.6) |
 | `js/songs-seed.js` | 63 | The song list for preview mode only |
 | `css/style.css` | 762 | All styles. Kid side uses variables `--navy --sheet --card --pt --accent`, and so on; `body.adult` switches to a light admin look. Themes are `body[data-theme="snow"|"night"|"red"|"forest"]`; the **default theme is `snow`** (white) |
-| `supabase/*.sql` | — | Database setup: `schema.sql`, then `002`…`016`, all already run on the live database |
+| `supabase/*.sql` | — | Database setup: `schema.sql`, then `002`…`017`, all already run on the live database |
 | `vendor/qrcode.js` | — | QR library |
 | `sheets/*.jpg` | — | Crops of the church sheet: `joy-of-christmas-day`, `jingle-bells`, `joy-to-the-world`, `christmas-is-a-time`, `piam-rak` |
 
@@ -175,6 +178,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
 | `#/admin/notice` | Announcement line and verse of the week |
 | `#/admin/weekly` | Weekly summary |
 | `#/admin/about` | Version number, grouped change log, Excel export of the change log |
+| `#/admin/super` | Super admin page (only for an unlocked super admin session; otherwise the two-step screens) |
 
 ### localStorage keys (on each phone)
 
@@ -195,7 +199,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
 
 ## 5. Database (Supabase)
 
-To set up a new copy, run these files in the SQL editor in this order: `schema.sql`, `002`, `003` … `016`. Each one is safe to re-run.
+To set up a new copy, run these files in the SQL editor in this order: `schema.sql`, `002`, `003` … `017`. After `017`, store the owner's email by hand (see 5b); it is not in the repo. Each one is safe to re-run.
 
 ### Tables
 
@@ -243,6 +247,25 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
 - **Not logged in:** visitors can read the `leaderboard`, `kid_skill_totals`, `event_info`, `point_categories`, active `shop_items` and active `songs`. They can insert `feedback` while it is open, and insert `kid_events`.
 - **Staff:** full access to the working tables. Only the admin can update `settings`.
 - **Storage bucket `images`:** public to view; only staff can upload, update or delete. Limit is 3 MB per file; types jpeg/png/webp/gif.
+
+### 5b. Super admin (v25, `supabase/017_superadmin.sql`)
+
+- **Who:** one super admin, username **Miruku** (the owner). Its Supabase login is the owner's own Gmail and has **no Supabase password**; the only way into that login is a sign-in link emailed by Supabase.
+- **Private schema `private`** (no access for `anon`/`authenticated`; only security-definer functions read it):
+  - `private.owner(id=1, email)`: the owner's email, inserted by hand in the SQL editor, never in the repo.
+  - `private.super_admins(user_id, username, pw_hash, failed, locked_until, pw_ok_at)`: the super admin's own password, bcrypt (`extensions.crypt`, `gen_salt('bf', 10)`). Kept here, not in Supabase Auth, so the owner could choose a short password (they asked for a 4-digit one; Supabase needs 6+).
+  - `private.super_sessions(session_id, user_id, until)`: Supabase sign-in sessions (JWT claim `session_id`) that passed both steps; valid 12 hours.
+- **Functions:**
+  - `superadmin_start(username, password)` (anon allowed): 0.4 s delay; 5 wrong tries = 15 minute lock; on success sets `pw_ok_at = now()` and returns `{ok, email}`. Returns `{ok:false, reason:'wrong'|'locked', minutes}` instead of raising (raising would undo the failed-try counter).
+  - `superadmin_unlock()`: needs `pw_ok_at` within 20 minutes and the session's sign-in time (latest `amr[].timestamp` in the JWT) after `pw_ok_at`; then stores the session in `super_sessions` and clears `pw_ok_at`.
+  - `superadmin_claim(username, password)`: first time only, while `super_admins` is empty and only if the caller's email equals `private.owner.email`; creates the row and unlocks the current session.
+  - `superadmin_lock()`, `superadmin_info()` (username, until), `superadmin_set(key, value)` (whitelist: `install_on`).
+  - `is_superadmin()`; `is_staff()` and `is_admin()` now also return true for an unlocked super admin; `my_role()` returns `superadmin` | `superlocked` | `superclaim` | `admin` | `editor` | `pending` | null.
+  - Trigger `settings_super_guard`: only the super admin can change `settings.install_on`.
+  - `clear_kid_events()` now also accepts a super admin who re-entered their password in the last 2 minutes (via `superadmin_start`).
+- **App flow:** login form → normal sign-in fails → `startFromLogin` → `superadmin_start` → `signInWithOtp(email, shouldCreateUser:false, emailRedirectTo: site URL)` → "check your email" screen. The email (default Supabase template "Your sign-in link"; templates can't be edited without custom SMTP) opens the site with `#access_token=…` (implicit flow). An inline script in `index.html` saves that as `window.YA_LINK` before supabase-js clears it; app.js then waits for the session and opens `#/admin/super`, where `superGate` calls `superadmin_unlock()`.
+- **Limits:** the built-in mailer sends at most 2 emails an hour and only to Supabase team members (the owner's Gmail is one). Site URL is `https://mirustat.github.io/youth-alpha/`; no extra redirect URLs are set. "Allow new users to sign up" is off, so the owner's login was created with Supabase's "Invite user".
+- **Super admin page (`#/admin/super`):** username and "until" time with a 🔒 Lock button; the kids' "Install as an app" switch; "Details for AI": fetches `HANDOFF.md`, checks its "current version" line against `VERSION`, shows it by section, and has "Copy as an AI prompt" (a short instruction header + the whole file) and "Download .md"; and a "Coming next" list.
 
 ### Running SQL from the browser (how it was done)
 
@@ -299,9 +322,11 @@ The SQL editor (Monaco) was used in the built-in browser tab:
 ## 7. Adult / admin side
 
 - **Login:**
-  - Username plus password (a username becomes `<u>@youth-alpha.app`). There is no public sign-up button.
+  - Username plus password (a username becomes `<u>@youth-alpha.app`). There is no public sign-up button. The password box accepts 4+ characters (for the super admin; normal Supabase logins still need 6+).
+  - If the normal sign-in fails and the name is the super admin's, the two-step super admin sign-in starts (section 5b).
   - A new account shows "waiting for approval". The first ever user can claim admin.
 - **Home** has grouped menus with red indicators for things to do:
+  - **Super admin** (only when signed in as the unlocked super admin): Super admin page 👑
   - **Daily:** Attendance ✅, Points ⭐, Weekly summary 📊
   - **Kids:** Kids 👧, Feedback 💬, Announcement & verse 📣
   - **Rewards:** Point categories 🏷️, Shop 🎁, Give a prize 🎟️
@@ -500,6 +525,8 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 - **SQL:** `||` on a `"char"` column needs a `::text` cast.
 - **Monaco in the Supabase editor:** setting `getModels()[0]` can edit a hidden tab, so the old query runs. Use the visible editor's model and check the screen.
 - **Tour blocks clicks** in automated tests; see above.
+- **Login form `minlength`** blocks form submission silently in tests (no error, no toast). It is 4 since v25.
+- **Simulating the email link in tests:** `page.goto(U + '#access_token=fake')` only changes the hash on the same page; call `page.reload()` so the inline `YA_LINK` script runs.
 - **Preview-mode tests:** the preview app saves its whole database on page hide (`flush` → `logEvents` → `save()`), so editing `ya_preview_db` from the test while a page is open gets overwritten. Seed test data with `context.add_init_script` instead.
 - **Performance measuring:** `tests/perf_festive.py` (CPU slowed 4×). Before v24: about 15 fps normally, 7–9 fps in the special mode. The cause was ~30 pulsing glow layers in the special mode, plus a blurred top bar over the 3D canvas.
 - **Service worker in tests:** block it (`service_workers='block'`) for normal tests. For offline tests allow it, set `PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1`, and route CDN files with `context.route` (not `page.route`) with an `access-control-allow-origin: *` header.
@@ -532,12 +559,13 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 21. Per-song "original sheet only" switch; original sheet always shown (v22).
 22. Data operation, not a code change, 2026-11-16: admin log and kids' activity log wiped at the owner's request.
 23. v23, 2026-11-16: prize redemption, announcement line, verse of the week, weekly summary, offline songs and faster loading, version page with change log. Database update `015_redeem_notice.sql`.
-24. v24 (current), 2026-11-16: special mode lag fixed (steady glow instead of 30 pulsing layers, fewer presents, 3D tree pauses when covered and lowers detail on slow phones, snow at 30 fps, no blur on the top bar, lighter harmony sounds); prize zoom in the shop; install-as-app option (off by default, `016_install_switch.sql`); app icons; detailed grouped change log with Excel export; tests and HANDOFF.md in the repo; Desktop folder on the owner's PC.
+24. v24, 2026-11-16: special mode lag fixed (steady glow instead of 30 pulsing layers, fewer presents, 3D tree pauses when covered and lowers detail on slow phones, snow at 30 fps, no blur on the top bar, lighter harmony sounds); prize zoom in the shop; install-as-app option (off by default, `016_install_switch.sql`); app icons; detailed grouped change log with Excel export; tests and HANDOFF.md in the repo; Desktop folder on the owner's PC.
+25. v25 (current), 2026-11-16: super admin "Miruku" with two-step sign-in (own password + emailed link, `017_superadmin.sql`), super admin page (install switch, "Details for AI" from HANDOFF.md with copy/download), AGENTS.md / CLAUDE.md rules for AIs, `songtext.js` and `superadmin.js` split out of app.js, login accepts 4-character passwords.
 
 ## 14. Ideas and open items
 
 ### Agreed plan (owner approved on 2026-11-16; build one release at a time, summary first, wait for "go")
-- **v25 (super admin):** split `js/app.js` (~2000 lines) into smaller files first. New top role `superadmin` for user "Miruku" with password plus a code emailed to the owner's Gmail (the one their Supabase account uses; the built-in mailer allows 2 emails an hour and reaches only Supabase team members). The password "1234" the owner asked for is below Supabase's 6-character minimum; the owner sets their own password in Supabase. The super admin page gets: the switch for "install as an app" (off by default), and the handoff shown as "AI prompt details" that updates with each release.
+- **v25 (super admin): DONE**, see 5b. Split of app.js started (songtext.js, superadmin.js); the rest of app.js (~1780 lines: kid pages, admin pages, song player) can be split further when touched.
 - **v26 (programs):** each customised app is a saved "program" with its own look, settings, people, points, shop and songs, and **its own link**. One live program per link; today's data becomes program 1 "Youth Alpha Christmas 2026", untouched. Never delete existing data. A new program can copy the people list or the look from an old one. Named saved versions of a program's look as a safety net.
 - **v27 (program settings, super admin only):** name, logo and wording, theme packs (Christmas, Easter, plain church), font and text size, feature switches.
 - **v28:** drag-and-drop layout editor (reorder and show/hide sections, tabs and menu items, live preview; not a free-form designer).

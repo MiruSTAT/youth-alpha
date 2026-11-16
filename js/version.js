@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '24';
+export const VERSION = '25';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -20,9 +20,23 @@ export const AREAS = {
 };
 
 export const UPDATES = [
+  { id: 'super', th: 'อัปเดตผู้ดูแลสูงสุดและโปรแกรม', en: 'Super admin & programs update',
+    versions: [
+      { v: '25', date: '2026-11-16', commit: '',
+        items: [
+          { a: 'safety', th: 'ผู้ดูแลสูงสุด (Miruku) เข้าสู่ระบบ 2 ขั้นตอน: 1) ชื่อผู้ใช้และรหัสผ่าน 2) ลิงก์ที่ส่งไปทางอีเมลของเจ้าของ ฐานข้อมูลตรวจทั้งสองขั้นเอง ลิงก์ต้องเปิดภายใน 20 นาทีหลังใส่รหัสผ่าน และใช้ได้ 12 ชั่วโมงต่อครั้ง', en: 'Super admin (Miruku) signs in with two steps: 1) username and password, 2) a link emailed to the owner. The database checks both; the link must be opened within 20 minutes of the password, and the sign-in lasts 12 hours' },
+          { a: 'safety', th: 'ใส่รหัสผ่านผิด 5 ครั้งล็อก 15 นาที รหัสผ่านเก็บแบบเข้ารหัส (bcrypt) ในตารางที่ไม่มีใครอ่านได้ และอีเมลของเจ้าของไม่อยู่ในโค้ดสาธารณะ', en: '5 wrong passwords lock it for 15 minutes; the password is stored hashed (bcrypt) in a table nobody can read, and the owner\'s email is not in the public code' },
+          { a: 'admin', th: 'ครั้งแรก: เจ้าของเปิดอีเมลเชิญ แล้วตั้งชื่อผู้ใช้และรหัสผ่านเองในแอป (เตือนถ้ารหัสสั้นกว่า 8 ตัว)', en: 'First time: the owner opens the invitation email and chooses the username and password in the app (with a warning if it is shorter than 8 characters)' },
+          { a: 'admin', th: 'หน้าผู้ดูแลสูงสุด (👑 บนสุดของเมนูผู้ดูแล): สวิตช์ "ติดตั้งเป็นแอป" สำหรับเด็ก (ค่าเริ่มต้นปิด) ปุ่มล็อก และรายการสิ่งที่กำลังจะมา', en: 'Super admin page (👑 at the top of the adult menu): the kids\' "Install as an app" switch (off by default), a lock button, and what is coming next' },
+          { a: 'admin', th: '"รายละเอียดสำหรับ AI": แสดงไฟล์ส่งต่องานทีละหัวข้อ บอกว่าเป็นปัจจุบันกับเวอร์ชันนี้หรือไม่ คัดลอกเป็นข้อความสั่ง AI หรือดาวน์โหลดเป็น .md ได้', en: '"Details for AI": the handoff file shown by section, a check that it matches this version, and buttons to copy it as an AI prompt or download it as .md' },
+          { a: 'safety', th: 'สวิตช์ติดตั้งเปลี่ยนได้เฉพาะผู้ดูแลสูงสุด (ฐานข้อมูลกันไว้) ผู้ดูแลสูงสุดใช้หน้าผู้ดูแลทุกหน้าได้ และล้างบันทึกการใช้งานด้วยรหัสผ่านของตัวเอง', en: 'Only the super admin can change the install switch (enforced by the database). The super admin can use every admin page and clears the activity log with their own password' },
+          { a: 'data', th: 'ไฟล์กฎสำหรับ AI (AGENTS.md / CLAUDE.md) ในโค้ด: AI ทุกตัวต้องอัปเดตไฟล์ส่งต่องานและรายการเปลี่ยนแปลงอย่างละเอียดทุกครั้ง', en: 'Rules file for AIs (AGENTS.md / CLAUDE.md) in the code: every AI must update the handoff and the change log in detail every time' },
+          { a: 'speed', th: 'ฟังก์ชันจัดการเนื้อเพลงและคอร์ดแยกเป็นไฟล์ของตัวเอง (songtext.js) และหน้าผู้ดูแลสูงสุดโหลดเฉพาะเมื่อใช้ ไฟล์หลักเล็กลง', en: 'The lyrics and chords functions moved into their own file (songtext.js), and the super admin code loads only when used, so the main file is smaller' },
+        ] },
+    ] },
   { id: 'prizes', th: 'อัปเดตของรางวัลและใช้งานออฟไลน์', en: 'Prizes & offline update',
     versions: [
-      { v: '24', date: '2026-11-16', commit: '',
+      { v: '24', date: '2026-11-16', commit: '9f25772',
         items: [
           { a: 'speed', th: 'โหมดพิเศษ (แตะต้นไม้ 5 ครั้ง) ไม่หน่วงแล้ว: แสงทองรอบปุ่มต่าง ๆ เป็นแสงนิ่ง เหลือแสงกระพริบแค่การ์ดของเด็กเอง (เดิมกระพริบพร้อมกัน 30 จุด) ของขวัญที่บินลดจาก 32 เป็น 20 และในฉาก 3 มิติจาก 26 เป็น 18', en: 'The special mode (5 taps on the tree) no longer lags: the gold glow around buttons is now steady and only the kid\'s own card pulses (it was 30 pulsing glows at once); flying presents cut from 32 to 20, and from 26 to 18 in the 3D scene' },
           { a: 'speed', th: 'ต้นคริสต์มาส 3 มิติหยุดวาดเมื่อเลื่อนหน้าจอจนต้นไม้ถูกบังหมด และจะลดความละเอียดเองถ้าเครื่องช้า', en: 'The 3D tree stops drawing when the page is scrolled over it, and lowers its detail by itself on slow phones' },

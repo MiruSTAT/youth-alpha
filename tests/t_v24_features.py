@@ -36,9 +36,9 @@ with sync_playwright() as p:
     print('versions in export:', sorted({r['เวอร์ชัน'] for r in xl[0][1][0][1]}))
     # festive + 3D pause sanity
     go('#/', 2500)
-    print('3D:', pg.evaluate("import('./js/scene3d.js?v=24').then(m => JSON.stringify(m.info()))"))
-    pg.evaluate("window.scrollTo(0, 2000)"); pg.wait_for_timeout(500); print('3D scrolled away:', pg.evaluate("import('./js/scene3d.js?v=24').then(m => JSON.stringify(m.info()))"))
-    pg.evaluate("window.scrollTo(0, 0)"); pg.wait_for_timeout(500); print('3D back:', pg.evaluate("import('./js/scene3d.js?v=24').then(m => JSON.stringify(m.info()))"))
+    print('3D:', pg.evaluate("import('./js/scene3d.js?v=25').then(m => JSON.stringify(m.info()))"))
+    pg.evaluate("window.scrollTo(0, 2000)"); pg.wait_for_timeout(500); print('3D scrolled away:', pg.evaluate("import('./js/scene3d.js?v=25').then(m => JSON.stringify(m.info()))"))
+    pg.evaluate("window.scrollTo(0, 0)"); pg.wait_for_timeout(500); print('3D back:', pg.evaluate("import('./js/scene3d.js?v=25').then(m => JSON.stringify(m.info()))"))
     for _ in range(5): pg.mouse.click(195, 220); pg.wait_for_timeout(90)
     pg.wait_for_timeout(3000); pg.screenshot(path='/tmp/s23/07_festive.png'); print('festive:', pg.evaluate("document.body.classList.contains('festive')"))
     b.close()
