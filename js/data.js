@@ -5,7 +5,10 @@ export const SKILLS = ['piano', 'singing', 'english', 'thai', 'attendance', 'bon
 export const SKILL_ICON = { piano: '🎹', singing: '🎤', english: '🔤', thai: '📖', attendance: '⛪', bonus: '🎁' };
 
 // ---- the program this link opens (?p=<slug>; no ?p = program 1). Set once at start by setProgram().
-export const program = { id: 1, slug: '', name: '', look: {}, list: [] };
+export const program = { id: 1, slug: '', name: '', look: {}, list: [], login: 'off' };
+// v31 member login (supabase/020_members.sql): the signed-in member of this program on this phone, or null.
+// login = programs.login_mode: 'off' (old app) | 'personal' (own point details only) | 'all' (sign in to see anything)
+export const member = { token: '', me: null };
 export const P = () => program.id;
 export const linkFor = (slug) => location.origin + location.pathname + (slug && slug !== program.list.find(x => x.id === 1)?.slug ? '?p=' + encodeURIComponent(slug) : '');
 
@@ -163,6 +166,22 @@ function supabaseApi() {
     async programUpdate(id, name, archived) { ok(await sb.rpc('program_update', { p_id: id, p_name: name, p_archived: !!archived })); },
     async programSetLook(id, look) { ok(await sb.rpc('program_set_look', { p_id: id, p_look: look })); },   // v28, see 019_program_look.sql
 
+    // ---- v31 member login (020_members.sql). The token goes on EVERY request as the header x-member-token.
+    memberUse(tok) {
+      const h = sb.rest.headers, k = 'x-member-token';
+      if (typeof h?.set === 'function') { tok ? h.set(k, tok) : h.delete(k); } else if (h) { if (tok) h[k] = tok; else delete h[k]; }
+    },
+    async memberLogin(username, password) { return ok(await sb.rpc('member_login', { p_program: P(), p_username: username, p_password: password })); },
+    async memberMe() { return ok(await sb.rpc('member_me', { p_program: P() })); },
+    async memberLogout() { ok(await sb.rpc('member_logout', { p_program: P() })); },
+    async memberPassword(oldPw, newPw) { return ok(await sb.rpc('member_password', { p_program: P(), p_old: oldPw, p_new: newPw })); },
+    async memberList() { return ok(await sb.rpc('member_list', { p_program: P() })); },
+    async memberSave(m) {
+      return ok(await sb.rpc('member_save', { p_program: P(), p_id: m.id || null, p_username: m.username, p_display: m.display_name || '',
+        p_kid: m.kid_id || null, p_active: m.active !== false, p_password: m.password || null }));
+    },
+    async programSetLogin(id, mode) { ok(await sb.rpc('program_set_login', { p_id: id, p_mode: mode })); },
+
     // ---- prizes given, announcement + verse, weekly summary
     async redemptions(limit = 1000) { return ok(await sb.from('redemptions').select('*, kids(nickname, avatar)').eq('program_id', P()).order('created_at', { ascending: false }).limit(limit)); },
     async redeem(row) { ok(await sb.from('redemptions').insert(row)); },
@@ -199,6 +218,13 @@ function previewApi() {
   const now = () => new Date().toISOString();
   const kidOf = (kid_id) => { const k = db.kids.find(k => k.id === kid_id); return k ? { nickname: k.nickname, avatar: k.avatar } : null; };
   const listeners = [];
+  // v31 members, preview copy: same rules as 020_members.sql (the preview data is not split by program)
+  db.members ??= []; db.msess ??= {};
+  let mtok = '';
+  const loginMode = () => (db.programs || []).find(p => p.id === P())?.login_mode || 'off';
+  const curMember = () => { const id = db.msess[mtok]; const m = id && db.members.find(x => x.id === id && x.active); return m || null; };
+  const memberOk = () => loginMode() !== 'all' || db.loggedIn || !!curMember();
+  const seesKid = (kid) => { const m = loginMode(); if (m === 'off' || db.loggedIn) return true; const c = curMember(); return m === 'all' ? !!c : !!c && c.kid_id === kid; };
   const syncAtt = (row) => {
     db.points = db.points.filter(p => p.attendance_id !== row.id);
     if (row.status === 'present' && db.settings.attendance_points > 0)
@@ -208,10 +234,12 @@ function previewApi() {
   return {
     onAuth: (cb) => listeners.push(cb),
     async leaderboard() {
+      if (!memberOk()) return [];
       return db.kids.filter(k => k.active).map(k => {
         const r = { id: k.id, nickname: k.nickname, avatar: k.avatar, total: 0, skills: {}, spent: db.redemptions.filter(x => x.kid_id === k.id).reduce((a, x) => a + x.price, 0) };
         db.points.filter(p => p.kid_id === k.id).forEach(p => {
-          r.skills[p.skill] = (r.skills[p.skill] || 0) + p.amount; r.total += p.amount;
+          r.total += p.amount; if (!seesKid(k.id)) return;
+          r.skills[p.skill] = (r.skills[p.skill] || 0) + p.amount;
           if (p.detail) { const d = ((r.details ??= {})[p.skill] ??= {}); d[p.detail] = (d[p.detail] || 0) + p.amount; }
         });
         return r;
@@ -295,7 +323,7 @@ function previewApi() {
     async deleteSchedule(sid) { db.schedule = db.schedule.filter(x => x.id !== sid); save(); },
 
     async shop() {
-      return { cats: [...db.cats].sort((a, b) => a.sort - b.sort), items: [...db.items].sort((a, b) => a.sort - b.sort || a.price - b.price) };
+      return { cats: [...db.cats].sort((a, b) => a.sort - b.sort), items: [...db.items].filter(() => memberOk()).sort((a, b) => a.sort - b.sort || a.price - b.price) };
     },
     async saveCategory(row) { const r = row.id && db.cats.find(x => x.id === row.id); r ? Object.assign(r, row) : db.cats.push({ sort: db.cats.length + 1, ...row, id: id() }); save(); },
     async deleteCategory(cid) { db.cats = db.cats.filter(x => x.id !== cid); db.items = db.items.filter(x => x.category_id !== cid); save(); },
@@ -317,8 +345,8 @@ function previewApi() {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=30'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
-      return [...db.songs].sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=31'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      return [...db.songs].filter(() => memberOk()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {
       const r = row.id && db.songs.find(x => x.id === row.id);
@@ -360,15 +388,60 @@ function previewApi() {
     async superInfo() { return db.sa?.unlocked ? { username: db.sa.user?.username, until: db.sa.until } : null; },
     async superSet(key, value) { if (key !== 'install_on') throw new Error('unknown setting'); db.settings.install_on = !!value; save(); },
     // programs, preview copy: only the list is kept (the preview data itself is not split by program)
-    async programs() { return (db.programs ??= [{ id: 1, slug: 'youth-alpha-christmas-2026', name: 'Youth Alpha Christmas 2026', archived: false, look: {} }]); },
+    async programs() { return (db.programs ??= [{ id: 1, slug: 'youth-alpha-christmas-2026', name: 'Youth Alpha Christmas 2026', archived: false, look: {}, login_mode: 'off' }]); },
     async programCreate(o) {
       const list = await this.programs();
       if (list.some(p => p.slug === o.slug)) throw new Error('duplicate key value violates unique constraint "programs_slug_key"');
-      const id = Math.max(...list.map(p => p.id)) + 1; list.push({ id, slug: o.slug, name: o.name, archived: false, copied_from: o.from, look: {} }); save();
+      const id = Math.max(...list.map(p => p.id)) + 1; list.push({ id, slug: o.slug, name: o.name, archived: false, copied_from: o.from, look: {}, login_mode: 'off' }); save();
       return { ok: true, id };
     },
     async programUpdate(id, name, archived) { const p = (await this.programs()).find(x => x.id === id); if (p) Object.assign(p, { name, archived: id === 1 ? false : !!archived }); save(); },
     async programSetLook(id, look) { const p = (await this.programs()).find(x => x.id === id); if (p) p.look = JSON.parse(JSON.stringify(look)); save(); },
+    async programSetLogin(id, mode) {
+      if (!['off', 'personal', 'all'].includes(mode)) throw new Error('bad mode');
+      const p = (await this.programs()).find(x => x.id === id); if (p) p.login_mode = mode; save();
+    },
+    memberUse(tok) { mtok = tok || ''; },
+    async memberLogin(username, password) {
+      const u = String(username || '').trim().toLowerCase(), m = db.members.find(x => x.username === u);
+      if (!m || !m.active) return { ok: false, reason: 'wrong' };
+      if (m.locked_until && m.locked_until > Date.now()) return { ok: false, reason: 'locked', minutes: Math.ceil((m.locked_until - Date.now()) / 6e4) };
+      if (m.pw !== password) { m.failed = (m.failed || 0) + 1; if (m.failed >= 5) { m.failed = 0; m.locked_until = Date.now() + 15 * 6e4; } save(); return { ok: false, reason: 'wrong' }; }
+      const tok = Array.from({ length: 48 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join('');
+      db.msess[tok] = m.id; m.failed = 0; m.locked_until = null; m.last_login = now(); save();
+      return { ok: true, token: tok, username: m.username, display_name: m.display_name, kid_id: m.kid_id };
+    },
+    async memberMe() { const m = curMember(); return m ? { username: m.username, display_name: m.display_name, kid_id: m.kid_id } : null; },
+    async memberLogout() { delete db.msess[mtok]; save(); },
+    async memberPassword(oldPw, newPw) {
+      const m = curMember(); if (!m) return { ok: false, reason: 'signin' };
+      if (m.pw !== oldPw) return { ok: false, reason: 'wrong' };
+      if (String(newPw || '').length < 4) return { ok: false, reason: 'short' };
+      m.pw = newPw; save(); return { ok: true };
+    },
+    async memberList() {
+      if (!db.loggedIn) throw new Error('admins only');
+      return db.members.map(m => ({ id: m.id, username: m.username, display_name: m.display_name, kid_id: m.kid_id, kid_name: db.kids.find(k => k.id === m.kid_id)?.nickname || null,
+        active: m.active, last_login: m.last_login || null, locked: !!(m.locked_until && m.locked_until > Date.now()), created_at: m.created_at })).sort((a, b) => a.username.localeCompare(b.username));
+    },
+    async memberSave(o) {
+      if (!db.loggedIn) throw new Error('admins only');
+      const u = String(o.username || '').trim().toLowerCase();
+      if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(u)) throw new Error('members_username_check');
+      if (o.password && String(o.password).length < 4) throw new Error('password too short');
+      if (db.members.some(x => x.username === u && x.id !== o.id)) throw new Error('duplicate key value violates unique constraint');
+      if (!o.id) {
+        if (!o.password) throw new Error('password needed');
+        const n = { id: id(), username: u, display_name: (o.display_name || '').trim(), kid_id: o.kid_id || null, active: o.active !== false, pw: o.password, failed: 0, locked_until: null, created_at: now() };
+        db.members.push(n); audit('members', 'INSERT', null, { ...n, pw: undefined }); save(); return n.id;
+      }
+      const m = db.members.find(x => x.id === o.id); if (!m) throw new Error('no such account');
+      const old = { ...m, pw: undefined };
+      Object.assign(m, { username: u, display_name: (o.display_name || '').trim(), kid_id: o.kid_id || null, active: o.active !== false });
+      if (o.password) Object.assign(m, { pw: o.password, failed: 0, locked_until: null });
+      if (!m.active) Object.keys(db.msess).forEach(k => { if (db.msess[k] === m.id) delete db.msess[k]; });
+      audit('members', 'UPDATE', old, { ...m, pw: undefined, password_changed: !!o.password }); save(); return m.id;
+    },
     async clearKidEvents() { const n = db.events.length; db.events = []; audit('kid_events', 'CLEAR', null, { rows_deleted: n }); save(); return n; },
 
     async redemptions(limit = 1000) { return [...db.redemptions].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit).map(r => ({ ...r, kids: kidOf(r.kid_id) })); },

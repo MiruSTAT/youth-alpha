@@ -1,14 +1,14 @@
-import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=30';
-import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor } from './data.js?v=30';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=30';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=30';
+import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=31';
+import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=31';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=31';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=31';
 
-import { music } from './music.js?v=30';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=30';
-import { snow } from './snow.js?v=30';
-import { track } from './track.js?v=30';
-import { metro } from './metronome.js?v=30';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=30';
+import { music } from './music.js?v=31';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=31';
+import { snow } from './snow.js?v=31';
+import { track } from './track.js?v=31';
+import { metro } from './metronome.js?v=31';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=31';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -24,6 +24,12 @@ const ME = () => pkey('ya' + '_me');
 // the category key without the program suffix (attendance_p2 -> attendance): the special categories keep their meaning
 const baseKey = (k) => String(k || '').replace(/_p\d+$/, '');
 const bal = (r) => Math.max(0, (r?.total || 0) - (r?.spent || 0));      // points left to spend on prizes
+// ---- v31 member login (HANDOFF.md 5d). program.login: 'off' | 'personal' | 'all'.
+// When it is on, "me" is the signed-in member's own kid (written into the same ME() key, so the old code and track.js keep working).
+const loginOn = () => program.login === 'personal' || program.login === 'all';
+const MTOK = () => pkey('ya_member');                                  // the member's sign-in token on this phone (per program)
+let staffHere = false;                                                // an adult is signed in on this phone (sees everything)
+let memberChecked = Date.now();                                       // last time the saved sign-in was checked with the server
 let catCache = { at: 0, list: [] };
 async function pcats(force = false) {
   if (force || Date.now() - catCache.at > 30000) catCache = { at: Date.now(), list: await read('pcats', () => api.pointCats()) };
@@ -122,7 +128,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=30');
+    const m = await import('./scene3d.js?v=31');
     if (m.initScene($('#scene'), { pack: document.body.dataset.pack })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -169,6 +175,7 @@ async function kidRank() {
     me: () => me ? `<button class="my-card" id="myCard"><span class="av" data-pic="${me.id}">${pic(me.avatar)}</span>
         <span class="who"><b>${esc(me.nickname)}</b><span>🏆 ${t('rank')} ${me.rank} ${t('of')} ${rows.length}</span>${me.spent ? `<span class="sp">🎁 ${t('canSpend')} ${bal(me)} ⭐</span>` : ''}</span>
         <span class="pts"><b id="tot">0</b><span>${t('points')}</span></span></button>`
+      : loginOn() ? (member.me ? '' : `<a class="my-hint mem-hint" href="#/login">🔑 ${t('mLoginHint')}</a>`)
       : rows.length ? `<p class="my-hint">👇 ${t('tapYourName')}</p>` : '',
     rank: () => `<h1 class="sheet-title" style="margin-bottom:12px">🏆 ${t('ranking')}</h1>
     ${rows.length ? `<div class="rank-list">${rows.map(k => `<button class="rank-row ${k.id === mineId ? 'mine' : ''}" data-id="${k.id}">
@@ -195,17 +202,21 @@ const verseCard = (ev) => `<div class="verse"><span class="vl">📖 ${t('verseWe
 function kidDetail(k, rows) {
   const isMe = localStorage.getItem(ME()) === k.id;
   const cats = catCache.list.filter(c => c.active || k.skills[c.key]);
+  // v31 "personal" login: only the signed-in kid (and adults) see the points per category
+  const closed = program.login === 'personal' && !staffHere && k.id !== member.me?.kid_id;
+  const meBtns = loginOn() ? (member.me ? '' : `<a class="kbtn" href="#/login">🔑 ${t('mLoginTitle')}</a>`)
+    : isMe ? `<button class="text-btn" id="notMe">${t('notMe')}</button>` : `<button class="kbtn" id="thisMe">${t('thisIsMe')}</button>`;
   const p = kidSheet(`<div class="panel-head"><h2>${esc(k.nickname)}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
     <div class="kid-detail-head"><button class="av" data-pic="${k.id}" aria-label="${esc(k.nickname)}">${pic(k.avatar)}</button><b>${k.total} ⭐</b><span class="me-rank">🏆 ${t('rank')} ${k.rank} ${t('of')} ${rows.length}</span></div>
     ${k.spent ? `<div class="cat-pts" style="margin-bottom:14px"><span>🎁 ${t('canSpend')}</span><b>${bal(k)} ⭐</b></div>` : ''}
-    <p class="section-label">${t('mySkills')}</p>
+    ${closed ? `<p class="cat-info mem-note">🔒 ${t('mOnlyOwn')}</p>` : `<p class="section-label">${t('mySkills')}</p>
     <div class="skill-list">${cats.map(c => {
       const det = k.details?.[c.key];
       return `<button class="skill-row ${c.info ? 'has-info' : ''}" data-c="${c.key}"><span class="i">${pic(c.icon)}</span><span class="l">${esc(cName(c))}</span>
         <span class="v">${k.skills[c.key] || 0}</span><span class="chev">${c.info ? 'ⓘ' : ''}</span></button>`
         + (det ? `<div class="sub-rows">${Object.entries(det).map(([d, v]) => `<div><span>${esc(d)}</span><span>${v}</span></div>`).join('')}</div>` : '');
-    }).join('')}</div>
-    ${isMe ? `<button class="text-btn" id="notMe">${t('notMe')}</button>` : `<button class="kbtn" id="thisMe">${t('thisIsMe')}</button>`}`);
+    }).join('')}</div>`}
+    ${meBtns}`);
   wirePics(p, rows);
   p.querySelectorAll('.skill-row.has-info').forEach(b => b.onclick = () => { track('cat_info', b.dataset.c); catInfo(cOf(b.dataset.c), k.skills[b.dataset.c] || 0); });
   const close = () => { $('#kidSheet').hidden = true; kidRank(); };
@@ -247,6 +258,9 @@ async function kidMenu() {
   view.innerHTML = `<section class="sheet">
     <h1 class="sheet-title" style="margin-bottom:16px">☰ ${t('menu')}</h1>
     <div class="mlist">
+      ${loginOn() ? (member.me
+        ? `<button class="mrow" data-m="account"><span class="mi">👤</span><span class="mt"><b>${t('mSignedAs', esc(member.me.display_name || member.me.username))}</b><span>${t('mAccountSub')}</span></span><span class="mv">›</span></button>`
+        : `<button class="mrow" data-m="account"><span class="mi">🔑</span><span class="mt"><b>${t('mLoginTitle')}</b><span>${t('mLoginRowSub')}</span></span><span class="mv">›</span></button>`) : ''}
       ${feat('feedback') ? `<button class="mrow" data-m="fb"><span class="mi">💬</span><span class="mt"><b>${t('fb')}</b>
         <span>${ev.fb_open ? t('fbOpenSub') : t('fbClosedSub')}</span></span><span class="mv">›</span></button>` : ''}
       ${feat('bible') ? `<button class="mrow" data-m="bible"><span class="mi">📖</span><span class="mt"><b>${t('bible')}</b><span>${t('bibleSub')}</span></span><span class="mv">›</span></button>` : ''}
@@ -257,12 +271,107 @@ async function kidMenu() {
       <a class="mrow quiet" data-k="adult" href="#/admin"><span class="mi">🔒</span><span class="mt"><b>${t('adults')}</b><span>${t('adminSub')}</span></span><span class="mv">›</span></a>
     </div></section>`;
   const act = {
+    account: () => member.me ? accountSheet() : (location.hash = '#/login'),
     fb: () => openFeedback(), bible: openBible, install: installApp, credits: songCredits, help: () => { track('help_open'); showTour(TOUR); },
     lang: () => { setLang(getLang() === 'th' ? 'en' : 'th'); track('lang', getLang()); paintChrome(); kidMenu(); },
   };
   const ml = view.querySelector('.mlist'), keep = layKeys('menu');       // v29: menu order and hidden rows from the layout editor
   layKeys('menu', true).forEach(k => { const el = ml.querySelector(`[data-m="${k}"], [data-k="${k}"]`); if (el) keep.includes(k) ? ml.appendChild(el) : el.remove(); });
   view.querySelectorAll('[data-m]').forEach(b => b.onclick = () => act[b.dataset.m]());
+}
+
+// ---- v31 member login: sign-in page, account sheet (change password, sign out). No pop-ups: messages are written on the page.
+function clearKidCache() {                                             // saved answers of this program (they may hold a member's details)
+  try { Object.keys(localStorage).filter(k => k.startsWith('ya_c_' + P() + '_')).forEach(k => localStorage.removeItem(k)); } catch {}
+  lbCache = { at: 0, rows: [] }; catCache.at = 0; songCache.at = 0;
+}
+function syncMe() { if (loginOn()) member.me?.kid_id ? localStorage.setItem(ME(), member.me.kid_id) : localStorage.removeItem(ME()); }
+function dropMember() {
+  member.token = ''; member.me = null; api.memberUse?.('');
+  localStorage.removeItem(MTOK()); localStorage.removeItem(MTOK() + '_me');
+  if (loginOn()) localStorage.removeItem(ME());
+  clearKidCache();
+}
+// at start (from loadProgram): read the login mode, then check the saved sign-in is still good
+async function memberStart() {
+  const pr = program.list.find(x => x.id === program.id);
+  program.login = ['personal', 'all'].includes(pr?.login_mode) ? pr.login_mode : 'off';
+  if (!loginOn()) return;
+  const tok = localStorage.getItem(MTOK());
+  if (tok) {
+    member.token = tok; api.memberUse(tok);
+    try { member.me = await api.memberMe(); if (member.me) localStorage.setItem(MTOK() + '_me', JSON.stringify(member.me)); else dropMember(); }
+    catch (e) { console.error(e); try { member.me = JSON.parse(localStorage.getItem(MTOK() + '_me') || 'null'); } catch {} }   // no internet: keep the last sign-in
+  }
+  syncMe();
+}
+async function kidLogin() {
+  setNav('');
+  if (!loginOn()) { location.hash = '#/'; return; }
+  if (member.me) { location.hash = '#/menu'; return; }
+  const all = program.login === 'all';
+  view.innerHTML = `<section class="sheet">
+    <h1 class="sheet-title">🔑 ${t('mLoginTitle')}</h1>
+    <p class="sheet-sub">${t(all ? 'mLoginSubAll' : 'mLoginSub')}</p>
+    <form id="mlf" class="k-form" novalidate>
+      <label class="k-label">${t('username')}<input class="k-input" name="u" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="30"></label>
+      <label class="k-label">${t('password')}<input class="k-input" name="pw" type="password" autocomplete="current-password" maxlength="72"></label>
+      <p class="k-msg" id="mlMsg" aria-live="polite"></p>
+      <button class="kbtn" id="mlGo">${t('login')}</button>
+    </form>
+    <p class="k-small">${t('mForgot')}</p>
+    ${all ? `<a class="mrow quiet" href="#/admin" style="margin-top:18px"><span class="mi">🔒</span><span class="mt"><b>${t('adults')}</b><span>${t('adminSub')}</span></span><span class="mv">›</span></a>`
+      : `<a class="text-btn" href="#/">‹ ${t('back')}</a>`}</section>`;
+  const f = $('#mlf'), msg = $('#mlMsg'), go = $('#mlGo');
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const u = f.u.value.trim(), pw = f.pw.value;
+    if (!u || !pw) { msg.textContent = t('mFillBoth'); return; }
+    go.disabled = true; msg.textContent = t('mSigning');
+    try {
+      const r = await api.memberLogin(u, pw);
+      if (!r?.ok) { msg.textContent = r?.reason === 'locked' ? t('mLocked', r.minutes || 15) : t('mWrong'); f.pw.value = ''; return; }
+      member.token = r.token; member.me = { username: r.username, display_name: r.display_name, kid_id: r.kid_id };
+      localStorage.setItem(MTOK(), r.token); localStorage.setItem(MTOK() + '_me', JSON.stringify(member.me));
+      api.memberUse(r.token); clearKidCache(); syncMe();
+      if (member.me.kid_id) localStorage.removeItem(`ya_seen_${member.me.kid_id}`);
+      track('member_login');
+      location.hash = '#/';
+    } catch (err) { console.error(err); msg.textContent = t('mNoNet'); }
+    finally { go.disabled = false; }
+  };
+}
+function accountSheet() {
+  const me = member.me; if (!me) return;
+  const p = kidSheet(`<div class="panel-head"><h2>👤 ${esc(me.display_name || me.username)}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
+    <p class="cat-info" style="font-size:1rem">${t('mUserLine', esc(me.username))}</p>
+    <details class="k-pw"><summary>🔒 ${t('mChangePw')}</summary>
+      <form id="mpf" class="k-form" novalidate>
+        <label class="k-label">${t('mPwOld')}<input class="k-input" name="o" type="password" autocomplete="current-password" maxlength="72"></label>
+        <label class="k-label">${t('mPwNew')}<input class="k-input" name="n" type="password" autocomplete="new-password" maxlength="72"></label>
+        <label class="k-label">${t('mPwAgain')}<input class="k-input" name="a" type="password" autocomplete="new-password" maxlength="72"></label>
+        <p class="k-msg" id="mpMsg" aria-live="polite"></p>
+        <button class="kbtn" id="mpGo">${t('save')}</button></form></details>
+    <button class="kbtn ghost" id="mOut">🚪 ${t('mLogout')}</button>`);
+  const f = p.querySelector('#mpf'), msg = p.querySelector('#mpMsg');
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    if (f.n.value.length < 4) { msg.textContent = t('mPwShort'); return; }
+    if (f.n.value !== f.a.value) { msg.textContent = t('mPwMatch'); return; }
+    msg.textContent = t('mSigning');
+    try {
+      const r = await api.memberPassword(f.o.value, f.n.value);
+      if (r?.ok) { msg.textContent = '✅ ' + t('mPwDone'); f.reset(); track('member_pw'); }
+      else if (r?.reason === 'signin') { dropMember(); $('#kidSheet').hidden = true; location.hash = '#/login'; }
+      else msg.textContent = r?.reason === 'short' ? t('mPwShort') : t('mPwWrong');
+    } catch (err) { console.error(err); msg.textContent = t('mNoNet'); }
+  };
+  p.querySelector('#mOut').onclick = async () => {
+    track('member_logout');
+    try { await api.memberLogout(); } catch (e) { console.error(e); }
+    dropMember(); $('#kidSheet').hidden = true;
+    location.hash = program.login === 'all' ? '#/login' : '#/'; render();
+  };
 }
 
 // ---- install as an app (Chrome on Android: real install; iPhone: Add to Home Screen steps).
@@ -751,7 +860,7 @@ let adult = { role: null, myId: null };
 const isAdm = () => adult.role === 'admin' || adult.role === 'superadmin';
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys });
-const saMod = () => import('./superadmin.js?v=30');
+const saMod = () => import('./superadmin.js?v=31');
 
 async function adultGate(page) {
   const session = await api.session();
@@ -761,7 +870,7 @@ async function adultGate(page) {
   if (adult.role === 'superlocked' || adult.role === 'superclaim') return (await saMod()).superGate(saCtx(), adult.role);
   const pages = { attendance: pAttendance, attsum: pAttSummary, points: pPoints, history: pHistory, kids: pKids, shop: pShop, pcats: pPcats, feedback: pFeedback, export: pExport,
     redeem: pRedeem, notice: pNotice, weekly: pWeekly, about: pAbout,
-    songs: pSongs, song: pSongEdit, sync: pSync, ...(isAdm() ? { settings: pSettings, musicset: pMusicSet } : {}),
+    songs: pSongs, song: pSongEdit, sync: pSync, ...(isAdm() ? { settings: pSettings, musicset: pMusicSet, members: pMembers } : {}),
     ...(adult.role === 'superadmin' ? { super: async () => (await saMod()).pSuper(saCtx()) } : {}) };
   if (!pages[page]) return adultHome();
   await pages[page](location.hash.split('/')[3]);
@@ -774,7 +883,7 @@ function adultHome() {
   const groups = [
     ...(adult.role === 'superadmin' ? [['g_super', [['super', '👑']]]] : []),
     ['g_daily', [['attendance', '✅'], ['points', '⭐'], ['weekly', '📊']]],
-    ['g_kids', [['kids', '👧'], ['feedback', '💬'], ['notice', '📣']]],
+    ['g_kids', [['kids', '👧'], ...(isAdm() ? [['members', '🔑']] : []), ['feedback', '💬'], ['notice', '📣']]],
     ['g_rewards', [['pcats', '🏷️'], ['shop', '🎁'], ['redeem', '🎟️']]],
     ['g_songs', [['songs', '🎵'], ...(isAdm() ? [['musicset', '🎛️']] : [])]],
     ['g_system', [['export', '📥'], ...(isAdm() ? [['settings', '⚙️']] : []), ['about', 'ℹ️']]],
@@ -856,6 +965,53 @@ function pendingView() {
     <button class="btn wide" id="lo">${t('logout')}</button>`;
   $('#claim').onclick = async () => { try { (await api.claimAdmin($('#nm').value.trim())) === 'ok' ? render() : toast(t('pendingMsg')); } catch (e) { fail(e); } };
   $('#lo').onclick = async () => { await api.signOut(); render(); };
+}
+
+// ---------------- v31 member accounts (admins). Never deleted: an account is switched off instead.
+const dTime = (iso) => iso ? new Date(iso).toLocaleString(getLang() === 'th' ? 'th-TH' : 'en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '–';
+async function pMembers() {
+  const [list, kids] = await Promise.all([api.memberList(), api.kids()]);
+  const mode = program.login || 'off';
+  view.innerHTML = `${pageHead('🔑 ' + t('tab_members'))}
+    <div class="card"><p style="margin:0"><b>${t('memMode')}: ${t('lm_' + mode)}</b></p><p class="muted" style="margin:6px 0 0">${t('lm_' + mode + '_sub')}</p>
+      ${mode === 'off' ? `<p class="hint" style="margin-top:8px">${t('memOffHint')}</p>` : ''}</div>
+    <button class="btn primary wide" id="memAdd" style="margin-bottom:12px">➕ ${t('memAdd')}</button>
+    <div class="card"><p class="muted" style="margin:0 0 4px">${t('memCount', list.length)}</p><div class="list">${list.map(m => `<div class="li click mem-li ${m.active ? '' : 'off'}" data-id="${m.id}">
+      <span class="av">${m.active ? (m.locked ? '⏳' : '👤') : '⛔'}</span>
+      <span class="grow"><b>${esc(m.display_name || m.username)}</b><span class="sub">@${esc(m.username)} · ${m.kid_name ? '⭐ ' + esc(m.kid_name) : t('memNoKid')}${!m.active ? ' · ' + t('memIsOff') : m.locked ? ' · ' + t('memLockedNow') : ''}</span>
+        <span class="sub">${t('memLast')}: ${dTime(m.last_login)}</span></span><span class="muted">${t('edit')} ›</span></div>`).join('') || `<p class="muted">${t('memNone')}</p>`}</div></div>`;
+  $('#memAdd').onclick = () => memberForm(null, kids);
+  view.querySelectorAll('.mem-li').forEach(b => b.onclick = () => memberForm(list.find(m => m.id === b.dataset.id), kids));
+}
+async function memberForm(m, kids) {
+  const kidOpts = `<option value="">${t('memNoKid')}</option>` + kids.filter(k => k.active || k.id === m?.kid_id).map(k => `<option value="${k.id}" ${k.id === m?.kid_id ? 'selected' : ''}>${esc(k.nickname)}</option>`).join('');
+  const r = await modal(m ? t('memEdit') : t('memAdd'), `
+    <div class="field"><label>${t('username')}</label><input class="input" name="username" required maxlength="30" autocapitalize="none" spellcheck="false" value="${esc(m?.username || '')}">
+      <p class="hint">${t('memUserHint')}</p></div>
+    <div class="field"><label>${t('memDisplay')}</label><input class="input" name="display_name" maxlength="40" value="${esc(m?.display_name || '')}"></div>
+    <div class="field"><label>${t('memKid')}</label><select class="input" name="kid_id">${kidOpts}</select><p class="hint">${t('memKidHint')}</p></div>
+    <div class="field"><label>${m ? t('memNewPw') : t('password')}</label><input class="input" name="password" type="text" ${m ? '' : 'required'} minlength="4" maxlength="72" autocomplete="off" spellcheck="false">
+      <p class="hint">${m ? t('memPwKeep') : t('memPwHint')}</p></div>`,
+    { extra: m ? `<button class="btn small ${m.active ? 'danger' : ''}" value="toggle" formnovalidate>${m.active ? '⛔ ' + t('memOff') : '✅ ' + t('memOn')}</button>` : '' });
+  try {
+    if (r instanceof FormData) {
+      const d = { id: m?.id, username: String(r.get('username')).trim().toLowerCase(), display_name: String(r.get('display_name')).trim(), kid_id: r.get('kid_id') || null,
+        active: m ? m.active : true, password: String(r.get('password') || '') || null };
+      if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(d.username)) { toast(t('memUserHint')); return memberForm(m, kids); }
+      if (d.password && d.password.length < 4) { toast(t('mPwShort')); return memberForm(m, kids); }
+      await api.memberSave(d); toast(t('saved'));
+    } else if (r === 'toggle') {
+      const name = m.display_name || m.username;
+      if (m.active && !(await confirmBox(t('memOffWarn', name), t('memOff')))) return;
+      await api.memberSave({ ...m, active: !m.active, password: null });
+      toast(m.active ? t('memIsOff') : t('memOn'));
+    } else return;
+    pMembers();
+  } catch (e) {
+    const s = String(e?.message || e);
+    if (/duplicate|unique/i.test(s)) { toast(t('memDup')); return; }
+    fail(e);
+  }
 }
 
 // ---------------- Attendance
@@ -1396,7 +1552,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=30');
+      const { readSheet } = await import('./ocr.js?v=31');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1702,7 +1858,7 @@ function loadXLSX() {
 const XL_SHEETS = [['xs_summary', 'summary', '📊'], ['xs_points', 'points', '⭐'], ['xs_att', 'attendance', '✅'], ['xs_attsum', 'attendance-totals', '📈'], ['xs_feedback', 'feedback', '💬'], ['xs_shop', 'shop', '🎁'], ['xs_redeem', 'prizes-given', '🎟️'],
   ['xs_adminlog', 'admin-log', '📜'], ['xs_kidlog', 'kid-activity', '👆'], ['xs_kidsum', 'kid-activity-summary', '📈']];
 const LOG_SHEETS = ['xs_adminlog', 'xs_kidlog', 'xs_kidsum'];
-const TBL = { songs: 'lt_songs', kids: 'lt_kids', points: 'lt_points', attendance: 'lt_att', attendance_rounds: 'lt_round', shop_items: 'lt_shop', point_categories: 'lt_pcats', settings: 'lt_settings', staff: 'lt_staff', kid_events: 'lt_kidlog', redemptions: 'lt_redeem' };
+const TBL = { songs: 'lt_songs', kids: 'lt_kids', points: 'lt_points', attendance: 'lt_att', attendance_rounds: 'lt_round', shop_items: 'lt_shop', point_categories: 'lt_pcats', settings: 'lt_settings', staff: 'lt_staff', kid_events: 'lt_kidlog', redemptions: 'lt_redeem', members: 'lt_members', programs: 'lt_programs' };
 const SKIP_FIELDS = new Set(['updated_at', 'created_at', 'updated_by', 'given_by', 'created_by', 'finished_by', 'finished_at']);
 // one admin-log row -> readable text
 function describeLog(e, kidName) {
@@ -1720,6 +1876,8 @@ function describeLog(e, kidName) {
     case 'kid_events': item = t('logCleared', r.rows_deleted ?? 0); break;
     case 'songs': item = r.title; break;
     case 'redemptions': item = `${who(r.kid_id)} · ${r.item_name} (−${r.price} ⭐)`; break;
+    case 'members': item = `@${r.username || '?'}${r.kid_id ? ' · ' + who(r.kid_id) : ''}${n.password_changed ? ' · 🔑' : ''}`; break;
+    case 'programs': item = r.name || ''; break;
     default: item = '';
   }
   let changes = '';
@@ -1730,7 +1888,7 @@ function describeLog(e, kidName) {
   return { item, changes, op: t('op_' + e.op) || e.op, area: t(TBL[e.table_name] || '') || e.table_name };
 }
 const EVT_TH = ['open_app', 'view', 'tap_kid', 'tap_my_card', 'set_me', 'not_me', 'cat_info', 'shop_tap', 'bible_open', 'bible_link', 'theme_open', 'theme', 'lang', 'music', 'help_open', 'tour_next', 'tour_skip', 'tour_done', 'fb_pill', 'fb_open', 'fb_send', 'tree_tap',
-  'songs', 'song_open', 'metro', 'autoscroll', 'song_speed', 'transpose', 'yt_play', 'sheet_view', 'credits', 'santa_tap', 'festive', 'pic_view', 'fb_qr', 'song_lang', 'prize_zoom', 'install', 'egg_hunt'];
+  'songs', 'song_open', 'metro', 'autoscroll', 'song_speed', 'transpose', 'yt_play', 'sheet_view', 'credits', 'santa_tap', 'festive', 'pic_view', 'fb_qr', 'song_lang', 'prize_zoom', 'install', 'egg_hunt', 'member_login', 'member_logout', 'member_pw'];
 const evName = (e) => EVT_TH.includes(e) ? t('ev_' + e) : e;
 
 async function pExport() {
@@ -1810,6 +1968,7 @@ async function render() {
   const seq = ++renderSeq, h = location.hash || '';
   const isAdult = h.startsWith('#/admin');
   document.body.classList.toggle('adult', isAdult);
+  document.body.classList.toggle('login-page', h === '#/login' && program.login === 'all');   // v31: no tabs on the sign-in page when sign-in is required
   $('#kidSheet').hidden = true;
   document.querySelectorAll('.lightbox').forEach(x => x.remove());
   stopPlayer();                                                   // leaving a song: stop scrolling / metronome / video
@@ -1820,6 +1979,14 @@ async function render() {
     if (isAdult) { scene?.stop(); return await adultGate(h.split('/')[2]); }
     await Promise.all([feat('tree') ? ensureScene() : null, eventInfo()]);             // eventInfo: the admin's music switches
     if (seq !== renderSeq) return;
+    // v31: in "all" mode a kid must be signed in first (adults signed in on this phone see everything)
+    if (loginOn()) staffHere = !!(await api.session().catch(() => null));
+    if (member.me && Date.now() - memberChecked > 60000 && navigator.onLine !== false) {   // an account switched off by an admin is noticed within a minute
+      memberChecked = Date.now();
+      try { if (!(await api.memberMe())) dropMember(); } catch (e) { console.error(e); }
+    }
+    if (h === '#/login') { track('view', 'login'); return await kidLogin(); }
+    if (program.login === 'all' && !member.me && !staffHere) { location.hash = '#/login'; return; }
     const page = h === '#/shop' ? 'shop' : h === '#/menu' ? 'menu' : h.startsWith('#/songs') ? 'songs' : h === '#/feedback' ? 'feedback' : 'ranking';
     track('view', page);
     if ((h === '#/shop' && !feat('shop')) || (h === '#/feedback' && !feat('feedback'))) { location.hash = '#/'; return; }
@@ -1859,6 +2026,7 @@ async function loadProgram() {
   else if (want) setTimeout(() => toast(t('progUnknown')), 600);
   window.YA_PID = program.id;
   applyLook();
+  await memberStart();                                            // v31 member login
 }
 // ---- v28 program settings (programs.look; set on the super admin page, see supabase/019_program_look.sql)
 // look = { title, emoji, pack, font, size, off: { songs, shop, feedback, bible, santa, festive, snow, tree, music }, words: { th: {}, en: {} } }
@@ -1872,9 +2040,9 @@ const LOOK = {
   LAYOUT: {
     tabs: [['rank', '🏆', 'ranking'], ['songs', '🎵', 'songs'], ['shop', '🎁', 'shop'], ['menu', '☰', 'menu']],
     home: [['notice', '📣', 'lay_notice'], ['me', '⭐', 'lay_me'], ['rank', '🏆', 'lay_rank'], ['verse', '📖', 'lay_verse']],
-    menu: [['fb', '💬', 'fb'], ['bible', '📖', 'bible'], ['credits', '🎵', 'songCredits'], ['lang', '🌐', 'language'], ['install', '📲', 'installApp'], ['help', '❓', 'help'], ['adult', '🔒', 'adults']],
+    menu: [['account', '👤', 'lay_account'], ['fb', '💬', 'fb'], ['bible', '📖', 'bible'], ['credits', '🎵', 'songCredits'], ['lang', '🌐', 'language'], ['install', '📲', 'installApp'], ['help', '❓', 'help'], ['adult', '🔒', 'adults']],
   },
-  LOCKED: { tabs: ['rank', 'menu'], home: ['rank'], menu: ['adult'] },
+  LOCKED: { tabs: ['rank', 'menu'], home: ['rank'], menu: ['adult', 'account'] },
   PACKS: {
     christmas: { emoji: '🎄', mascot: '🎅', gift: '🎁', things: ['🎁', '🎁', '🎁', '🎀', '⭐', '✨', '🎁', '🍬', '🧸', '🎄'], words: {} },
     plain: { emoji: '⛪', mascot: '🕊️', gift: '✨', things: ['✨', '⭐', '🕊️', '💛', '🌟'], words: { th: { songsTitle: 'เพลงนมัสการ' }, en: { songsTitle: 'Worship songs' } } },

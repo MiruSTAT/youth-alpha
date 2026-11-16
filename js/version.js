@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '30';
+export const VERSION = '31';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,22 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'super', th: 'อัปเดตผู้ดูแลสูงสุด โปรแกรม และชุดธีม', en: 'Super admin, programs & theme packs update',
     versions: [
-      { v: '30', date: '2026-11-16', commit: '',
+      { v: '31', date: '2026-11-17', commit: '',
+        items: [
+          { a: 'safety', th: 'ระบบเข้าสู่ระบบของสมาชิก (ชื่อผู้ใช้ + รหัสผ่าน) ต่อโปรแกรม มี 3 แบบ: ปิด (แอปเหมือนเดิม) / เห็นคะแนนละเอียดเฉพาะของตัวเอง / ต้องเข้าสู่ระบบก่อนดูทุกอย่าง ทุกโปรแกรมยังเป็น "ปิด" จึงไม่มีอะไรเปลี่ยนจนกว่าผู้ดูแลสูงสุดจะเปิด',
+            en: 'Member login (username + password) per program, in 3 modes: off (the app as before) / own details only / sign in to see anything. Every program is still "off", so nothing changes until the super admin switches it on' },
+          { a: 'admin', th: 'หน้าผู้ดูแลสูงสุดมีส่วน "ระบบเข้าสู่ระบบของสมาชิก" เลือกแบบของโปรแกรมในลิงก์ที่เปิดอยู่ พร้อมคำอธิบายแต่ละแบบ และเตือนก่อนเปลี่ยนเป็น "ต้องเข้าสู่ระบบก่อน"',
+            en: 'The super admin page has a "Member login" section: choose the mode for the program of the open link, each with a plain explanation, and a warning before switching to "sign in to see anything"' },
+          { a: 'admin', th: 'หน้าใหม่ "บัญชีสมาชิก" (เมนูผู้ดูแล → เด็ก, เฉพาะแอดมิน): เพิ่มบัญชี ผูกกับเด็ก ตั้งรหัสใหม่ (ปลดล็อกด้วย) ปิด/เปิดบัญชี บัญชีไม่ถูกลบ และมีคำเตือนพร้อมชื่อก่อนปิดบัญชี',
+            en: 'New "Member accounts" page (admin menu → Kids, admins only): add accounts, link each to a kid, set a new password (also unlocks), switch accounts off/on. Accounts are never deleted, and switching one off shows a named warning first' },
+          { a: 'kids', th: 'หน้าเข้าสู่ระบบสำหรับเด็ก ตัวหนังสือใหญ่ ไม่มีป๊อปอัป ข้อความแสดงบนหน้า (เช่น "ลองใหม่อีก 15 นาที" หลังใส่ผิด 5 ครั้ง) เมนูมีแถว "เข้าสู่ระบบ" หรือ "เข้าสู่ระบบเป็น …" สำหรับเปลี่ยนรหัสผ่านและออกจากระบบ',
+            en: 'A sign-in page for kids with big text and no pop-ups; messages are written on the page (e.g. "try again in 15 min" after 5 wrong tries). The menu has a "Sign in" or "Signed in as …" row to change the password and sign out' },
+          { a: 'kids', th: 'เมื่อเปิดระบบสมาชิก การ์ด "ของฉัน" คือเด็กที่ผูกกับบัญชี (ไม่มีปุ่ม "นี่คือฉัน/ไม่ใช่ฉัน") แบบ "เฉพาะของตัวเอง" เด็กคนอื่นจะเห็นข้อความแทนคะแนนแยกหมวด',
+            en: 'With member login on, "my card" is the kid linked to the account (no "this is me / not me" buttons). In "own details only", other kids show a short note instead of their points by category' },
+          { a: 'data', th: 'บันทึกการใช้งานของเด็กมีเหตุการณ์ใหม่: เข้าสู่ระบบ ออกจากระบบ เปลี่ยนรหัสผ่าน และบันทึกของผู้ดูแลอ่านการแก้บัญชีสมาชิกได้ (ไม่เก็บรหัสผ่าน)',
+            en: "The kids' activity log has new events: signed in, signed out, changed password; the admin log describes member account changes (passwords are never logged)" },
+        ] },
+      { v: '30', date: '2026-11-16', commit: '904fbe5',
         items: [
           { a: 'look', th: 'ชุดธีมใหม่ "อีสเตอร์" เลือกได้ในตั้งค่าโปรแกรม: อีโมจิ 🐣 สีกลีบดอกไม้แทนหิมะ และคำที่เข้ากับอีสเตอร์ (เพลงอีสเตอร์ สุขสันต์วันอีสเตอร์ พระเยซูทรงคืนพระชนม์)', en: 'New "Easter" theme pack in the program settings: 🐣, petals instead of snow, and Easter wording (Easter songs, Happy Easter, He is risen)' },
           { a: 'kids', th: 'ฉาก 3 มิติอีสเตอร์: เนินหญ้าสีเขียว ไม้กางเขนพร้อมผ้าขาวและวงแสงสีทอง ไข่อีสเตอร์สีพาสเทลบนเนินที่สว่างขึ้นตามคะแนน และกลีบดอกไม้สีชมพูโปรยลงมา หมุนและแตะได้เหมือนต้นคริสต์มาส', en: 'Easter 3D scene: a green hill, a wooden cross with a white cloth and a golden halo, pastel eggs on the hill that light up with points, and pink petals falling; spin and tap like the Christmas tree' },

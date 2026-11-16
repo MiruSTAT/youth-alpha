@@ -103,6 +103,9 @@ export async function pSuper(c) {
     <div class="card toggles"><div class="tg-row"><span class="tg-i">📲</span><span class="tg-t"><b>${c.t('installApp')}</b><span>${c.t('saInstallSub')}</span></span>
       <button class="switch ${s.install_on ? 'on' : ''}" id="swInstall" role="switch" aria-checked="${!!s.install_on}" aria-label="${c.t('installApp')}"><span></span></button></div></div>
 
+    <h2 class="grp">🔑 ${c.t('saLogin')}</h2>
+    <div class="card" id="loginCard"></div>
+
     <h2 class="grp">📁 ${c.t('progTitle')}</h2>
     <div class="card"><p class="muted" style="margin:0 0 10px">${c.t('progSub')}</p><div id="progList"></div>
       <button class="btn primary wide" id="progNew" style="margin-top:12px">➕ ${c.t('progNew')}</button></div>
@@ -120,7 +123,7 @@ export async function pSuper(c) {
     <div id="hoBody"></div>
 
     <h2 class="grp">${c.t('saNext')}</h2>
-    <div class="card"><ul class="sa-next">${['saN5', 'saN6'].map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
+    <div class="card"><ul class="sa-next">${['saN6'].map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
 
   // sign out: end the super admin powers on this device AND sign out (next time: password + email link again)
   c.$('#saLock').onclick = async () => {
@@ -141,6 +144,7 @@ export async function pSuper(c) {
 
   drawPrograms(c);
   c.$('#progNew').onclick = () => newProgram(c);
+  drawLogin(c);
   drawLook(c);
   drawLayout(c);
 
@@ -227,6 +231,33 @@ async function newProgram(c) {
 
 
 // ---------- v28 program settings: name on screen, theme pack, font, text size, parts on/off, wording
+// ---------- v31 member login mode of the program this link opens (program_set_login, supabase/020_members.sql)
+async function drawLogin(c) {
+  const box = c.$('#loginCard'); if (!box) return;
+  let cur = c.program.login || 'off';
+  const n = await c.api.memberList().then(l => l.length).catch(() => null);
+  box.innerHTML = `<p class="muted" style="margin:0 0 10px">${c.t('saLoginSub')}</p>
+    <div class="lm-opts">${['off', 'personal', 'all'].map(m => `<label class="lm-opt"><input type="radio" name="lm" value="${m}" ${m === cur ? 'checked' : ''}>
+      <span><b>${c.t('lm_' + m)}</b><span class="sub">${c.t('lm_' + m + '_sub')}</span></span></label>`).join('')}</div>
+    ${n != null ? `<p class="hint" style="margin:10px 0 0">${c.t('saLoginAccts', n)} · <a href="#/admin/members">${c.t('tab_members')} ›</a></p>` : ''}
+    <button class="btn primary wide" id="lmSave" style="margin-top:12px" disabled>💾 ${c.t('save')}</button>`;
+  const save = box.querySelector('#lmSave');
+  const pick = () => box.querySelector('input[name="lm"]:checked')?.value || 'off';
+  box.querySelectorAll('input[name="lm"]').forEach(r => r.onchange = () => { save.disabled = pick() === cur; });
+  save.onclick = async () => {
+    const m = pick(); if (m === cur) return;
+    if (m === 'all' && !(await c.confirmBox(c.t('saLoginAllWarn'), c.t('save'), false))) return;
+    save.disabled = true;
+    try {
+      await c.api.programSetLogin(c.program.id, m);
+      cur = c.program.login = m;
+      const pr = c.program.list.find(x => x.id === c.program.id); if (pr) pr.login_mode = m;
+      try { Object.keys(localStorage).filter(k => k.includes('programs')).forEach(k => localStorage.removeItem(k)); } catch { }
+      c.toast(c.t('saLoginSaved'));
+    } catch (e) { c.fail(e); save.disabled = false; }
+  };
+}
+
 // saved in programs.look of the program this link opens (program_set_look, supabase/019_program_look.sql)
 function drawLook(c) {
   const box = c.$('#lookCard'); if (!box) return;

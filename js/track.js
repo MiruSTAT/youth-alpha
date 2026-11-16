@@ -1,7 +1,7 @@
 // Kid activity log: what kids view and tap (for later analysis).
 // No names are typed or stored here — only a random device id, the chosen kid (if they tapped "this is me"),
 // the event name and a short detail. Events are batched and sent every 15 s or when the app is hidden.
-import { api } from './data.js?v=30';
+import { api } from './data.js?v=31';
 
 const DEV_KEY = 'ya_dev';
 let dev = '';

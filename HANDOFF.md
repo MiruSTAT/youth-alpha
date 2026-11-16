@@ -1,6 +1,6 @@
 # Youth Alpha 🎄: full handoff for the next AI
 
-> **START HERE (next chat, written 2026-11-16 night):** the live app is **v30**. Work in progress = **v31 member login**: its database part (`supabase/020_members.sql`) is **already run on the live database** but every program has `login_mode = 'off'`, so nothing changed for users; the app screens for it are **not built yet** (see section 5d for exactly what exists and what to build). After that, follow the **owner's new roadmap in section 14 ("Roadmap v31+")**, one step at a time: give the owner a short summary of each step first and wait for "go" (the owner already approved the order and answered the open questions there). After every release: version + changelog, HANDOFF.md in detail, tests in the preview copy, live SQL if any, commit/push, check live, copy to the owner's Desktop folder, tell the owner.
+> **START HERE (next chat, written 2026-11-17):** the live app is **v31** (member login finished: database + screens; every program still has `login_mode = 'off'`, so kids and admins see no change until the super admin switches it on). The next job is **step 2 of the owner's roadmap in section 14 ("Roadmap v31+"): admins and permissions + one merged admin panel**. Work one step at a time: give the owner a short summary of the step first and wait for "go" (the owner already approved the order and answered the open questions there). After every release: version + changelog, HANDOFF.md in detail, tests in the preview copy, live SQL (rolled-back test first) if any, commit/push, check live, copy to the owner's Desktop folder, tell the owner.
 
 This file is meant to let another AI (or developer) understand, rebuild, run and change the **Youth Alpha** app without needing the old chat.
 Read it top to bottom once. The sections are:
@@ -82,7 +82,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
   - the YouTube IFrame API
   - `vendor/qrcode.js` (local copy) for QR codes
   - Google font **Noto Sans Thai**
-- **Versioning:** every import and asset carries `?v=N`. **The current version is `30`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
+- **Versioning:** every import and asset carries `?v=N`. **The current version is `31`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
 - **Service worker** (`sw.js`) makes the app work offline and open fast on weak Wi-Fi:
   - Files with `?v=` and same-origin pictures are served from the phone first (cache `ya-v<N>`, replaced on each version).
   - The page itself tries the internet first for 3.5 s, then uses the saved copy.
@@ -165,10 +165,12 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
 | `#/shop` | Prize shop |
 | `#/menu` | Menu (feedback, Bible, song credits, language, help/tour, adult login link) |
 | `#/feedback` | Feedback as its own page (what the QR code opens) |
+| `#/login` | v31 member sign-in page (only when the program's login mode is not `off`; otherwise it goes home) |
 | `#/admin` | Admin home or login |
 | `#/admin/attendance`, `/attsum` | Attendance, attendance totals |
 | `#/admin/points`, `/history` | Give points, points history (undo) |
 | `#/admin/kids` | Kids list and editing |
+| `#/admin/members` | v31 member accounts (**admin only**) |
 | `#/admin/pcats` | Point categories |
 | `#/admin/shop` | Prizes |
 | `#/admin/songs`, `/song/<id or new>`, `/sync/<id>` | Song list, song editor, tap-along video sync |
@@ -197,6 +199,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
 | `ya_fb_seen` | Admin: newest feedback already seen |
 | `ya_dev` | Random device id for analytics |
 | `ya_preview_db` | Preview-mode database |
+| `ya_member`, `ya_member_me` | v31: the member's sign-in token and the last `member_me` answer (per program via `pkey()`: program 1 keeps these names, others get `_p<id>`). Removed on sign-out or when the server says the sign-in is no longer good |
 | `ya_c_lb`, `ya_c_pcats`, `ya_c_songs`, `ya_c_ev`, `ya_c_shop` | Last good answers for kid pages, used when offline or when the network takes over 6 s |
 
 ## 5. Database (Supabase)
@@ -286,7 +289,7 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
 - **Program copies:** `program_create` (018) does not copy `look`; set it on the new program's link.
 - **Tested:** preview (tests/t_v28_look.py: save title/emoji/pack/font/size/switches/words, reload, shop redirect, menu rows, worship-song title, English words, form keeps values) and regression tests/t_v27_programs.py. Live: 019 run on 2026-11-16 (function exists, security definer); live program 1 `look` is still `{}`.
 
-### 5d. Member login (v31, `supabase/020_members.sql`) — DATABASE DONE AND LIVE, APP SCREENS NOT BUILT YET
+### 5d. Member login (v31, `supabase/020_members.sql`) — DONE (database + app screens), every program still `off`
 
 - **Run live on 2026-11-16** (after a rolled-back test that checked every rule; results below). After running: program 1 `login_mode = 'off'`, leaderboard still shows the kid, 9 `member*` functions exist.
 - **`programs.login_mode`** text, default `'off'`, check in (`off`, `personal`, `all`). Public (programs is public-read), so the app knows the mode before anyone signs in. Set only by `program_set_login(p_id, p_mode)` (super admin only; audited by the `audit_programs` trigger).
@@ -301,14 +304,16 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
   - Members (anon may call): `member_login(p_program, p_username, p_password)` → `{ok, token, username, display_name, kid_id}` or `{ok:false, reason:'wrong'|'locked', minutes}` (username is trimmed + lower-cased); `member_me(p_program)` → json or null; `member_logout(p_program)` (expires the session, row kept); `member_password(p_program, p_old, p_new)` → `{ok}` or reason `signin|wrong|short` (min 4).
   - Admins only (`is_admin()`): `member_list(p_program)` → id, username, display_name, kid_id, kid_name, active, last_login, locked, created_at; `member_save(p_program, p_id null=new, p_username, p_display, p_kid, p_active, p_password null=keep)` → id. Writes an `audit_log` row (table_name `members`, password hash never logged, `password_changed` flag). Switching an account off ends its sessions.
 - **Rolled-back live test result (2026-11-16):** `OFF lb=1 skills=2 songs=5 shop=1 | ALL nobody lb=0 songs=0 shop=0 | wrong password refused, login ok token 48 | ALL signed lb=1 songs=5 skills=2 me={testkid…} | PERSONAL signed own=2 others=0, nobody skills=0 lb=1 | after logout me=null | anon member_list refused`. The test script is the `do $t$ … raise exception 'TEST RESULT: %'` pattern (see "Running SQL from the browser").
-- **Still to build in the app (v31 screens):**
-  1. `js/data.js`: `memberUse(token)` (set/delete the header), `memberLogin`, `memberMe`, `memberLogout`, `memberPassword`, `memberList`, `memberSave`, `programSetLogin`; preview (fake DB) versions.
-  2. `js/app.js` `loadProgram()`: read `login_mode` from the programs row into `program.login`; if not `off`, load the token, `memberUse()`, `memberMe()` (drop the token if null).
-  3. Kid side: `#/login` page (big Thai text, username + password, show "locked for N minutes"); in mode `all`, every kid route without a member goes to `#/login` (admin routes unaffected); in `personal`/`all` the "me" kid = the member's `kid_id` (hide "this is me / not me" buttons); in `personal` another kid's details show a short note instead of categories; menu rows "Sign in" / "Signed in as X · Sign out" / "Change password". No pop-ups for kids.
-  4. Admin side: "Member accounts" page (admins of the program): list, add (username, display name, link to a kid, password ≥4), reset password, switch off/on — never delete; named warning before switching off.
-  5. Super admin: login mode chooser (off / personal / everything) with a plain explanation of each, for the program of the open link.
-  6. Version 31 + changelog, tests (preview), HANDOFF, Desktop copy.
-  In the new roadmap the member settings and accounts should end up inside the merged admin panel (step 2), so keep the screens simple.
+- **App screens (v31, built and tested on 2026-11-17):**
+  - **`js/data.js`:** `member = { token, me }` (exported) and `program.login`. Supabase API: `memberUse(tok)` sets/deletes the header `x-member-token` on `sb.rest.headers` (works whether `headers` is a `Headers` object or a plain object), `memberLogin(u, pw)`, `memberMe()`, `memberLogout()`, `memberPassword(old, new)`, `memberList()`, `memberSave({id?, username, display_name, kid_id, active, password?})` (password `null` = keep), `programSetLogin(id, mode)`. All pass `P()` as `p_program`. The **preview** copy has the same functions and the same rules (5 wrong = 15 min lock, `personal` hides other kids' `skills`/`details`, `all` empties leaderboard/songs/shop unless a member or an adult is signed in; `db.members`, `db.msess`; preview data is not split by program, the mode is read from `db.programs`).
+  - **`js/app.js` start-up:** `loadProgram()` ends with `await memberStart()`: `program.login` = the program row's `login_mode` (`off` if missing). If not `off`, it loads the token from `localStorage[MTOK()]` (`MTOK() = pkey('ya_member')`), calls `api.memberUse(tok)` and `api.memberMe()`; `null` → `dropMember()`; a network error keeps the last answer saved in `ya_member_me` (offline use). `syncMe()` writes the member's `kid_id` into the old "this is me" key `ME()` (or removes it), so `kidRank`, the shop balance, the feedback "send with my name" and `track.js` keep working unchanged.
+  - **Router (`render`):** on kid pages, when login is on, `staffHere` = an adult session exists on this phone (adults see everything). Every 60 s at most (and only online) the saved sign-in is re-checked with `memberMe()`, so an account switched off by an admin is noticed on an open phone. `#/login` → `kidLogin()`. In `all` mode, any other kid route without a member (and without an adult session) goes to `#/login`; the body class `login-page` hides the bottom tabs there (the page has its own "For adults" link). Admin routes are not affected.
+  - **Kid side:** `kidLogin()` page (big inputs `.k-input`, messages written in `#mlMsg` on the page, no toasts/pop-ups: empty fields / wrong / "try again in N min" / no internet; "forgot your password? ask an adult"). On success: token + `me` saved, `clearKidCache()` (removes this program's `ya_c_<id>_*` saved answers and resets the in-memory caches, because they may hold a member's details), `syncMe()`, event `member_login`, go home. `kidRank`: with login on, "tap your name" becomes a "🔑 sign in to see your points" link when nobody is signed in. `kidDetail`: no "this is me / not me" buttons when login is on (a sign-in button instead when not signed in); in `personal` mode another kid's sheet shows `mOnlyOwn` instead of the category list (`closed` flag; adults on the phone still see it). `kidMenu`: first row `data-m="account"`: "🔑 Sign in" or "👤 Signed in as <display name>" → `accountSheet()` (username, a folded "change password" form with old/new/new again, messages in `#mpMsg`, and "Sign out", which calls `member_logout`, `dropMember()`, and goes to `#/login` in `all` mode or home otherwise). The menu key `account` is in `LOOK.LAYOUT.menu` (first) and `LOOK.LOCKED.menu` (cannot be hidden in the layout editor; label `lay_account`).
+  - **Admin side:** `pMembers()` at `#/admin/members` (admin menu → Kids group, row "🔑 Member accounts", **admins only**, like the database rule `is_admin()`). Shows the program's mode with its explanation (and a hint that accounts can be made before the mode is on), "➕ Add account", and a list (display name, @username, linked kid, switched off / locked, last sign-in). `memberForm()` modal: username (checked `^[a-z0-9][a-z0-9._-]{2,29}$` after lower-casing), display name, linked kid (active kids), password (required for new, ≥4; for an existing account "set a new password", empty = keep; a new password also unlocks). The extra button "⛔ Switch off" shows a **named warning** (`memOffWarn`) first; "✅ Switch on" needs none. **No delete button** (accounts are never deleted). A duplicate username shows `memDup`. Changes are logged by the database (`audit_log` table_name `members`, no password hash); `describeLog` shows `@username · kid · 🔑` and the area "Member accounts".
+  - **Super admin page:** new section "🔑 Member login" (`drawLogin(c)` in `js/superadmin.js`, card `#loginCard`) for the program of the open link: three radio options (off / own details only / sign in to see anything), each with a one-line explanation, the number of accounts with a link to the accounts page, and Save (enabled only after a change; choosing "all" asks first). Saves with `programSetLogin`, updates `c.program.login` and the program list, and clears the saved `programs` answer. Phones pick up a new mode the next time the app is opened. "Coming next" no longer lists member login.
+  - **Events:** `member_login`, `member_logout`, `member_pw` (labels `ev_*`, in `EVT_TH`).
+  - **Tested:** `tests/t_v31_members.py` (42 checks, preview copy): mode off = old app, admin adds accounts (lower-cased usernames, duplicate refused), named switch-off warning, super admin mode card, personal mode (hint, other kid's note, lock after 5 wrong, sign in, own details, change password, sign out removes token and "me", old password refused, events logged), all mode (every kid route → sign-in, no tabs, sign in → ranking/shop, sign-in kept after reload, switched-off account signed out). Plus a smoke run of every kid and admin page with mode off (no errors). **Not yet tried with a real account on the live database** (that needs the owner to switch a program on); the live database part was tested in 2026-11-16's rolled-back test, and the header path was verified then.
+  - **Not done on purpose:** kids cannot make their own accounts or reset a forgotten password (an adult sets a new one); no delete of accounts; feedback by QR also needs sign-in in `all` mode (the owner said every kid route).
 
 ### 5b. Super admin (v25, `supabase/017_superadmin.sql`)
 
@@ -327,7 +332,7 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
   - `clear_kid_events()` now also accepts a super admin who re-entered their password in the last 2 minutes (via `superadmin_start`).
 - **App flow:** login form → normal sign-in fails → `startFromLogin` → `superadmin_start` → `signInWithOtp(email, shouldCreateUser:false, emailRedirectTo: site URL)` → "check your email" screen. The email (default Supabase template "Your sign-in link"; templates can't be edited without custom SMTP) opens the site with `#access_token=…` (implicit flow). An inline script in `index.html` saves that as `window.YA_LINK` before supabase-js clears it; app.js then waits for the session and opens `#/admin/super`, where `superGate` calls `superadmin_unlock()`.
 - **Limits:** the built-in mailer sends at most 2 emails an hour and only to Supabase team members (the owner's Gmail is one). Site URL is `https://mirustat.github.io/youth-alpha/`; no extra redirect URLs are set. "Allow new users to sign up" is off, so the owner's login was created with Supabase's "Invite user".
-- **Super admin page (`#/admin/super`):** a one-line explanation of the page; the **Programs** section (v27: each program with its link, copy link, open its admin, edit name / archive, and "New program" with name, link name filled from the name, start-from program, and copy kids / prizes / songs); username and "signed in until" time; a **"Sign out of super admin"** button (v26; was "Lock", which confused the owner) that asks first, then calls `superadmin_lock()` and signs out, so next time needs password + email link again; the kids' "Install as an app" switch; "Details for AI": fetches `HANDOFF.md`, checks its "current version" line against `VERSION`, shows it folded inside ONE card ("Read the handoff (N sections)", each section folded with its line count; v26), and has "Copy as an AI prompt" (a short instruction header + the whole file) and "Download .md"; and a "Coming next" list.
+- **Super admin page (`#/admin/super`):** a one-line explanation of the page; the **Programs** section (v27: each program with its link, copy link, open its admin, edit name / archive, and "New program" with name, link name filled from the name, start-from program, and copy kids / prizes / songs); username and "signed in until" time; a **"Sign out of super admin"** button (v26; was "Lock", which confused the owner) that asks first, then calls `superadmin_lock()` and signs out, so next time needs password + email link again; the kids' "Install as an app" switch; **"🔑 Member login"** mode chooser (v31, see 5d); "Details for AI": fetches `HANDOFF.md`, checks its "current version" line against `VERSION`, shows it folded inside ONE card ("Read the handoff (N sections)", each section folded with its line count; v26), and has "Copy as an AI prompt" (a short instruction header + the whole file) and "Download .md"; and a "Coming next" list.
 
 ### Running SQL from the browser (how it was done)
 
@@ -372,6 +377,7 @@ The SQL editor (Monaco) was used in the built-in browser tab:
   - 🔊/🔇 background music (Jingle Bells). Music pauses while a song player is open.
 - **Offline:** after one visit with internet, the app opens with no internet. Kid pages show the last saved ranking, shop and songs (lyrics, chords, sheet pictures), with a quiet line "📴 no internet — showing the last saved data". The songs list shows "✓ songs are saved on this phone" once every sheet picture is stored. Videos, feedback and all admin pages still need internet.
 - **Install as an app** (menu row, shown only when `settings.install_on` is true; off by default; the switch will be on the super admin page in v25): Chrome on Android uses the browser's own install prompt (`beforeinstallprompt`); otherwise a sheet shows 3 steps for Android Chrome or iPhone Safari. Hidden when already installed. This replaced the APK idea: an APK from an unregistered developer is blocked on phones in Thailand since 30 Sep 2026 (Google developer verification).
+- **Member login (v31, only when the super admin switched it on for the program; see 5d):** a sign-in page with big text (`#/login`); messages are written on the page, never as pop-ups. "Own details only" mode: everyone sees the ranking, but points by category only for yourself. "Sign in to see anything" mode: every kid page asks to sign in first, with no tabs on that page. The menu's first row is "Sign in" or "Signed in as …" (change password, sign out). There is no "this is me" button while login is on: "me" is the account's kid.
 - **Tutorial:** an arrow and a bubble over a dark screen. The full tour runs on the first visit; after that, one tip every `tip_days` days (set by the admin; 0 = never).
 - **Santa** peeks in from a screen edge every 1–2 minutes. Tapping him throws 🎁 and plays a ding. He doesn't appear on admin or song pages, or during the tour or sheets.
 - **Special "festive" mode:**
@@ -391,7 +397,7 @@ The SQL editor (Monaco) was used in the built-in browser tab:
   - A **program picker** at the top when there is more than one (non-archived) program (v27).
   - **Super admin** (only when signed in as the unlocked super admin): Super admin page 👑
   - **Daily:** Attendance ✅, Points ⭐, Weekly summary 📊
-  - **Kids:** Kids 👧, Feedback 💬, Announcement & verse 📣
+  - **Kids:** Kids 👧, Member accounts 🔑 (admin only, v31), Feedback 💬, Announcement & verse 📣
   - **Rewards:** Point categories 🏷️, Shop 🎁, Give a prize 🎟️
   - **Songs:** Songs 🎵, Music switches 🎛️ (admin only)
   - **System:** Export 📥, Settings ⚙️ (admin only), Version & changes ℹ️ (the row shows the version number)
@@ -414,6 +420,7 @@ The SQL editor (Monaco) was used in the built-in browser tab:
   - Add or edit nickname, avatar (emoji list or 📷 uploaded photo, shrunk to 512 px) and group.
   - Hide/show. Delete (named warning).
   - Copy the kids' link.
+- **Member accounts (v31, admins only):** shows the program's login mode and what it means; add an account (username, display name, which kid, password ≥4); edit / set a new password (also unlocks a locked account); switch off (named warning; signs it out at once) / on. Never deleted. Accounts can be made while the mode is still off.
 - **Point categories:** Thai and English name, icon (list, upload or type your own emoji), info text for kids, details list. Hide/show, delete (blocked if points use it).
 - **Shop:** name, price and icon (list, upload or own emoji; special `chipbag`). Hide/show, delete.
 - **Give a prize (redemption):**
@@ -532,6 +539,7 @@ The Thai songs start with **chord-only lines** so that key change works. Admins 
   - `tour_next`, `tour_skip`, `tour_done`, `fb_pill`, `fb_open`, `fb_send`, `fb_qr`, `tree_tap`
   - `songs`, `song_open`, `metro`, `autoscroll`, `song_speed`, `transpose`, `yt_play`, `sheet_view`, `song_lang`
   - `credits`, `santa_tap`, `festive`, `pic_view`
+  - v30–v31: `egg_hunt`, `member_login`, `member_logout`, `member_pw`
 
   New events need a Thai/English name `ev_<name>` in i18n and an entry in `EVT_TH`.
 - **Both logs were wiped on 2026-11-16** at the owner's request. Both start from zero, and the protection triggers were checked afterwards: `audit_log_no_change` and `audit_log_no_truncate` are both enabled (`O`).
@@ -576,6 +584,7 @@ The owner wants, after every change: the handoff file and the app's GitHub files
   - for OCR tests, serve Tesseract from local `node_modules`
 - **Hide the tutorial in tests:** `#tour` covers the screen and blocks clicks. Use an init script that adds the CSS `#tour{display:none!important}`, or set `localStorage.ya_tour` first.
 - Admin login in preview: any username and password (e.g. `admin` / `preview1`).
+- **In a fresh cloud session (2026-11-17):** Playwright's own browser was not installed and could not be downloaded; `/usr/bin/google-chrome` worked with `executable_path`. three.js and supabase-js were taken from npm (`npm i three@0.170.0 @supabase/supabase-js@2.119.0` in `/tmp/npm3`). `tests/t_v31_members.py` reads `YA_VENDOR`, `YA_CHROME`, `YA_SHOTS` and seeds its own preview database (older scripts expect a `SEED` from `/tmp/t35.py`, which is not in the repo).
 - Always collect `pageerror` events and check there are none. Take screenshots of changed screens and look at them.
 
 ## 12. Gotchas and lessons learned
@@ -597,6 +606,9 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 - **Service worker in tests:** block it (`service_workers='block'`) for normal tests. For offline tests allow it, set `PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1`, and route CDN files with `context.route` (not `page.route`) with an `access-control-allow-origin: *` header.
 - **Git tags can't be pushed** from the Claude session (403); versions are tracked by `js/version.js` and the commit message instead.
 - **Testing live database triggers without saving anything:** run a `do $$ … raise exception 'TEST RESULT: %', msg; end $$;` block in the SQL editor; the error message carries the result and everything rolls back.
+- **Playwright `goto` to the same page with only a different `#hash` does NOT reload the page** (same-document navigation): start-up code (`loadProgram`, `memberStart`) does not run again and `pagehide` (which sends queued kid events) does not fire. Use `page.reload()` when a test needs a fresh start.
+- **Member login and saved answers:** kid pages keep last answers in `ya_c_<program>_*`. They can hold a signed-in member's details, so sign-in and sign-out call `clearKidCache()`.
+- **`pattern` attributes:** Chrome compiles them with the `v` flag, where `-` inside `[...]` must be escaped; an unescaped one logs a console error and the pattern is ignored. The member form checks the username in JS instead.
 - **Kid privacy:** only nickname, avatar and points are public. RLS enforces this; keep new views the same.
 
 ## 13. History (commits, oldest → newest)
@@ -630,7 +642,8 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 27. v27, 2026-11-16: programs (`018_programs.sql`): many programs in one database, each with its own `?p=` link and its own data; program 1 = all earlier data; super admin Programs section; admin program picker; per-program phone storage. Backup tables `private.bk_20261116_*` made first.
 28. v28, 2026-11-16: program settings (`019_program_look.sql`, section 5c): name/emoji on the top bar, theme pack (Christmas / plain church), font and text size, parts on/off per program, wording overrides in Thai and English; super admin card "This program's settings".
 29. v29, 2026-11-16: layout editor (section 5c): reorder and hide bottom tabs, kid home parts and menu rows per program, drag/▲▼/👁️ with a live mini preview; stored in `look.layout`, no database change.
-30. v30 (current), 2026-11-16: Easter theme pack (section 5c): cross-on-a-hill 3D scene with eggs and petals, Easter Hymn (public domain) bells / trumpets, egg-hunt special mode, lamb instead of Santa, Easter wording. No database change.
+30. v30, 2026-11-16: Easter theme pack (section 5c): cross-on-a-hill 3D scene with eggs and petals, Easter Hymn (public domain) bells / trumpets, egg-hunt special mode, lamb instead of Santa, Easter wording. No database change.
+31. v31 (current), 2026-11-17: member login screens (section 5d) on top of `020_members.sql` (run live on 2026-11-16): kid sign-in page, account sheet (change password, sign out), "own details only" and "sign in first" modes, admin "Member accounts" page (add, link to a kid, new password, switch off/on, never delete), super admin login mode chooser. No database change in this release; every program still `off`.
 
 ## 14. Ideas and open items
 
@@ -640,13 +653,13 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 - **v28 (program settings): DONE**, see 5c. Easter is added as a pack in v30.
 - **v29 (layout editor): DONE**, see 5c.
 - **v30 (Easter pack): DONE**, see 5c.
-- **v31 (member login): DATABASE DONE, SCREENS TO DO**, see 5d.
+- **v31 (member login): DONE**, see 5d (database 2026-11-16, screens 2026-11-17). All programs are still `off`; the owner decides when to switch one on.
 
 ### Roadmap v31+ (owner's requests of 2026-11-16 night; order approved by the owner; summary first and wait for "go" before each step)
 
 Owner's answers to the open questions: **maintenance mode is per program**; the admin permission checklist below is right, **but normal admins may never see or export the admin log or the kids' activity log — only the super admin can** (normal admins may still export other things, e.g. points, kids, attendance); **visits and feedback counters are on the kids' home page, seen by everyone**; **Kids mode / Normal mode is chosen per program by the super admin, Youth Alpha stays in Kids mode**; finishing member login first was left to the AI (decided: yes, finish v31 screens first).
 
-1. **Finish v31 member login screens** (section 5d).
+1. **Finish v31 member login screens** (section 5d). **DONE in v31.** **NEXT: step 2.** Note for step 2: the member accounts page and the login mode card should move into the merged admin panel.
 2. **Admins and permissions + merged admin panel** (owner's groups 1, 3, 4):
    - **Rule to always keep: everything an admin can do, the super admin can do too.**
    - No separate super admin page: when signed in as super admin, the normal admin panel shows a clear "Super admin" badge and extra super-only sections (merge the program panel and the super admin page into the admin panel).

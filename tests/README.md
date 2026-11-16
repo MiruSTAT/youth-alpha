@@ -11,4 +11,5 @@ cd /tmp/prev && (python3 -m http.server 8766 &) ; python3 /path/to/tests/t_v24_f
 - The scripts expect `three.module.min.js` and `supabase.js` in a local vendor folder (`V=` at the top of each file); change the path for your machine.
 - `perf_festive.py` slows the CPU 4× and prints frames per second before, during and after the special mode. Results for v24: special mode about 33 fps (was 9), after it about 40 fps (was 15).
 - `t_v23_offline.py` needs `PW_EXPERIMENTAL_SERVICE_WORKER_NETWORK_EVENTS=1`.
+- `t_v31_members.py` (member login) seeds its own preview database and uses `YA_CHROME` (default `/usr/bin/google-chrome`), `YA_VENDOR` (folder with `three.module.min.js`) and `YA_SHOTS` (screenshot folder).
 - Each script prints what it checked and ends with `no errors` when nothing broke.
