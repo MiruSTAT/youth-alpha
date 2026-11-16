@@ -29,4 +29,4 @@ Music: "Jingle Bells" (1857, public domain melody), synthesized in the browser â
 ## Versions
 The version number lives in `js/version.js` (with the list of changes admins see under **For adults â†’ Version & changes**).
 On every release raise the same number in three places: `VERSION` in `js/version.js`, every `?v=` (index.html and the js imports) and `V` in `sw.js`;
-add an entry to `CHANGELOG`; then tag the commit (`git tag v23`).
+and add an entry at the top of `CHANGELOG` (Thai and English).
