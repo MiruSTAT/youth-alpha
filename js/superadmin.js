@@ -94,8 +94,10 @@ export async function pSuper(c) {
   const [info, s] = await Promise.all([c.api.superInfo().catch(() => null), c.api.settings()]);
   const until = info?.until ? new Date(info.until).toLocaleTimeString(c.getLang() === 'th' ? 'th-TH' : 'en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
   c.view.innerHTML = `${c.pageHead('👑 ' + c.t('saTitle'))}
-    <div class="card sa-who"><span class="sa-crown">👑</span><span class="grow"><b>${c.esc(info?.username || '')}</b><span class="sub">${c.t('saUntil', until)}</span></span>
-      <button class="btn small" id="saLock">🔒 ${c.t('saLockBtn')}</button></div>
+    <p class="muted sa-intro">${c.t('saIntro')}</p>
+    <div class="card sa-who"><div class="sa-who-top"><span class="sa-crown">👑</span><span class="grow"><b>${c.esc(info?.username || '')}</b><span class="sub">${c.t('saUntil', until)}</span></span></div>
+      <button class="btn wide" id="saLock">🚪 ${c.t('saOutBtn')}</button>
+      <p class="hint" style="margin-top:8px">${c.t('saOutHint')}</p></div>
 
     <h2 class="grp">${c.t('saKidsApp')}</h2>
     <div class="card toggles"><div class="tg-row"><span class="tg-i">📲</span><span class="tg-t"><b>${c.t('installApp')}</b><span>${c.t('saInstallSub')}</span></span>
@@ -110,7 +112,13 @@ export async function pSuper(c) {
     <h2 class="grp">${c.t('saNext')}</h2>
     <div class="card"><ul class="sa-next">${['saN1', 'saN2', 'saN3', 'saN4', 'saN5', 'saN6'].map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
 
-  c.$('#saLock').onclick = async () => { try { await c.api.superLock(); } catch (e) { c.fail(e); } location.hash = '#/admin'; c.render(); };
+  // sign out: end the super admin powers on this device AND sign out (next time: password + email link again)
+  c.$('#saLock').onclick = async () => {
+    if (!(await c.confirmBox(c.t('saOutWarn'), c.t('saOutBtn'), false))) return;
+    try { await c.api.superLock(); } catch (e) { console.error(e); }
+    try { await c.api.signOut(); } catch (e) { console.error(e); }
+    location.hash = '#/admin'; c.render();
+  };
   c.$('#swInstall').onclick = async (e) => {
     const sw = e.currentTarget, on = !sw.classList.contains('on'); sw.disabled = true;
     try {
@@ -131,10 +139,12 @@ export async function pSuper(c) {
   st.innerHTML = hoVer === String(c.VERSION) ? `✓ ${c.t('saHoOk', hoVer, lines)}` : `⚠️ ${c.t('saHoOld', hoVer, c.VERSION)}`;
   st.className = 'sa-ho ' + (hoVer === String(c.VERSION) ? 'c-here' : 'c-leave');
   const parts = md.split(/\n(?=## )/);
-  c.$('#hoBody').innerHTML = parts.map((p, i) => {
-    const title = i === 0 ? (/^# (.+)/m.exec(p)?.[1] || 'Handoff') : p.split('\n')[0].replace(/^##\s*/, '');
-    return `<details class="card ho-sec"><summary><b>${c.esc(title)}</b><span class="muted">${p.split('\n').length}</span></summary><pre class="ho-pre">${c.esc(p)}</pre></details>`;
-  }).join('');
+  // all sections inside one folded card, each section folded too
+  c.$('#hoBody').innerHTML = `<details class="card ho-all"><summary><b>📄 ${c.t('saHoRead', parts.length)}</b><span class="chev">›</span></summary>
+    ${parts.map((p, i) => {
+      const title = i === 0 ? c.t('saHoStart') : p.split('\n')[0].replace(/^##\s*/, '');
+      return `<details class="ho-sec"><summary><span>${c.esc(title)}</span><span class="muted">${c.t('saHoLines', p.split('\n').length)}</span></summary><pre class="ho-pre">${c.esc(p)}</pre></details>`;
+    }).join('')}</details>`;
   const prompt = PROMPT_HEAD(c.VERSION) + md;
   const copy = c.$('#hoCopy'), dl = c.$('#hoDl'); copy.disabled = dl.disabled = false;
   copy.onclick = async () => {

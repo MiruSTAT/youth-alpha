@@ -840,3 +840,24 @@ body[data-theme="snow"] .verse b { color: var(--dark-ink); }
 .ho-pre { margin: 0; padding: 12px 16px; border-top: 1px solid var(--line); white-space: pre-wrap; word-break: break-word; font: .82rem/1.55 ui-monospace, Menlo, Consolas, monospace; max-height: 60vh; overflow: auto; background: #fafbfe; }
 .sa-next { margin: 0; padding-left: 20px; line-height: 1.7; }
 .sa-btns { display: grid; gap: 8px; margin-top: 12px; }
+
+/* ---- update 26: grouped switches, simple songs, clearer super admin */
+.sw-card { padding: 0 16px; }
+.sw-card > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 14px 0; cursor: pointer; }
+.sw-card > summary::-webkit-details-marker { display: none; }
+.sw-card > summary b { flex: 1; }
+.sw-card > summary .chev, .ho-all > summary .chev { transition: transform .2s; color: var(--ink-2); font-size: 1.3rem; }
+.sw-card[open] > summary .chev, .ho-all[open] > summary .chev { transform: rotate(90deg); }
+.tg-grp { margin: 14px 0 2px; font-size: .85rem; font-weight: 700; color: var(--ink-2); }
+.dimmed { opacity: .5; }
+.simple-note { background: #e7f6ee; color: #1f6b40; border-radius: 12px; padding: 10px 12px; margin: 0 0 12px; font-size: .95rem; line-height: 1.5; }
+.simple-note a { color: inherit; font-weight: 700; }
+.simple-card { border: 2px solid var(--here); }
+.sa-intro { margin: -4px 4px 12px; line-height: 1.6; }
+.sa-who { display: block; }
+.sa-who-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.ho-all { padding: 0; }
+.ho-all > summary { list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; }
+.ho-all > summary::-webkit-details-marker { display: none; }
+.ho-all .ho-sec { margin: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; box-shadow: none; }
+.ho-all .ho-sec > summary { padding: 10px 16px; font-size: .98rem; }

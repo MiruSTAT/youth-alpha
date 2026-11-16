@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '25';
+export const VERSION = '26';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,15 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'super', th: 'อัปเดตผู้ดูแลสูงสุดและโปรแกรม', en: 'Super admin & programs update',
     versions: [
-      { v: '25', date: '2026-11-16', commit: '',
+      { v: '26', date: '2026-11-16', commit: '',
+        items: [
+          { a: 'songs', th: 'สวิตช์ใหม่ "ทุกเพลง: วิดีโอ + แผ่นเพลงต้นฉบับเท่านั้น" บนสุดของหน้าตั้งค่าเพลง เปิดแล้วทุกเพลงแสดงแค่วิดีโอ YouTube และแผ่นเพลงต้นฉบับ (ไม่มีเนื้อเพลงในแอป ไม่มีปุ่มด้านล่าง) เปิดไว้เป็นค่าเริ่มต้นตามที่เจ้าของขอ', en: 'New switch "All songs: video + original sheet only" at the top of Music settings: every song shows only its YouTube video and the original song sheet (no in-app lyrics, no buttons at the bottom). Switched on by default, as the owner asked' },
+          { a: 'admin', th: 'สวิตช์เพลงจัดเป็นกลุ่ม: ทั้งแอป / สิ่งที่เด็กเห็น / เนื้อเพลงและคอร์ด / ปุ่มช่วยซ้อม / ตามวิดีโอ แต่ละกลุ่มพับได้และบอกว่าเปิดอยู่กี่อัน', en: 'Music switches are grouped: whole app / what kids see / lyrics and chords / practice buttons / follow the video; each group folds and shows how many are on' },
+          { a: 'songs', th: 'การ์ดสวิตช์ของแต่ละเพลงจัดกลุ่มแบบเดียวกัน แผ่นเพลงต้นฉบับอยู่บนสุด และเมื่อโหมด "ทุกเพลง" เปิดอยู่ การ์ดจะพับไว้และบอกว่ากำลังใช้โหมดนี้', en: 'Each song\'s switch card uses the same groups with the original sheet first; while "All songs" mode is on, the card is folded and says so' },
+          { a: 'admin', th: 'หน้าผู้ดูแลสูงสุดเข้าใจง่ายขึ้น: มีคำอธิบายว่าหน้านี้ใช้ทำอะไร ปุ่ม "ล็อก" เปลี่ยนเป็น "ออกจากระบบผู้ดูแลสูงสุด" พร้อมคำอธิบายและคำเตือน', en: 'Clearer super admin page: a line explaining what it is for, and the "Lock" button became "Sign out of super admin" with an explanation and a warning' },
+          { a: 'admin', th: 'ไฟล์ส่งต่องานในหน้าผู้ดูแลสูงสุดพับอยู่ในการ์ดเดียว แต่ละหัวข้อพับได้และบอกจำนวนบรรทัด', en: 'The handoff on the super admin page is folded into one card; each section folds and shows its number of lines' },
+        ] },
+      { v: '25', date: '2026-11-16', commit: '51e9624',
         items: [
           { a: 'safety', th: 'ผู้ดูแลสูงสุด (Miruku) เข้าสู่ระบบ 2 ขั้นตอน: 1) ชื่อผู้ใช้และรหัสผ่าน 2) ลิงก์ที่ส่งไปทางอีเมลของเจ้าของ ฐานข้อมูลตรวจทั้งสองขั้นเอง ลิงก์ต้องเปิดภายใน 20 นาทีหลังใส่รหัสผ่าน และใช้ได้ 12 ชั่วโมงต่อครั้ง', en: 'Super admin (Miruku) signs in with two steps: 1) username and password, 2) a link emailed to the owner. The database checks both; the link must be opened within 20 minutes of the password, and the sign-in lasts 12 hours' },
           { a: 'safety', th: 'ใส่รหัสผ่านผิด 5 ครั้งล็อก 15 นาที รหัสผ่านเก็บแบบเข้ารหัส (bcrypt) ในตารางที่ไม่มีใครอ่านได้ และอีเมลของเจ้าของไม่อยู่ในโค้ดสาธารณะ', en: '5 wrong passwords lock it for 15 minutes; the password is stored hashed (bcrypt) in a table nobody can read, and the owner\'s email is not in the public code' },

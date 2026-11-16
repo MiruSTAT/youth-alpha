@@ -1,14 +1,14 @@
-import { t, getLang, setLang } from './i18n.js?v=25';
-import { api, MODE, ranked, today, bkkToday, cached, net } from './data.js?v=25';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=25';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=25';
+import { t, getLang, setLang } from './i18n.js?v=26';
+import { api, MODE, ranked, today, bkkToday, cached, net } from './data.js?v=26';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=26';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=26';
 
-import { music } from './music.js?v=25';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=25';
-import { snow } from './snow.js?v=25';
-import { track } from './track.js?v=25';
-import { metro } from './metronome.js?v=25';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=25';
+import { music } from './music.js?v=26';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=26';
+import { snow } from './snow.js?v=26';
+import { track } from './track.js?v=26';
+import { metro } from './metronome.js?v=26';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=26';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -75,14 +75,22 @@ async function eventInfo(force = false) {
   return evCache;
 }
 // music switches set by the admin (everything is on unless switched off)
-const MUSIC_OPTS = [
-  ['ms_app', [['bgMusic', '🔔'], ['songsTab', '🎵'], ['festive', '🎄'], ['festiveSfx', '✨']]],
-  ['ms_player', [['lyrics', '📝'], ['video', '▶️'], ['metro', '🥁'], ['beatDots', '🔴'], ['scroll', '⏬'], ['speed', '🐢'], ['beatSync', '🔗'], ['lineSync', '🎤'],
-    ['chords', '🎸'], ['transpose', '♯'], ['textSize', 'Aa'], ['langSwitch', '🌐'], ['origSheet', '📄']]],
+// music switches, in groups (the same groups on the Music settings page and on each song's card)
+const MUSIC_GROUPS = [
+  ['mg_app', [['bgMusic', '🔔'], ['songsTab', '🎵'], ['festive', '🎄'], ['festiveSfx', '✨']]],
+  ['mg_see', [['origSheet', '📄'], ['video', '▶️'], ['lyrics', '📝']]],
+  ['mg_text', [['chords', '🎸'], ['transpose', '♯'], ['textSize', 'Aa'], ['langSwitch', '🌐']]],
+  ['mg_tools', [['metro', '🥁'], ['beatDots', '🔴'], ['scroll', '⏬'], ['speed', '🐢']]],
+  ['mg_sync', [['beatSync', '🔗'], ['lineSync', '🎤']]],
 ];
+const PLAYER_GROUPS = MUSIC_GROUPS.slice(1);
+const PLAYER_KEYS = PLAYER_GROUPS.flatMap(([, items]) => items.map(([k]) => k));
+// "simple songs" (settings.music.simpleSongs, Music settings page): every song shows only its video and original sheet
+const SIMPLE_KEEP = new Set(['video', 'origSheet']);
+const simpleSongs = () => evCache?.music?.simpleSongs === true;
 let songOpts = {};                                                  // switches for the open song (set by an admin per song)
 const moApp = (k) => evCache?.music?.[k] !== false;
-const mo = (k) => moApp(k) && songOpts[k] !== false;
+const mo = (k) => moApp(k) && (simpleSongs() && PLAYER_KEYS.includes(k) ? SIMPLE_KEEP.has(k) : songOpts[k] !== false);
 function applyAppOpts() {
   document.body.classList.toggle('no-bgm', !mo('bgMusic'));
   document.body.classList.toggle('no-songs', !mo('songsTab'));
@@ -109,7 +117,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=25');
+    const m = await import('./scene3d.js?v=26');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -708,7 +716,7 @@ let adult = { role: null, myId: null };
 const isAdm = () => adult.role === 'admin' || adult.role === 'superadmin';
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, evReset: () => { evCache = null; } });
-const saMod = () => import('./superadmin.js?v=25');
+const saMod = () => import('./superadmin.js?v=26');
 
 async function adultGate(page) {
   const session = await api.session();
@@ -1269,7 +1277,7 @@ async function pasteWholeSheet(list) {
   } catch (e) { fail(e); }
 }
 async function pSongEdit(id) {
-  const list = await songList(true), x = list.find(v => v.id === id);
+  const [list] = await Promise.all([songList(true), eventInfo(true)]), x = list.find(v => v.id === id);   // eventInfo: the music switches (simple songs)
   if (id !== 'new' && !x) { location.hash = '#/admin/songs'; return; }
   const v = x || { title: '', subtitle: '', song_key: 'C', bpm: 100, beats: 4, youtube: '', yt_start: 0, credits: '', content: '', sheets: [], sort: list.length + 1, active: true };
   let sheets = [...(v.sheets || [])];
@@ -1311,7 +1319,7 @@ async function pSongEdit(id) {
   const form = $('#sf');
   // "original sheet only": everything else switches off (and back on when it is turned off)
   view.querySelector('[data-only]')?.addEventListener('click', async (e) => {
-    const b = e.currentTarget, on = !b.classList.contains('on'), keys = MUSIC_OPTS.find(([g]) => g === 'ms_player')[1].map(([k]) => k);
+    const b = e.currentTarget, on = !b.classList.contains('on'), keys = PLAYER_KEYS;
     const opts = Object.fromEntries(keys.map(k => [k, k === 'origSheet' ? true : !on])); opts.sheetOnly = on;
     b.disabled = true;
     try {
@@ -1347,7 +1355,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=25');
+      const { readSheet } = await import('./ocr.js?v=26');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1398,14 +1406,16 @@ async function pSongEdit(id) {
 
 // ---------------- What kids see in this one song (switches like the feedback switch)
 function songSwitches(x) {
-  const items = MUSIC_OPTS.find(([g]) => g === 'ms_player')[1], o = x.opts || {};
-  return `<div class="card toggles"><b style="display:block;padding:12px 0 4px">👀 ${t('songSw')}</b>
-    <p class="muted" style="margin:0 0 4px">${t('songSwSub')}</p>
+  const o = x.opts || {}, simple = simpleSongs();
+  const row = ([k, i]) => { const off = !moApp(k); return `<div class="tg-row"><span class="tg-i">${i}</span>
+      <span class="tg-t"><b>${t('mo_' + k)}</b>${off ? `<span>${t('songSwOff')}</span>` : ''}</span>
+      <button type="button" class="switch ${o[k] !== false ? 'on' : ''}" data-so="${k}" role="switch" aria-checked="${o[k] !== false}" aria-label="${t('mo_' + k)}" ${off ? 'disabled' : ''}><span></span></button></div>`; };
+  return `<details class="card toggles sw-card" ${simple ? '' : 'open'}><summary><b>👀 ${t('songSw')}</b><span class="chev">›</span></summary>
+    ${simple ? `<p class="simple-note">✅ ${t('simpleOnNote')} <a href="#/admin/musicset">${t('tab_musicset')} ›</a></p>` : `<p class="muted" style="margin:0 0 4px">${t('songSwSub')}</p>`}
+    <div class="${simple ? 'dimmed' : ''}">
     <div class="tg-row only"><span class="tg-i">📄</span><span class="tg-t"><b>${t('sheetOnly')}</b><span>${t('sheetOnlySub')}</span></span>
       <button type="button" class="switch ${o.sheetOnly ? 'on' : ''}" data-only role="switch" aria-checked="${!!o.sheetOnly}" aria-label="${t('sheetOnly')}"><span></span></button></div>
-    ${items.map(([k, i]) => { const off = !moApp(k); return `<div class="tg-row"><span class="tg-i">${i}</span>
-      <span class="tg-t"><b>${t('mo_' + k)}</b>${off ? `<span>${t('songSwOff')}</span>` : ''}</span>
-      <button type="button" class="switch ${o[k] !== false ? 'on' : ''}" data-so="${k}" role="switch" aria-checked="${o[k] !== false}" aria-label="${t('mo_' + k)}" ${off ? 'disabled' : ''}><span></span></button></div>`; }).join('')}</div>`;
+    ${PLAYER_GROUPS.map(([g, items]) => `<p class="tg-grp">${t(g)}</p>${items.map(row).join('')}`).join('')}</div></details>`;
 }
 
 // ---------------- Tap-along: match the beat and the lyric lines to the video (admin)
@@ -1595,21 +1605,36 @@ function drawQR(canvas, text, qrcode, poster) {
 // ---------------- Music switches (admin): turn each music feature on or off for the kids
 async function pMusicSet() {
   const cur = { ...((await api.settings()).music || {}) };
-  view.innerHTML = `${pageHead(t('tab_musicset'))}
-    ${MUSIC_OPTS.map(([g, items]) => `<h2 class="grp">${t(g)}</h2><div class="card toggles">${items.map(([k, i]) => `<div class="tg-row">
+  const row = ([k, i]) => `<div class="tg-row">
       <span class="tg-i">${i}</span><span class="tg-t"><b>${t('mo_' + k)}</b>${t('mos_' + k) !== 'mos_' + k ? `<span>${t('mos_' + k)}</span>` : ''}</span>
-      <button class="switch ${cur[k] !== false ? 'on' : ''}" data-mo="${k}" role="switch" aria-checked="${cur[k] !== false}" aria-label="${t('mo_' + k)}"><span></span></button></div>`).join('')}</div>`).join('')}
-    <p class="muted" style="margin:6px 4px 0">${t('moNote')}</p>`;
-  view.querySelectorAll('[data-mo]').forEach(b => b.onclick = async () => {
-    const k = b.dataset.mo, on = cur[k] === false;
-    b.disabled = true;
-    try {
-      cur[k] = on; await api.saveSettings({ music: cur }); evCache = null;
-      b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on));
-      toast(`${t('mo_' + k)} · ${on ? t('moOn') : t('moOff')}`);
-    } catch (e) { cur[k] = !on; fail(e); }
-    b.disabled = false;
-  });
+      <button class="switch ${cur[k] !== false ? 'on' : ''}" data-mo="${k}" role="switch" aria-checked="${cur[k] !== false}" aria-label="${t('mo_' + k)}"><span></span></button></div>`;
+  const draw = () => {
+    const simple = cur.simpleSongs === true;
+    view.innerHTML = `${pageHead(t('tab_musicset'))}
+      <div class="card toggles simple-card"><div class="tg-row"><span class="tg-i">📄</span><span class="tg-t"><b>${t('simpleSongs')}</b><span>${t('simpleSongsSub')}</span></span>
+        <button class="switch ${simple ? 'on' : ''}" id="swSimple" role="switch" aria-checked="${simple}" aria-label="${t('simpleSongs')}"><span></span></button></div></div>
+      <h2 class="grp">${t('mg_app')}</h2><div class="card toggles">${MUSIC_GROUPS[0][1].map(row).join('')}</div>
+      <h2 class="grp">${t('ms_player')}</h2>
+      ${simple ? `<p class="simple-note">✅ ${t('simpleOnNote2')}</p>` : ''}
+      <div class="${simple ? 'dimmed' : ''}">${PLAYER_GROUPS.map(([g, items]) => `<details class="card toggles sw-card" ${simple ? '' : 'open'}><summary><b>${t(g)}</b><span class="muted">${items.filter(([k]) => cur[k] !== false).length} / ${items.length}</span><span class="chev">›</span></summary>${items.map(row).join('')}</details>`).join('')}</div>
+      <p class="muted" style="margin:6px 4px 0">${t('moNote')}</p>`;
+    $('#swSimple').onclick = async (e) => {
+      const b = e.currentTarget, on = !simple; b.disabled = true;
+      try { cur.simpleSongs = on; await api.saveSettings({ music: cur }); evCache = null; toast(`${t('simpleSongs')} · ${on ? t('moOn') : t('moOff')}`); draw(); }
+      catch (err) { cur.simpleSongs = simple; fail(err); b.disabled = false; }
+    };
+    view.querySelectorAll('[data-mo]').forEach(b => b.onclick = async () => {
+      const k = b.dataset.mo, on = cur[k] === false;
+      b.disabled = true;
+      try {
+        cur[k] = on; await api.saveSettings({ music: cur }); evCache = null;
+        b.classList.toggle('on', on); b.setAttribute('aria-checked', String(on));
+        toast(`${t('mo_' + k)} · ${on ? t('moOn') : t('moOff')}`);
+      } catch (e) { cur[k] = !on; fail(e); }
+      b.disabled = false;
+    });
+  };
+  draw();
 }
 
 // ---------------- Settings (admin): all timings in one place

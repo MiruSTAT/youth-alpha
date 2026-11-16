@@ -476,3 +476,25 @@ Object.assign(DICT.en, {
   saNext: 'Coming next', saN1: 'Programs: save each customised app separately, each with its own link; existing data kept', saN2: 'Program settings: name, wording, themes (Christmas, Easter, church), font and size',
   saN3: 'Drag-and-drop layout', saN4: 'Easter pack: 3D scene, music and an egg hunt', saN5: 'Username login for members (can be switched on/off)', saN6: 'SQL export and data analysis tools',
 });
+
+// ---- update 26: clearer super admin page, grouped music switches, "simple songs" for all songs
+Object.assign(DICT.th, {
+  saIntro: 'หน้านี้มีแค่คุณที่เข้าได้ ใช้ตั้งค่าที่ผู้ดูแลคนอื่นเปลี่ยนไม่ได้ และเก็บไฟล์อธิบายแอปสำหรับส่งให้ AI',
+  saUntil: (t) => `เข้าอยู่ถึง ${t} หลังจากนั้นต้องเข้าสู่ระบบใหม่ (รหัสผ่าน + ลิงก์อีเมล)`,
+  saOutBtn: 'ออกจากระบบผู้ดูแลสูงสุด', saOutHint: 'ใช้เมื่อเสร็จแล้ว หรือเมื่อใช้เครื่องของคนอื่น ครั้งหน้าต้องใส่รหัสผ่านและเปิดลิงก์อีเมลใหม่',
+  saOutWarn: 'ออกจากระบบผู้ดูแลสูงสุดในเครื่องนี้?\nครั้งหน้าต้องใส่ Miruku + รหัสผ่าน แล้วเปิดลิงก์ในอีเมลอีกครั้ง',
+  saHoRead: (n) => `อ่านไฟล์ส่งต่องาน (${n} หัวข้อ)`, saHoStart: 'เริ่มต้น', saHoLines: (n) => `${n} บรรทัด`,
+  mg_app: 'ทั้งแอป', mg_see: 'สิ่งที่เด็กเห็นในหน้าเพลง', mg_text: 'เนื้อเพลงและคอร์ดในแอป', mg_tools: 'ปุ่มช่วยซ้อม', mg_sync: 'ตามวิดีโอ (ต้องแตะตามวิดีโอไว้ก่อน)',
+  simpleSongs: 'ทุกเพลง: วิดีโอ + แผ่นเพลงต้นฉบับเท่านั้น', simpleSongsSub: 'เปิดอยู่ = ทุกเพลงแสดงแค่วิดีโอ YouTube และแผ่นเพลงต้นฉบับ ปิด = ใช้สวิตช์ด้านล่างและสวิตช์ของแต่ละเพลง',
+  simpleOnNote: 'ตอนนี้ทุกเพลงแสดงแค่วิดีโอและแผ่นเพลงต้นฉบับ สวิตช์ของเพลงนี้จะใช้เมื่อปิดโหมดนี้ใน', simpleOnNote2: 'ตอนนี้ทุกเพลงแสดงแค่วิดีโอและแผ่นเพลงต้นฉบับ สวิตช์ด้านล่างจะใช้เมื่อปิดสวิตช์ด้านบน',
+});
+Object.assign(DICT.en, {
+  saIntro: 'Only you can open this page. It holds the settings other admins cannot change, and the file that explains the app to an AI.',
+  saUntil: (t) => `Signed in until ${t}; after that, sign in again (password + email link)`,
+  saOutBtn: 'Sign out of super admin', saOutHint: 'Use it when you are done, or on someone else\'s phone. Next time you enter the password and open a new email link.',
+  saOutWarn: 'Sign out of super admin on this device?\nNext time: Miruku + password, then open the email link again',
+  saHoRead: (n) => `Read the handoff (${n} sections)`, saHoStart: 'Start', saHoLines: (n) => `${n} lines`,
+  mg_app: 'Whole app', mg_see: 'What kids see on a song page', mg_text: 'In-app lyrics and chords', mg_tools: 'Practice buttons', mg_sync: 'Follow the video (needs a tap-along first)',
+  simpleSongs: 'All songs: video + original sheet only', simpleSongsSub: 'On = every song shows only its YouTube video and the original song sheet. Off = the switches below and each song\'s own switches apply',
+  simpleOnNote: 'Every song now shows only the video and the original sheet. This song\'s switches apply when that is turned off in', simpleOnNote2: 'Every song now shows only the video and the original sheet. The switches below apply when the switch above is off.',
+});

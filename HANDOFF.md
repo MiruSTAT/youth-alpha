@@ -80,7 +80,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
   - the YouTube IFrame API
   - `vendor/qrcode.js` (local copy) for QR codes
   - Google font **Noto Sans Thai**
-- **Versioning:** every import and asset carries `?v=N`. **The current version is `25`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
+- **Versioning:** every import and asset carries `?v=N`. **The current version is `26`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
 - **Service worker** (`sw.js`) makes the app work offline and open fast on weak Wi-Fi:
   - Files with `?v=` and same-origin pictures are served from the phone first (cache `ya-v<N>`, replaced on each version).
   - The page itself tries the internet first for 3.5 s, then uses the saved copy.
@@ -265,7 +265,7 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
   - `clear_kid_events()` now also accepts a super admin who re-entered their password in the last 2 minutes (via `superadmin_start`).
 - **App flow:** login form → normal sign-in fails → `startFromLogin` → `superadmin_start` → `signInWithOtp(email, shouldCreateUser:false, emailRedirectTo: site URL)` → "check your email" screen. The email (default Supabase template "Your sign-in link"; templates can't be edited without custom SMTP) opens the site with `#access_token=…` (implicit flow). An inline script in `index.html` saves that as `window.YA_LINK` before supabase-js clears it; app.js then waits for the session and opens `#/admin/super`, where `superGate` calls `superadmin_unlock()`.
 - **Limits:** the built-in mailer sends at most 2 emails an hour and only to Supabase team members (the owner's Gmail is one). Site URL is `https://mirustat.github.io/youth-alpha/`; no extra redirect URLs are set. "Allow new users to sign up" is off, so the owner's login was created with Supabase's "Invite user".
-- **Super admin page (`#/admin/super`):** username and "until" time with a 🔒 Lock button; the kids' "Install as an app" switch; "Details for AI": fetches `HANDOFF.md`, checks its "current version" line against `VERSION`, shows it by section, and has "Copy as an AI prompt" (a short instruction header + the whole file) and "Download .md"; and a "Coming next" list.
+- **Super admin page (`#/admin/super`):** a one-line explanation of the page; username and "signed in until" time; a **"Sign out of super admin"** button (v26; was "Lock", which confused the owner) that asks first, then calls `superadmin_lock()` and signs out, so next time needs password + email link again; the kids' "Install as an app" switch; "Details for AI": fetches `HANDOFF.md`, checks its "current version" line against `VERSION`, shows it folded inside ONE card ("Read the handoff (N sections)", each section folded with its line count; v26), and has "Copy as an AI prompt" (a short instruction header + the whole file) and "Download .md"; and a "Coming next" list.
 
 ### Running SQL from the browser (how it was done)
 
@@ -370,6 +370,8 @@ The SQL editor (Monaco) was used in the built-in browser tab:
 - **Music switches** (admin): turn each music feature on or off for every kid (stored in `settings.music`).
   - App: `bgMusic`, `songsTab`, `festive`, `festiveSfx`.
   - Song player: `lyrics`, `video`, `metro`, `beatDots`, `scroll`, `speed`, `beatSync`, `lineSync`, `chords`, `transpose`, `textSize`, `langSwitch`, `origSheet`.
+  - Since v26 the switches are in groups (`MUSIC_GROUPS` in app.js): whole app (`mg_app`) / what kids see on a song page (`mg_see`: origSheet, video, lyrics) / in-app lyrics and chords (`mg_text`) / practice buttons (`mg_tools`) / follow the video (`mg_sync`). The song-page groups fold and show "on / total". The same groups are used on each song's switch card.
+  - **"All songs: video + original sheet only"** (`settings.music.simpleSongs`, v26; switched ON on the live site at the owner's request): a switch at the top of Music settings. While on, `mo(k)` returns true for song-page keys only when `k` is `video` or `origSheet`, for every song, ignoring the per-song switches (they are kept, dimmed, and apply again when it is off). Each song's switch card is folded and says the mode is on.
 - **Settings** (admin): tip frequency in days, and attendance points.
 - **Export:**
   - One Excel file with all sheets, or one sheet at a time.
@@ -560,17 +562,18 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 22. Data operation, not a code change, 2026-11-16: admin log and kids' activity log wiped at the owner's request.
 23. v23, 2026-11-16: prize redemption, announcement line, verse of the week, weekly summary, offline songs and faster loading, version page with change log. Database update `015_redeem_notice.sql`.
 24. v24, 2026-11-16: special mode lag fixed (steady glow instead of 30 pulsing layers, fewer presents, 3D tree pauses when covered and lowers detail on slow phones, snow at 30 fps, no blur on the top bar, lighter harmony sounds); prize zoom in the shop; install-as-app option (off by default, `016_install_switch.sql`); app icons; detailed grouped change log with Excel export; tests and HANDOFF.md in the repo; Desktop folder on the owner's PC.
-25. v25 (current), 2026-11-16: super admin "Miruku" with two-step sign-in (own password + emailed link, `017_superadmin.sql`), super admin page (install switch, "Details for AI" from HANDOFF.md with copy/download), AGENTS.md / CLAUDE.md rules for AIs, `songtext.js` and `superadmin.js` split out of app.js, login accepts 4-character passwords.
+25. v25, 2026-11-16: super admin "Miruku" with two-step sign-in (own password + emailed link, `017_superadmin.sql`), super admin page (install switch, "Details for AI" from HANDOFF.md with copy/download), AGENTS.md / CLAUDE.md rules for AIs, `songtext.js` and `superadmin.js` split out of app.js, login accepts 4-character passwords.
+26. v26 (current), 2026-11-16: owner feedback on v25: super admin page explained, "Lock" became "Sign out of super admin", handoff folded into one card; music switches grouped and foldable; new "All songs: video + original sheet only" switch (`settings.music.simpleSongs`), switched on live; the song editor now loads the music switches (`eventInfo(true)`) so its card knows about that mode.
 
 ## 14. Ideas and open items
 
 ### Agreed plan (owner approved on 2026-11-16; build one release at a time, summary first, wait for "go")
 - **v25 (super admin): DONE**, see 5b. Live database updated (017 run, with row level security switched on for the three private tables; the owner's email stored in `private.owner`). The owner's Supabase login was created with "Invite user" on 2026-11-16; **still to do by the owner:** open that invitation email, choose the username and password on the set-up page. Until then the real two-step sign-in is untested on the live site (it was tested in the preview copy). Split of app.js started (songtext.js, superadmin.js); the rest of app.js (~1780 lines: kid pages, admin pages, song player) can be split further when touched.
-- **v26 (programs):** each customised app is a saved "program" with its own look, settings, people, points, shop and songs, and **its own link**. One live program per link; today's data becomes program 1 "Youth Alpha Christmas 2026", untouched. Never delete existing data. A new program can copy the people list or the look from an old one. Named saved versions of a program's look as a safety net.
-- **v27 (program settings, super admin only):** name, logo and wording, theme packs (Christmas, Easter, plain church), font and text size, feature switches.
-- **v28:** drag-and-drop layout editor (reorder and show/hide sections, tabs and menu items, live preview; not a free-form designer).
-- **v29:** Easter pack (3D scene from simple shapes, public-domain hymn, egg-hunt special mode, a mascot in place of Santa).
-- **v30:** member login switch: real username + password accounts (future programs may be for adults), toggleable per program (off / personal details only / everything).
+- **v27 (programs; was planned as v26):** each customised app is a saved "program" with its own look, settings, people, points, shop and songs, and **its own link**. One live program per link; today's data becomes program 1 "Youth Alpha Christmas 2026", untouched. Never delete existing data. A new program can copy the people list or the look from an old one. Named saved versions of a program's look as a safety net.
+- **v28 (program settings, super admin only):** name, logo and wording, theme packs (Christmas, Easter, plain church), font and text size, feature switches.
+- **v29:** drag-and-drop layout editor (reorder and show/hide sections, tabs and menu items, live preview; not a free-form designer).
+- **v30:** Easter pack (3D scene from simple shapes, public-domain hymn, egg-hunt special mode, a mascot in place of Santa).
+- **v31:** member login switch: real username + password accounts (future programs may be for adults), toggleable per program (off / personal details only / everything).
 - **Also requested:** SQL export and data science tools for the super admin (separate release after the programs work).
 - **Name:** stays "Youth Alpha" for now (no repo rename).
 - **APK:** not built (see the install note in section 6); the owner chose the install option instead.
