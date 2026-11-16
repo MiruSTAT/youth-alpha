@@ -1,24 +1,38 @@
 # Youth Alpha 🎄: full handoff for the next AI
 
-> **START HERE (next chat, written 2026-11-17):** the live app is **v32** (roadmap step 2 finished: admins per program with a permission checklist enforced by the database, `supabase/021_admin_access.sql` run live; one merged admin panel with a "Super admin" badge and group instead of the old super admin page; "Copy user link"; regrouped admin menu; logs for the super admin only; "Who is online"). See section **5e**. The next job is **step 3 of the owner's roadmap in section 14 ("Roadmap v31+"): Kids mode / Normal mode + a real PC layout**. Work one step at a time: give the owner a short summary of the step first and wait for "go" (the owner said sub-steps of an approved step, like 2a/2b/2c, need no extra "go": just report when finished). After every release: version + changelog, HANDOFF.md in detail, tests in the preview copy, live SQL (rolled-back test first) if any, commit/push, check live, copy to the owner's Desktop folder, tell the owner.
+This file lets another AI (or developer) understand, rebuild, run and change the **Youth Alpha** app without the old chat. **Start with section 0**; the other sections are reference, read only the ones a task needs.
 
-This file is meant to let another AI (or developer) understand, rebuild, run and change the **Youth Alpha** app without needing the old chat.
-Read it top to bottom once. The sections are:
+## 0. Quick start (read this first — usually the only part you need to read in full)
 
-1. What the app is and who it is for
-2. The owner's rules (do not break these)
-3. Where everything lives (links, accounts, repo)
-4. Tech stack and how the code is organised
-5. Database (Supabase): every table, view, function and rule
-6. Kid side: every page and feature
-7. Adult/admin side: every page and feature
-8. Songs system in detail (lyrics format, chords, key change, video sync, karaoke, metronome, OCR)
-9. Logs and analytics
-10. How to make a change and publish it (step by step)
-11. How to test
-12. Gotchas and lessons learned
-13. History of what was built (commit list)
-14. Ideas and open items
+**Now:** live app **v32** (2026-11-17). Roadmap step 2 is done (admins per program + permissions, merged admin panel, who is online — section 5e).
+**Next:** roadmap **step 3: Kids mode / Normal mode + real PC layout** (section 14, "Roadmap v31+"). Give the owner a short summary first and wait for "go". Sub-steps of an approved step need no extra "go": just report when finished.
+**Still open:** a real sign-in with an admin account made by "Create an admin account" was not tried yet (the owner will make the first one); the unused branch `wip-v32` on GitHub can be deleted.
+
+**How to read this file cheaply:** read section 0 only. For anything else, list the headings (`grep -n "^## \|^### " HANDOFF.md`) and read only the range you need. Never read the whole file "just in case".
+
+**Owner's rules (short; full list in section 2):** calm simple UI, big Thai text, no pop-ups for kids · named warning before every delete · feedback and the admin log can never be deleted · never delete existing data · kids see only nickname, avatar, points · everything an admin can do, the super admin can do too · never type copyrighted lyrics or the owner's passwords · the owner's email never goes in the repo (it is public) · ask before big changes.
+
+**Where things are:** repo `MiruSTAT/youth-alpha` (branch `main`, GitHub Pages) · live https://mirustat.github.io/youth-alpha/ · Supabase project `zzjoxshqatkzqsnjvlwn` · owner's Desktop folder `C:\Users\USER\Desktop\Youth Alpha\`.
+
+**Code map (find code with grep, do not read big ranges):**
+- `js/app.js` (~2200 lines): kid pages, admin pages, router. `grep -n "^async function \|^function \|^const PAGES" js/app.js` lists every page; admin pages are `p<Name>` and are listed in `PAGES` with the permission they need.
+- `js/superadmin.js`: super admin pages (admins, programs, look, online, AI) · `js/data.js`: every database call (Supabase + a preview copy with the same names) · `js/i18n.js`: all text, Thai + English (new text goes in an `Object.assign(DICT.th/en, …)` block at the end) · `js/version.js`: VERSION + change log · `css/style.css` · `supabase/0NN_*.sql`: database changes, newest = `021_admin_access.sql`.
+
+**Tools (use them, do not rebuild them):**
+
+| Job | How |
+|---|---|
+| Raise the version everywhere | `tools/bump.sh 33`, then add the change log entry at the top of `UPDATES` in `js/version.js` (Thai + English; fill the previous version's `commit`) |
+| Preview copy + tests | `tools/preview.sh t_v32_admins t_v31_members` (serves http://localhost:8766/; prints only failures and "no errors"). Run it with `run_in_background` and wait: the two tests take about 4 minutes |
+| Live SQL | built-in browser on `https://supabase.com/dashboard/project/zzjoxshqatkzqsnjvlwn/sql/new`, paste `tools/sql.js` once, then `await QF('<commit>', 'supabase/022_x.sql', 'tests/sql_022_test.sql')` for the rolled-back test and `await QF('<commit>', 'supabase/022_x.sql')` for real. Push the files to a branch first; never paste big files into a message or a browser call |
+| Desktop copy | after pushing: `device_request_folder_access(["~/Desktop"])`, then in `device_bash`: `bash -c "$(curl -fsSL https://raw.githubusercontent.com/MiruSTAT/youth-alpha/main/tools/desktop-copy.sh)"` |
+| Check the live site | built-in browser on the live site: `fetch('/youth-alpha/js/version.js', {cache: 'no-store'})` shows the new VERSION after about 1–2 minutes |
+
+**Release checklist (every published change; details in AGENTS.md and section 10):** 1 `tools/bump.sh` + change log · 2 HANDOFF.md: section 0 "Now/Next/Still open", every section you touched, one history line in 13, roadmap in 14 · 3 database change = new SQL file, rolled-back test first, then real · 4 `tools/preview.sh <tests>` (add or extend a `tests/t_vNN_*.py`), look at 1–2 screenshots · 5 commit (author `MiruSTAT <MiruSTAT@users.noreply.github.com>`) and push `main` · 6 check live · 7 Desktop copy · 8 tell the owner in a few plain sentences.
+
+**Working efficiently (the owner asked for this):** follow "Efficiency rules" in AGENTS.md. One roadmap step per chat; after a step is released, update section 0 and give the owner a short prompt for the next chat.
+
+**Sections of the full reference:** 1 what the app is · 2 owner's rules · 3 where everything lives · 4 tech stack, files, routes, phone storage · 5 database (5a programs, 5c look, 5d member login, 5e admins & permissions, 5b super admin, running SQL from the browser) · 6 kid side · 7 admin side · 8 songs · 9 logs · 10 release steps (10b Desktop folder) · 11 tests · 12 gotchas · 13 history · 14 roadmap and open items.
 
 ---
 
@@ -694,6 +708,8 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 31. v31, 2026-11-17: member login screens (section 5d) on top of `020_members.sql` (run live on 2026-11-16): kid sign-in page, account sheet (change password, sign out), "own details only" and "sign in first" modes, admin "Member accounts" page (add, link to a kid, new password, switch off/on, never delete), super admin login mode chooser. No database change in this release; every program still `off`.
 
 32. v32 (current), 2026-11-17: roadmap step 2 — admins per program with a permission checklist (`021_admin_access.sql`, run live after a rolled-back test), super admin "Admins & permissions" (create / approve / permissions / password / switch off), merged admin panel (badge + "Super admin" group; the old super admin page split into Programs, This program's look, Details for AI; login mode card on the members page), "Copy user link", regrouped menu with a Settings group, program picker for the super admin only, logs and their exports for the super admin only (admin log per program), simple change log for admins, "Who is online" (`admin_ping` / `admin_online`).
+
+33. Docs/tools only, 2026-11-17 (no app change, still v32): HANDOFF.md section 0 "Quick start" (read first; the rest is reference), efficiency rules in AGENTS.md, `tools/` (`bump.sh`, `preview.sh`, `sql.js`, `desktop-copy.sh`) at the owner's request to use less usage per session.
 
 ## 14. Ideas and open items
 
