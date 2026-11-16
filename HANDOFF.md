@@ -498,7 +498,7 @@ The Thai songs start with **chord-only lines** so that key change works. Admins 
 
 The owner wants, after every change: the handoff file and the app's GitHub files in a folder on their Windows PC Desktop.
 - Folder: `C:\Users\USER\Desktop\Youth Alpha\` with `HANDOFF.md` and `app\` (a copy of the repo, without the `.git` folder).
-- How: the Claude desktop app must be open; ask for access to `~/Desktop` with `device_request_folder_access` (granted on 2026-11-16 for that session). In `device_bash`: `git clone` the public repo into the session home (outside `mnt/`), then `cp -r` it (without `.git`) into `$HOME/mnt/Desktop/Youth Alpha/app` and copy `HANDOFF.md` next to it.
+- How: the Claude desktop app must be open; ask for access to `~/Desktop` with `device_request_folder_access` (granted on 2026-11-16 for that session). In `device_bash`: `git clone` the public repo into the session home (outside `mnt/`), then copy each tracked file with `for f in $(git ls-files); do mkdir -p "$D/app/$(dirname "$f")"; cat "$f" > "$D/app/$f"; done` and `cat HANDOFF.md > "$D/HANDOFF.md"` (where `D="$HOME/mnt/Desktop/Youth Alpha"`). Overwrite with `cat >`, not `tar`/`cp`: those try to delete the old file first, and deleting is not allowed there.
 - Deleting files there is off by default, so a file removed from the repo stays in the copy until the owner deletes it. Don't use git inside the Desktop folder (git needs to delete its lock files).
 
 ## 11. How to test
