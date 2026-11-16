@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '32';
+export const VERSION = '33';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -20,9 +20,25 @@ export const AREAS = {
 };
 
 export const UPDATES = [
+  { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
+    versions: [
+      { v: '33', date: '2026-11-17', commit: '',
+        short: { th: 'แต่ละโปรแกรมเลือกได้ว่าเป็น "โหมดเด็ก" หรือ "โหมดปกติ" (เรียบ ดูเป็นมืออาชีพ สำหรับผู้ใหญ่) และหน้าผู้ดูแลบนคอมพิวเตอร์มีเมนูด้านซ้าย ใช้พื้นที่จอเต็มขึ้น',
+                 en: 'Each program can be in "Kids mode" or "Normal mode" (calm and professional, for adults), and on a computer the admin area has a menu on the left and uses the whole screen' },
+        items: [
+          { a: 'look', th: 'ผู้ดูแลสูงสุด: หน้า "หน้าตาโปรแกรมนี้" มีตัวเลือกใหม่ "รูปแบบแอป" = โหมดเด็ก (แบบเดิม สนุก ตัวใหญ่ มีอีโมจิ) หรือโหมดปกติ เลือกได้ทีละโปรแกรม Youth Alpha และทุกโปรแกรมเดิมยังเป็นโหมดเด็ก ไม่มีอะไรเปลี่ยน',
+            en: 'Super admin: the "This program\'s look" page has a new "App style" choice = Kids mode (as before: playful, big, emoji) or Normal mode, chosen per program. Youth Alpha and every existing program stay in Kids mode; nothing changes for them' },
+          { a: 'look', th: 'โหมดปกติ: สีเรียบสว่าง ไอคอนเส้นแทนอีโมจิ (แถบล่าง เมนู เมนูผู้ดูแล) ไม่มีอีโมจินำหน้าหัวข้อและปุ่ม ไม่มีปุ่มเปลี่ยนสีธีม และไม่มีช่องว่างด้านบนแทนฉาก 3 มิติ รูปประจำตัวของสมาชิกยังแสดงเหมือนเดิม',
+            en: 'Normal mode: calm light colours, line icons instead of emoji (bottom tabs, menu, admin menu), no emoji in front of titles and buttons, no colour-theme button, and no empty space at the top where the 3D scene was. Members\' avatars still show as before' },
+          { a: 'look', th: 'เมื่อเลือกโหมดปกติ ระบบจะปิดฉาก 3 มิติ หิมะ/กลีบดอกไม้ ตัวละครโผล่ โหมดพิเศษ และเพลงพื้นหลังให้ (ติ๊กเปิดกลับได้ก่อนกดบันทึก) เลือกกลับเป็นโหมดเด็กจะเปิดให้อีกครั้ง',
+            en: 'Choosing Normal mode switches off the 3D scene, falling snow/petals, the peeking friend, the special mode and the background music (you can tick them on again before saving). Going back to Kids mode switches them on again' },
+          { a: 'admin', th: 'หน้าผู้ดูแลบนคอมพิวเตอร์ (จอกว้าง 1024 px ขึ้นไป): มีเมนูด้านซ้ายตลอด แสดงเฉพาะหน้าที่ผู้ดูแลคนนั้นมีสิทธิ์ หน้าที่เปิดอยู่จะเป็นแถบสี เนื้อหากว้างขึ้น และเมนูหน้าแรกเรียง 2–3 คอลัมน์ บนมือถือยังเหมือนเดิม',
+            en: 'Admin area on a computer (screens 1024 px and wider): a menu stays on the left, with only the pages that admin may open, the open page highlighted, wider content, and the admin home menu in 2–3 columns. Phones are unchanged' },
+        ] },
+    ] },
   { id: 'super', th: 'อัปเดตผู้ดูแลสูงสุด โปรแกรม และชุดธีม', en: 'Super admin, programs & theme packs update',
     versions: [
-      { v: '32', date: '2026-11-17', commit: '',
+      { v: '32', date: '2026-11-17', commit: '938f9a2',
         short: { th: 'ผู้ดูแลแต่ละคนมีสิทธิ์ของตัวเองในแต่ละโปรแกรม เมนูผู้ดูแลจัดกลุ่มใหม่ (ร้านค้า หมวดคะแนน ความคิดเห็น และตั้งค่าเพลง ย้ายไปอยู่ใน "ตั้งค่า") และมีปุ่ม "คัดลอกลิงก์ผู้ใช้" ด้านบนขวา',
                  en: 'Each admin now has their own permissions per program. The admin menu is regrouped (shop, point categories, feedback and music switches are under "Settings") and there is a "Copy user link" button at the top right' },
         items: [

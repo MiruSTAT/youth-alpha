@@ -976,3 +976,55 @@ a.adm-li { color: inherit; text-decoration: none; }
 .sa-badge .grow { flex: 1; min-width: 0; }
 .sa-badge .grow b, .sa-badge .sub { display: block; }
 .sa-badge .sub { color: var(--ink-2); font-size: .9rem; }
+
+/* =========================================================
+   v33 NORMAL MODE (per program, chosen by the super admin): calm, professional, few emojis.
+   Kids mode = everything above, unchanged. These rules come last so they win over the kid colour themes.
+   ========================================================= */
+.ico { width: 1em; height: 1em; display: inline-block; vertical-align: -0.125em; }
+body[data-mode="normal"] {
+  --navy: #eef1f6; --navy-2: #f7f8fb; --sheet: #ffffff; --card: #f3f5f9; --line-d: rgba(15, 23, 42, .1);
+  --text-d2: #5b6476; --k-text: #1d2433; --topbar: rgba(255, 255, 255, .94); --accent: #2f5bd3; --pt: #9a6a00;
+  --flake: rgba(120, 140, 180, .6); --primary: #2f5bd3; --r: 12px;
+}
+body[data-mode="normal"]:not(.adult) { background: linear-gradient(180deg, #f7f8fb, #eef1f6) fixed; }
+body[data-mode="normal"] .topbar { border-bottom: 1px solid var(--line-d); }
+body[data-mode="normal"] .brand-tree, body[data-mode="normal"] #themeBtn { display: none; }
+body[data-mode="normal"] .icon-btn { background: transparent; }
+body[data-mode="normal"]::before { display: none !important; }              /* no big bobbing emoji when the 3D scene is off */
+body[data-mode="normal"] .kid-nav { background: #fff; }
+body[data-mode="normal"] .kid-nav a span { font-size: 1.35rem; }
+body[data-mode="normal"] .kid-nav a.active { color: var(--accent); }
+body[data-mode="normal"] .menu .mi, body[data-mode="normal"] .mrow .mi { font-size: 1.35rem; color: var(--accent); display: grid; place-items: center; }
+body[data-mode="normal"] .sheet:not(.song-sheet) { margin-top: 16px; min-height: calc(100vh - 76px); border-radius: 18px 18px 0 0; box-shadow: 0 1px 3px rgba(15, 23, 42, .06); }   /* no 3D scene above: no empty gap */
+
+/* =========================================================
+   v33 PC LAYOUT for the admin and super admin area: side menu + wide content (1024 px and wider).
+   Phones and tablets keep the one-column layout; the kids' side is not changed.
+   ========================================================= */
+.admin-side { display: none; }
+@media (min-width: 1024px) {
+  body.adult.has-side .admin-side {
+    display: block; position: fixed; z-index: 8; top: 60px; left: 0; bottom: 0; width: 256px; overflow-y: auto;
+    background: var(--white); border-right: 1px solid var(--line); padding: 14px 10px 28px; color: var(--ink);
+  }
+  .side-prog { padding: 4px 10px 12px; border-bottom: 1px solid var(--line); margin-bottom: 8px; line-height: 1.35; }
+  .side-prog b { display: block; font-size: .95rem; overflow-wrap: anywhere; }
+  .side-super { display: inline-block; font-size: .78rem; font-weight: 700; color: #8a5a00; background: #fff5d6; border-radius: 999px; padding: 1px 10px; margin-bottom: 4px; }
+  .side-grp { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--ink-2); margin: 14px 10px 4px; }
+  .side-link { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; color: var(--ink); text-decoration: none; font-size: .95rem; font-weight: 600; }
+  .side-link .mi { width: 26px; text-align: center; font-size: 1.15rem; color: var(--primary); flex: none; }
+  .side-link:hover { background: var(--bg); }
+  .side-link.on { background: #e8eefc; color: var(--primary); }
+  .side-link.quiet { margin-top: 14px; color: var(--ink-2); font-weight: 500; }
+  body.adult.has-side main { max-width: 1040px; margin: 0 0 0 max(256px, calc(256px + (100vw - 256px - 1040px) / 2)); padding: 24px 32px 120px; }
+  body.adult.has-side .bottom-bar { left: 256px; }
+  body.adult.has-side .page-head .back { display: none; }                    /* the side menu is the way back */
+  /* admin home: the menu groups side by side instead of one long column */
+  body.adult.has-side .menu.grouped { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  body.adult.has-side .menu.grouped > a:nth-child(odd) { border-right: 1px solid var(--line); }
+  body.adult.has-side .menu.grouped > :last-child { border-bottom: 1px solid var(--line); }
+  body.adult.has-side .card form, body.adult.has-side form.card { max-width: 760px; }
+}
+@media (min-width: 1440px) { body.adult.has-side .menu.grouped { grid-template-columns: 1fr 1fr 1fr; }
+  body.adult.has-side .menu.grouped > a:nth-child(odd) { border-right: 0; } body.adult.has-side .menu.grouped > a:not(:nth-child(3n)) { border-right: 1px solid var(--line); } }

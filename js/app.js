@@ -1,14 +1,15 @@
-import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=32';
-import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=32';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=32';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=32';
+import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=33';
+import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=33';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=33';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=33';
 
-import { music } from './music.js?v=32';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=32';
-import { snow } from './snow.js?v=32';
-import { track } from './track.js?v=32';
-import { metro } from './metronome.js?v=32';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=32';
+import { music } from './music.js?v=33';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=33';
+import { snow } from './snow.js?v=33';
+import { track } from './track.js?v=33';
+import { calmIcon } from './icons.js?v=33';
+import { metro } from './metronome.js?v=33';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=33';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -128,7 +129,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=32');
+    const m = await import('./scene3d.js?v=33');
     if (m.initScene($('#scene'), { pack: document.body.dataset.pack })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -879,7 +880,7 @@ const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? is
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys,
   PERMS, dTime, adult, renderSeq: () => renderSeq });
-const saMod = () => import('./superadmin.js?v=32');
+const saMod = () => import('./superadmin.js?v=33');
 
 // "who is online" for the super admin: a ping when an admin page opens and about every 45 s while one stays open
 let pingAt = 0, pingPage = '';
@@ -892,26 +893,26 @@ setInterval(() => { if (location.hash.startsWith('#/admin') && adult.access && d
 
 async function adultGate(page) {
   const session = await api.session();
-  if (!session) { adult.access = null; return loginView(); }
+  if (!session) { adult.access = null; setSide(null); return loginView(); }
   adult.role = await api.myRole(); adult.myId = await api.myId();
   adult.access = null;
+  if (['pending', 'noaccess', 'superlocked', 'superclaim'].includes(adult.role)) setSide(null);
   if (adult.role === 'pending') return pendingView();
   if (adult.role === 'noaccess') return noAccessView();
   if (adult.role === 'superlocked' || adult.role === 'superclaim') return (await saMod()).superGate(saCtx(), adult.role);
   try { adult.access = await api.myAccess(); } catch (e) { console.error(e); adult.access = { all: false, programs: {} }; }
-  if (!isSuper() && !myPerms().length) return otherProgramView();
+  if (!isSuper() && !myPerms().length) { setSide(null); return otherProgramView(); }
   if (page === 'super') { history.replaceState(null, '', '#/admin'); page = ''; }   // the old super admin page is part of the admin panel now
   adminPing(PAGES[page] ? page : 'home');
-  if (!PAGES[page] || !pageOk(page)) return adultHome();
+  const ok = PAGES[page] && pageOk(page);
+  setSide(ok ? (SIDE_OF[page] || page) : 'home');
+  if (!ok) return adultHome();
   await PAGES[page][1](location.hash.split('/')[3]);
 }
 
-function adultHome() {
-  const live = program.list.filter(x => !x.archived || x.id === program.id);
-  // the program picker is the super admin's: normal admins only ever see the program of their own link
-  const progBar = isSuper() && live.length > 1 ? `<div class="card prog-bar"><span>📁 ${t('progNow')}</span><b>${esc(program.name)}</b>
-      <select class="input" id="progSel" aria-label="${t('progNow')}">${live.map(x => `<option value="${esc(x.slug)}" ${x.id === program.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : '';
-  const groups = [
+// v33: the admin menu groups (admin home on phones, side menu on PC); only pages this admin may open
+function adminGroups() {
+  return [
     ...(isSuper() ? [['g_super', [['admins', '👥', 'super'], ['programs', '📁', 'super'], ['look', '🎨', 'super'], ['online', '🟢', 'super'], ['ai', '🤖', 'super']]]] : []),
     ['g_daily', [['attendance', '✅'], ['points', '⭐'], ['redeem', '🎟️'], ['weekly', '📊']]],
     ['g_kids', [['kids', '👧'], ['members', '🔑'], ['notice', '📣']]],
@@ -919,6 +920,55 @@ function adultHome() {
     ['g_settings', [['shop', '🎁'], ['pcats', '🏷️'], ['feedback', '💬'], ['musicset', '🎛️'], ['settings', '⚙️']]],
     ['g_system', [['export', '📥'], ['about', 'ℹ️']]],
   ].map(([g, items]) => [g, items.filter(([k]) => pageOk(k))]).filter(([, items]) => items.length);
+}
+// ---------- v33: PC side menu for the admin area (shown by CSS only on screens 1024 px and wider; phones keep the home menu)
+const SIDE_OF = { attsum: 'attendance', history: 'points', song: 'songs', sync: 'songs' };   // sub-pages light up their parent
+function setSide(page) {                    // page = the admin page that is open ('home' = admin home), null = no side menu
+  const box = $('#adminSide'), on = page !== null;
+  document.body.classList.toggle('has-side', on); box.hidden = !on;
+  if (!on) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="side-prog">${isSuper() ? `<span class="side-super">👑 ${t('saBadge')}</span>` : ''}<b>${esc(program.name)}</b></div>
+    <a class="side-link ${page === 'home' ? 'on' : ''}" data-k="home" href="#/admin"><span class="mi">🏠</span><span>${t('adultMenu')}</span></a>
+    ${adminGroups().map(([g, items]) => `<h3 class="side-grp">${t(g)}</h3>${items.map(([k, i]) =>
+      `<a class="side-link ${k === page ? 'on' : ''}" data-k="${k}" href="#/admin/${k}"><span class="mi">${i}</span><span>${t('tab_' + k)}</span></a>`).join('')}`).join('')}
+    <a class="side-link quiet" href="#/"><span class="mi">‹</span><span>${t('sideKids')}</span></a>`;
+  calmAll();
+}
+
+// ---------- v33 Normal mode: line icons instead of emoji icons, and no emoji in front of titles, buttons and labels.
+// Runs right after any change on screen (MutationObserver = before the screen is drawn, so no emoji flashes).
+// Kid avatars (.av) and emoji that stand alone (avatar pickers, points ⭐ after a number) are never touched.
+const EMO = /^(\s*)((?:[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}][️‍\u{1F3FB}-\u{1F3FF}\p{Extended_Pictographic}]*\s*)+)(?=\S)/u;
+const calmOn = () => document.body.dataset.mode === 'normal';
+function calmNode(root) {
+  root.querySelectorAll('.mi, .kid-nav a > span').forEach(el => {
+    const f = el.firstChild; if (f?.nodeType !== 3) return;
+    const svg = calmIcon(f.textContent); if (!svg) return;
+    el.dataset.emo = f.textContent; f.replaceWith(document.createRange().createContextualFragment(svg));
+  });
+  root.querySelectorAll('h1, h2, h3, summary, label, .btn, .grp, .mt b, .side-super, a.back, th, .my-hint, .hint').forEach(el => {
+    if (el.closest('.av')) return;
+    const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n;
+    while ((n = tw.nextNode()) && !n.textContent.trim());
+    const m = n?.textContent.match(EMO); if (m) n.textContent = m[1] + n.textContent.slice(m[0].length);
+  });
+}
+const CALM_ROOTS = ['#view', '#adminSide', '#dlg', '#kidSheet', '#kidNav'];
+function calmAll() { if (calmOn()) CALM_ROOTS.forEach(s => { const el = $(s); if (el) calmNode(el); }); }
+function calmNav() {                        // called by applyLook: switch the tab icons both ways
+  if (calmOn()) return calmAll();
+  document.querySelectorAll('[data-emo]').forEach(el => { const svg = el.querySelector('svg.ico'); if (svg) svg.replaceWith(el.dataset.emo); delete el.dataset.emo; });
+}
+const calmSoon = () => queueMicrotask(calmAll);
+{ const mo = new MutationObserver(() => { if (calmOn()) calmAll(); });
+  CALM_ROOTS.forEach(s => { const el = $(s); if (el) mo.observe(el, { childList: true, subtree: true }); }); }
+
+function adultHome() {
+  const live = program.list.filter(x => !x.archived || x.id === program.id);
+  // the program picker is the super admin's: normal admins only ever see the program of their own link
+  const progBar = isSuper() && live.length > 1 ? `<div class="card prog-bar"><span>📁 ${t('progNow')}</span><b>${esc(program.name)}</b>
+      <select class="input" id="progSel" aria-label="${t('progNow')}">${live.map(x => `<option value="${esc(x.slug)}" ${x.id === program.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : '';
+  const groups = adminGroups();
   view.innerHTML = `
     <div class="page-head"><a class="back" href="#/">‹ ${t('back')}</a><h1 class="page-title">${t('adultMenu')}</h1>
       <button class="btn small head-btn" id="copyLink" title="${t('copyUserLinkSub')}">🔗 ${t('copyUserLink')}</button></div>
@@ -1614,7 +1664,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=32');
+      const { readSheet } = await import('./ocr.js?v=33');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -2145,6 +2195,8 @@ function applyLook() {
   const size = Math.min(1.3, Math.max(0.9, Number(L.size) || 1));
   root.style.fontSize = size === 1 ? '' : (18 * size).toFixed(1) + 'px';
   document.body.dataset.pack = LOOK.PACKS[L.pack] ? L.pack : 'christmas';
+  document.body.dataset.mode = L.mode === 'normal' ? 'normal' : 'kids';      // v33: Kids mode / Normal mode (per program, set by the super admin)
+  calmNav(); calmSoon();
   music.setPack?.(document.body.dataset.pack);
   LOOK.FEATS.forEach(([k]) => document.body.classList.toggle('off-' + k, !feat(k)));
   const nav = $('#kidNav'), shown = layKeys('tabs');                  // v29: bottom tab order and hidden tabs

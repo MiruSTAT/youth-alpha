@@ -692,3 +692,15 @@ Object.assign(DICT.en, {
   onlineIntro: 'Admins who had an admin page open in the last 10 minutes. 🟢 = still open (within 2 minutes).', agoS: (n) => `${n} s ago`, agoM: (n) => `${n} min ago`,
   onlineNone: 'Nobody is online right now', onlineAuto: 'Updates by itself every 20 seconds',
 });
+
+// v33: Kids mode / Normal mode, PC side menu
+Object.assign(DICT.th, {
+  lookMode: 'รูปแบบแอป', mode_kids: '🧒 โหมดเด็ก (สนุก ตัวใหญ่ มีอีโมจิ)', mode_normal: '💼 โหมดปกติ (เรียบ ดูเป็นมืออาชีพ สำหรับผู้ใหญ่)',
+  lookModeHint: 'โหมดปกติ: สีเรียบ ไอคอนเส้นแทนอีโมจิ และปิดฉาก 3 มิติ หิมะ ตัวละครโผล่ โหมดพิเศษ และเพลงพื้นหลังให้ (เปิดกลับได้ด้านล่าง)',
+  sideKids: 'ไปหน้าแอปผู้ใช้',
+});
+Object.assign(DICT.en, {
+  lookMode: 'App style', mode_kids: '🧒 Kids mode (playful, big, emoji)', mode_normal: '💼 Normal mode (calm, professional, for adults)',
+  lookModeHint: 'Normal mode: calm colours, line icons instead of emoji, and the 3D scene, falling snow, peeking friend, special mode and music are switched off (you can switch them on again below)',
+  sideKids: 'Open the users’ app',
+});

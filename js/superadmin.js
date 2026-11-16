@@ -386,6 +386,8 @@ function drawLook(c) {
   const opt = (v, cur, label) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${label}</option>`;
   box.innerHTML = `<p class="muted" style="margin:0 0 6px">${c.t('lookSub', c.esc(c.program.name))}</p>
     <form id="lookForm">
+      <label>${c.t('lookMode')}<select class="input" name="mode">${opt('kids', L.mode === 'normal' ? 'normal' : 'kids', c.t('mode_kids'))}${opt('normal', L.mode === 'normal' ? 'normal' : 'kids', c.t('mode_normal'))}</select></label>
+      <p class="hint" style="margin:-4px 0 10px">${c.t('lookModeHint')}</p>
       <div class="look-row">
         <label>${c.t('lookName')}<input class="input" name="title" maxlength="30" value="${c.esc(L.title || '')}" placeholder="Youth Alpha"></label>
         <label>${c.t('lookEmoji')}<input class="input" name="emoji" maxlength="8" value="${c.esc(L.emoji || '')}" placeholder="${(K.PACKS[L.pack] || K.PACKS.christmas).emoji}"></label>
@@ -424,9 +426,14 @@ function drawLook(c) {
     if (f.pack.value === 'plain') ['tree', 'snow', 'santa', 'festive', 'music'].forEach(k => { f['f_' + k].checked = false; });
     if (f.pack.value === 'easter') ['tree', 'santa', 'festive', 'music'].forEach(k => { f['f_' + k].checked = true; });   // Easter has its own scene, lamb, egg hunt and hymn
   };
+  // v33: Normal mode switches the playful parts off; back to Kids mode switches them on again (not for the plain church pack). Both can be changed again
+  f.mode.onchange = () => {
+    const kids = f.mode.value === 'kids';
+    if (!kids || f.pack.value !== 'plain') ['tree', 'snow', 'santa', 'festive', 'music'].forEach(k => { f['f_' + k].checked = kids; });
+  };
   f.onsubmit = async (e) => {
     e.preventDefault();
-    const look = { ...(c.program.look || {}), title: f.title.value.trim(), emoji: f.emoji.value.trim(), pack: f.pack.value, font: f.font.value, size: Number(f.size.value), off: {}, words: { th: {}, en: {} } };
+    const look = { ...(c.program.look || {}), mode: f.mode.value, title: f.title.value.trim(), emoji: f.emoji.value.trim(), pack: f.pack.value, font: f.font.value, size: Number(f.size.value), off: {}, words: { th: {}, en: {} } };
     K.FEATS.forEach(([k]) => { if (!f['f_' + k].checked) look.off[k] = true; });
     K.WORDS.forEach(k => ['th', 'en'].forEach(l => { const v = f[`${l}_${k}`].value.trim(); if (v) look.words[l][k] = v; }));
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
