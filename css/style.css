@@ -951,3 +951,28 @@ body.login-page .kid-nav { display: none; }
 .lm-opt input { width: 22px; height: 22px; margin-top: 3px; flex: none; }
 .lm-opt .sub { display: block; font-size: .9rem; opacity: .75; }
 .lm-opt:has(input:checked) { border-color: #1c2d66; box-shadow: inset 0 0 0 1px #1c2d66; }
+
+/* ---- v32 admins per program, merged admin panel */
+.page-head .head-btn { margin-left: auto; white-space: nowrap; flex: none; }
+.sa-badge { border: 2px solid #c9a227; background: #fffaf0; }
+.grp-super { color: #8a6a00; }
+.super-menu a { border-left: 4px solid #c9a227; }
+.super-card { border: 2px solid #c9a227; }
+.perm-card { padding-bottom: 6px; }
+.perm-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+.perm-top b { font-size: 1.05rem; }
+.perm-grid { display: grid; grid-template-columns: 1fr; gap: 0 16px; }
+@media (min-width: 640px) { .perm-grid { grid-template-columns: 1fr 1fr; } }
+.perm-chk { align-items: flex-start; margin: 8px 0; }
+.perm-chk input { margin-top: 3px; flex: none; }
+.perm-chk .sub { display: block; font-size: .85rem; color: var(--ink-2); font-weight: 400; }
+a.adm-li { color: inherit; text-decoration: none; }
+.adm-li.off { opacity: .6; }
+.clog-simple ul { margin: 6px 0 2px; padding-left: 20px; }
+.clog-simple li { margin: 4px 0; }
+.on-li .av { font-size: 1rem; }
+.sa-badge .sa-who-top { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.sa-badge .sa-crown { font-size: 2rem; }
+.sa-badge .grow { flex: 1; min-width: 0; }
+.sa-badge .grow b, .sa-badge .sub { display: block; }
+.sa-badge .sub { color: var(--ink-2); font-size: .9rem; }

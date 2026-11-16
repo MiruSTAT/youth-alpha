@@ -139,7 +139,8 @@ function supabaseApi() {
     // ---- logs
     async logEvents(rows) { ok(await sb.from('kid_events').insert(rows.map(r => ({ ...r, program_id: P() })))); },
     async auditLog(limit = 100) { return ok(await sb.from('audit_log').select('*').order('created_at', { ascending: false }).limit(limit)); },
-    async auditAll() { return pageAll((a, b) => sb.from('audit_log').select('*').order('created_at').range(a, b)); },
+    // v32: the admin log of THIS program (program 1 also keeps the rows from before v32, which have no program)
+    async auditAll() { return pageAll((a, b) => sb.from('audit_log').select('*').or(P() === 1 ? 'program_id.eq.1,program_id.is.null' : `program_id.eq.${P()}`).order('created_at').range(a, b)); },
     async kidEvents() { return pageAll((a, b) => sb.from('kid_events').select('*').eq('program_id', P()).order('created_at').range(a, b)); },
     async kidEventsSince(iso) { return pageAll((a, b) => sb.from('kid_events').select('event,detail,device_id,kid_id,created_at').eq('program_id', P()).gte('created_at', iso).order('created_at').range(a, b)); },
     async reauth(password) {
@@ -182,6 +183,16 @@ function supabaseApi() {
     },
     async programSetLogin(id, mode) { ok(await sb.rpc('program_set_login', { p_id: id, p_mode: mode })); },
 
+    // ---- v32 admins per program (supabase/021_admin_access.sql)
+    async myAccess() { return ok(await sb.rpc('my_access')); },                  // { all: true } | { all: false, programs: { "1": ["points", …] } }
+    async adminList() { return ok(await sb.rpc('admin_list')); },                // super admin: every login except the super admin's
+    async adminSave(userId, name, active, access) { ok(await sb.rpc('admin_save', { p_user: userId, p_display: name, p_active: !!active, p_access: access })); },
+    async adminCreate(username, password, name) { return ok(await sb.rpc('admin_create', { p_username: username, p_password: password, p_display: name })); },
+    async adminPassword(userId, password) { ok(await sb.rpc('admin_password', { p_user: userId, p_password: password })); },
+    async adminPing(page) { ok(await sb.rpc('admin_ping', { p_program: P(), p_page: page })); },
+    async adminOnline() { return ok(await sb.rpc('admin_online')); },
+    async kidWeekStats(iso) { return ok(await sb.rpc('kid_week_stats', { p_program: P(), p_since: iso })); },   // { phones, songs: [{ title, n, devices }] }
+
     // ---- prizes given, announcement + verse, weekly summary
     async redemptions(limit = 1000) { return ok(await sb.from('redemptions').select('*, kids(nickname, avatar)').eq('program_id', P()).order('created_at', { ascending: false }).limit(limit)); },
     async redeem(row) { ok(await sb.from('redemptions').insert(row)); },
@@ -220,6 +231,9 @@ function previewApi() {
   const listeners = [];
   // v31 members, preview copy: same rules as 020_members.sql (the preview data is not split by program)
   db.members ??= []; db.msess ??= {};
+  db.admins ??= [];
+  const PERMS = ['points', 'kids', 'songs', 'shop', 'feedback', 'notice', 'settings'];
+  const curAdmin = () => (db.sa?.asSuper ? null : db.admins.find(a => a.user_id === db.who)) || null;
   let mtok = '';
   const loginMode = () => (db.programs || []).find(p => p.id === P())?.login_mode || 'off';
   const curMember = () => { const id = db.msess[mtok]; const m = id && db.members.find(x => x.id === id && x.active); return m || null; };
@@ -253,18 +267,68 @@ function previewApi() {
     },
     async deletePointCat(key) { if (db.points.some(p => p.skill === key)) throw new Error('in use'); db.pcats = db.pcats.filter(c => c.key !== key); save(); },
     async session() { return db.loggedIn ? { user: { id: 'preview-admin' } } : null; },
-    async signIn(email) {
+    async signIn(email, pw) {
       // the preview super admin has no normal account (like the real one): its name goes to the two-step sign-in
       if (db.sa?.user && String(email).startsWith(db.sa.user.username.toLowerCase() + '@')) throw new Error('Invalid login credentials');
+      const a = db.admins.find(x => String(email).toLowerCase() === x.username + '@youth-alpha.app');
+      if (a && a.pw && a.pw !== pw) throw new Error('Invalid login credentials');
+      db.who = a ? a.user_id : 'preview-admin';
       db.loggedIn = true; save(); listeners.forEach(f => f());
     },
     async signUp() { return {}; },
-    async signOut() { db.loggedIn = false; if (db.sa) { db.sa.asSuper = false; db.sa.unlocked = false; } save(); listeners.forEach(f => f()); },
+    async signOut() { db.loggedIn = false; db.who = null; if (db.sa) { db.sa.asSuper = false; db.sa.unlocked = false; } save(); listeners.forEach(f => f()); },
     async myRole() {
       if (!db.loggedIn) return null;
       const sa = db.sa || {};
       if (sa.asSuper) return sa.unlocked ? 'superadmin' : (sa.user ? 'superlocked' : 'superclaim');
-      return 'admin';
+      const me = curAdmin();
+      if (!me) return 'admin';                                     // the default preview admin: everything, every program
+      if (me.pending) return 'pending';
+      return me.active && Object.values(me.access || {}).some(a => a.length) ? 'admin' : 'noaccess';
+    },
+    // v32 admins, preview copy: db.admins = [{ user_id, username, name, pw, active, pending, access: { "1": [...] } }].
+    // Signing in with one of those usernames acts as that admin; any other name is the default admin with every permission.
+    async myAccess() {
+      if (db.sa?.asSuper && db.sa?.unlocked) return { all: true };
+      const me = curAdmin();
+      if (!me) return { all: false, programs: Object.fromEntries((db.programs || [{ id: 1 }]).map(p => [String(p.id), [...PERMS]])) };
+      return { all: false, programs: me.active ? Object.fromEntries(Object.entries(me.access || {}).filter(([, a]) => a.length)) : {} };
+    },
+    async adminList() {
+      return db.admins.map(a => ({ user_id: a.user_id, username: a.username, name: a.name || a.username, pending: !!a.pending, active: !!a.active && !a.pending, role: a.pending ? null : 'admin',
+        app_login: true, created_at: a.created_at || now(), last_sign_in_at: a.last || null, access: a.access || {} }));
+    },
+    async adminSave(userId, name, active, access) {
+      const a = db.admins.find(x => x.user_id === userId); if (!a) throw new Error('no such account');
+      const old = JSON.parse(JSON.stringify(a));
+      Object.keys(a.access || {}).forEach(k => { if (!access[k]) a.access[k] = []; });
+      Object.assign(a, { name: String(name || '').trim().slice(0, 40), active: !!active, pending: false, access: { ...(a.access || {}), ...access } });
+      audit('staff', old.pending ? 'INSERT' : 'UPDATE', old, a); save();
+    },
+    async adminCreate(username, password, name) {
+      const u = String(username || '').trim().toLowerCase();
+      if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(u)) throw new Error('bad username');
+      if (String(password || '').length < 6) throw new Error('password too short');
+      if (db.admins.some(a => a.username === u)) throw new Error('duplicate username');
+      const a = { user_id: id(), username: u, name: String(name || '').trim(), pw: password, active: true, pending: false, access: {}, created_at: now() };
+      db.admins.push(a); audit('staff', 'INSERT', null, { ...a, pw: undefined }); save(); return a.user_id;
+    },
+    async adminPassword(userId, password) {
+      if (String(password || '').length < 6) throw new Error('password too short');
+      const a = db.admins.find(x => x.user_id === userId); if (!a) throw new Error('not an app login'); a.pw = password; save();
+    },
+    async adminPing(page) { (db.presence ??= {})[db.sa?.asSuper ? 'preview-super' : (db.who || 'preview-admin')] = { program_id: P(), page, seen_at: now() }; save(); },
+    async adminOnline() {
+      const p = db.presence || {};
+      return Object.entries(p).filter(([, x]) => Date.now() - new Date(x.seen_at) < 10 * 6e4).map(([uid, x]) => {
+        const a = db.admins.find(y => y.user_id === uid);
+        return { user_id: uid, program_id: x.program_id, page: x.page, seen_at: x.seen_at, is_super: uid === 'preview-super', name: a?.name || a?.username || (uid === 'preview-super' ? db.sa?.user?.username : 'Preview') };
+      }).sort((a, b) => b.seen_at.localeCompare(a.seen_at));
+    },
+    async kidWeekStats(iso) {
+      const ev = db.events.filter(e => e.created_at >= iso), m = {};
+      ev.filter(e => e.event === 'song_open' && e.detail).forEach(e => { const x = (m[e.detail] ??= { title: e.detail, n: 0, d: new Set() }); x.n++; x.d.add(e.device_id); });
+      return { phones: new Set(ev.map(e => e.device_id)).size, songs: Object.values(m).sort((a, b) => b.n - a.n).slice(0, 5).map(x => ({ title: x.title, n: x.n, devices: x.d.size })) };
     },
     async claimAdmin() { return 'ok'; },
 
@@ -345,7 +409,7 @@ function previewApi() {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=31'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=32'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].filter(() => memberOk()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {

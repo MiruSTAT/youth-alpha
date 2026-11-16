@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '31';
+export const VERSION = '32';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,32 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'super', th: 'อัปเดตผู้ดูแลสูงสุด โปรแกรม และชุดธีม', en: 'Super admin, programs & theme packs update',
     versions: [
-      { v: '31', date: '2026-11-17', commit: '',
+      { v: '32', date: '2026-11-17', commit: '',
+        short: { th: 'ผู้ดูแลแต่ละคนมีสิทธิ์ของตัวเองในแต่ละโปรแกรม เมนูผู้ดูแลจัดกลุ่มใหม่ (ร้านค้า หมวดคะแนน ความคิดเห็น และตั้งค่าเพลง ย้ายไปอยู่ใน "ตั้งค่า") และมีปุ่ม "คัดลอกลิงก์ผู้ใช้" ด้านบนขวา',
+                 en: 'Each admin now has their own permissions per program. The admin menu is regrouped (shop, point categories, feedback and music switches are under "Settings") and there is a "Copy user link" button at the top right' },
+        items: [
+          { a: 'safety', th: 'ผู้ดูแลแต่ละคนมีรายการสิทธิ์ต่อโปรแกรม: คะแนนและเช็กชื่อ / รายชื่อเด็ก / เพลง / ร้านและการแลกรางวัล / ความคิดเห็น / ประกาศและข้อพระคัมภีร์ / ตั้งค่า ฐานข้อมูลตรวจสอบสิทธิ์ทุกครั้ง (ไม่ใช่แค่ซ่อนปุ่ม) ผู้ดูแลเปิดได้เฉพาะโปรแกรมที่ได้รับสิทธิ์',
+            en: 'Each admin has a permission checklist per program: points & attendance / kids list / songs / shop & prizes / feedback / announcements & verse / settings. The database checks it every time (not just hidden buttons), and an admin can open only the programs they were given' },
+          { a: 'admin', th: 'หน้าใหม่ "ผู้ดูแลและสิทธิ์" (เฉพาะผู้ดูแลสูงสุด): สร้างบัญชีผู้ดูแล (ชื่อผู้ใช้ + รหัสผ่าน) อนุมัติบัญชีที่รออยู่ เลือกโปรแกรมและสิทธิ์ ตั้งรหัสผ่านใหม่ และปิด/เปิดบัญชี (มีคำเตือนพร้อมชื่อก่อนปิด ไม่มีการลบบัญชี)',
+            en: 'New "Admins & permissions" page (super admin only): create admin accounts (username + password), approve waiting accounts, choose programs and permissions, set a new password, switch accounts off/on (a named warning before switching off; accounts are never deleted)' },
+          { a: 'admin', th: 'ไม่มีหน้าผู้ดูแลสูงสุดแยกแล้ว: เมื่อเข้าเป็นผู้ดูแลสูงสุด หน้าผู้ดูแลจะมีป้าย "ผู้ดูแลสูงสุด" (พร้อมปุ่มออกจากระบบผู้ดูแลสูงสุด) และกลุ่ม "ผู้ดูแลสูงสุด": ผู้ดูแลและสิทธิ์ / โปรแกรม / หน้าตาโปรแกรมนี้ / ใครออนไลน์อยู่ / รายละเอียดสำหรับ AI ส่วนเลือกระบบเข้าสู่ระบบของสมาชิกย้ายไปอยู่ในหน้า "บัญชีสมาชิก"',
+            en: 'No separate super admin page any more: signed in as super admin, the admin panel shows a "Super admin" badge (with the super admin sign-out button) and a "Super admin" group: Admins & permissions / Programs / This program\'s look / Who is online / Details for AI. The member login mode chooser moved to the "Member accounts" page' },
+          { a: 'admin', th: 'จัดเมนูผู้ดูแลใหม่ให้โล่งขึ้น: ประจำวัน (เช็กชื่อ ให้คะแนน แลกของรางวัล สรุปประจำสัปดาห์) / เด็ก ๆ / เพลง / ตั้งค่า (ร้านค้า หมวดคะแนน ความคิดเห็น ตั้งค่าเพลง ตั้งค่า) / ระบบ แต่ละคนเห็นเฉพาะเมนูที่มีสิทธิ์',
+            en: 'The admin menu is regrouped and less crowded: Daily (attendance, points, give a prize, weekly summary) / Kids / Songs / Settings (shop, point categories, feedback, music switches, settings) / System. Everyone sees only the rows they have permission for' },
+          { a: 'admin', th: 'ปุ่ม "คัดลอกลิงก์ผู้ใช้" ด้านบนขวาของหน้าผู้ดูแล คัดลอกลิงก์ที่เด็ก ๆ ใช้เปิดแอปของโปรแกรมนี้', en: 'A "Copy user link" button at the top right of the admin panel copies the link kids use to open this program\'s app' },
+          { a: 'admin', th: 'ตัวเลือกโปรแกรมด้านบนหน้าผู้ดูแลมีเฉพาะผู้ดูแลสูงสุด ผู้ดูแลทั่วไปที่เปิดลิงก์ของโปรแกรมที่ไม่มีสิทธิ์ จะเห็นข้อความและลิงก์ไปโปรแกรมของตัวเอง',
+            en: 'The program picker at the top of the admin panel is for the super admin only. An admin who opens the link of a program they have no access to sees a message and the links of their own programs' },
+          { a: 'admin', th: 'หน้าใหม่ "ใครออนไลน์อยู่" (เฉพาะผู้ดูแลสูงสุด): ผู้ดูแลที่เปิดหน้าผู้ดูแลอยู่ อยู่โปรแกรมไหน หน้าไหน และล่าสุดเมื่อไหร่ (หน้าผู้ดูแลส่งสัญญาณประมาณทุก 45 วินาที อัปเดตเองทุก 20 วินาที)',
+            en: 'New "Who is online" page (super admin only): admins who have an admin page open, which program and page, and how long ago (admin pages send a signal about every 45 s; the list updates every 20 s)' },
+          { a: 'safety', th: 'บันทึกการแก้ไขของผู้ดูแล และบันทึกการใช้งานของเด็ก ดูและส่งออกได้เฉพาะผู้ดูแลสูงสุด และแยกตามโปรแกรมแล้ว ผู้ดูแลทั่วไปยังส่งออกคะแนน เช็กชื่อ รายชื่อ และอื่น ๆ ได้ตามปกติ (ความคิดเห็นต้องมีสิทธิ์ความคิดเห็น)',
+            en: "The admin change log and the kids' activity log can be seen and exported by the super admin only, and are now separate per program. Admins can still export points, attendance, kids and the rest (feedback needs the feedback permission)" },
+          { a: 'admin', th: 'หน้า "เวอร์ชันและสิ่งที่เปลี่ยน" สำหรับผู้ดูแลทั่วไปเป็นแบบสั้นและง่าย (5 เวอร์ชันล่าสุด) ส่วนแบบละเอียดพร้อมส่งออก Excel เป็นของผู้ดูแลสูงสุด',
+            en: 'For admins, "Version & changes" is now a short, simple "What\'s new" (last 5 versions); the detailed grouped change log with the Excel export is the super admin\'s' },
+          { a: 'data', th: 'ฐานข้อมูล 021_admin_access.sql: ตารางสิทธิ์ต่อโปรแกรม กฎความปลอดภัยใหม่ทุกตาราง บันทึกการแก้ไขมีโปรแกรมกำกับ และตารางผู้ที่ออนไลน์ ผู้ดูแลเดิม (admin) ยังมีสิทธิ์ครบในโปรแกรม Youth Alpha Christmas 2026 ไม่มีข้อมูลใดถูกลบ',
+            en: 'Database 021_admin_access.sql: a per-program permissions table, new security rules on every table, the admin log records the program, and an "online" table. The existing "admin" keeps every permission on Youth Alpha Christmas 2026; nothing was deleted' },
+          { a: 'admin', th: 'สรุปประจำสัปดาห์ยังแสดงจำนวนโทรศัพท์ที่เปิดแอปและเพลงที่เปิดบ่อย โดยใช้ตัวเลขสรุป (ไม่ใช่บันทึกรายแถวของเด็ก)', en: 'The weekly summary still shows phones that opened the app and the most opened songs, from counts only (not the kids\' activity rows)' },
+        ] },
+      { v: '31', date: '2026-11-17', commit: '4226414',
         items: [
           { a: 'safety', th: 'ระบบเข้าสู่ระบบของสมาชิก (ชื่อผู้ใช้ + รหัสผ่าน) ต่อโปรแกรม มี 3 แบบ: ปิด (แอปเหมือนเดิม) / เห็นคะแนนละเอียดเฉพาะของตัวเอง / ต้องเข้าสู่ระบบก่อนดูทุกอย่าง ทุกโปรแกรมยังเป็น "ปิด" จึงไม่มีอะไรเปลี่ยนจนกว่าผู้ดูแลสูงสุดจะเปิด',
             en: 'Member login (username + password) per program, in 3 modes: off (the app as before) / own details only / sign in to see anything. Every program is still "off", so nothing changes until the super admin switches it on' },

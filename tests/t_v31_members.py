@@ -64,7 +64,7 @@ with sync_playwright() as p:
     warn = pg.inner_text('#dlgForm'); check('น้องต้น' in warn, 'switch-off warning names the account'); pg.screenshot(path=S + 'v31_03_off_warning.png')
     pg.click('#dlgForm button[value=cancel]'); pg.wait_for_timeout(500)
     check('ปิดอยู่' not in pg.inner_text('.mem-li >> nth=1'), 'cancel keeps the account on')
-    go(pg, '#/admin/super', 1800); pg.evaluate("document.querySelector('#loginCard').scrollIntoView()"); pg.screenshot(path=S + 'v31_04_super_login.png')
+    go(pg, '#/admin/members', 1800); pg.evaluate("document.querySelector('#loginCard').scrollIntoView()")  # v32: the mode chooser is on the members page; pg.screenshot(path=S + 'v31_04_super_login.png')
     check(pg.locator('#loginCard input[name=lm]').count() == 3 and pg.is_disabled('#lmSave'), 'super admin: 3 modes, save disabled until changed')
     check('บัญชีในโปรแกรมนี้: 2' in pg.inner_text('#loginCard'), 'super admin card shows the account count')
     pg.check('#loginCard input[value=personal]'); pg.click('#lmSave'); pg.wait_for_timeout(600)

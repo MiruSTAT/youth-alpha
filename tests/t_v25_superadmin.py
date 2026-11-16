@@ -18,7 +18,7 @@ def run(name, logged, sa, steps):
         print('=====', name); steps(pg); b.close()
 
 def claim(pg):
-    pg.goto(U+'#/admin/super'); pg.wait_for_timeout(1500); pg.screenshot(path='/tmp/s23/30_claim.png')
+    pg.goto(U+'#/admin'); pg.wait_for_timeout(1500); pg.screenshot(path='/tmp/s23/30_claim.png')
     print('claim page:', pg.inner_text('.page-title'), '| username prefilled:', pg.input_value('[name=u]'))
     pg.fill('[name=p]','1234'); pg.fill('[name=p2]','1234'); pg.click('#sac button'); pg.wait_for_timeout(400)
     print('weak warning:', pg.inner_text('#dlgForm p').replace('\n',' / ')); pg.click('#dlgForm button[value=ok]'); pg.wait_for_timeout(1800)
@@ -42,13 +42,13 @@ def login(pg):
     pg.click('#hoCopy'); pg.wait_for_timeout(400); clip=pg.evaluate('navigator.clipboard.readText()'); print('copied prompt starts:', clip[:90].replace('\n',' '), '| length', len(clip))
     pg.goto(U+'#/admin'); pg.wait_for_timeout(1200); print('admin menu first group:', pg.inner_text('.grp'), '| items', pg.eval_on_selector_all('.menu a', 'e=>e.map(x=>x.dataset.k)')[:4])
     pg.goto(U+'#/menu'); pg.wait_for_timeout(900); print('kids menu install row now:', pg.locator('[data-m=install]').count())
-    pg.goto(U+'#/admin/super'); pg.wait_for_timeout(1200); pg.click('#saLock'); pg.wait_for_timeout(1500)
+    pg.goto(U+'#/admin'); pg.wait_for_timeout(1200); pg.click('#saLock'); pg.wait_for_timeout(1500)
     print('after lock:', pg.inner_text('.page-title'), '|', pg.inner_text('.sa-step h2') if pg.locator('.sa-step h2').count() else '')
     pg.screenshot(path='/tmp/s23/33_locked.png')
 run('login + link', 'false', "{ user: { username: 'Miruku', pw: '1234' } }", login)
 
 def normal(pg):
     pg.goto(U+'#/admin'); pg.wait_for_timeout(1000); pg.fill('input[name=email]','admin'); pg.fill('input[name=pw]','xxxxxx'); pg.click('button[value=in]'); pg.wait_for_timeout(1200)
-    print('normal admin menu:', pg.eval_on_selector_all('.menu a', 'e=>e.map(x=>x.dataset.k)')); pg.goto(U+'#/admin/super'); pg.wait_for_timeout(900); print('normal admin on #/admin/super ->', pg.inner_text('.page-title'))
+    print('normal admin menu:', pg.eval_on_selector_all('.menu a', 'e=>e.map(x=>x.dataset.k)')); pg.goto(U+'#/admin'); pg.wait_for_timeout(900); print('normal admin on #/admin ->', pg.inner_text('.page-title'))
 run('normal admin', 'false', "{}", normal)
 print('\n'.join(errs) or 'no errors')

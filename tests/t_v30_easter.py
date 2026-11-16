@@ -12,7 +12,7 @@ with sync_playwright() as p:
     pg.on('pageerror',lambda e: errs.append('PAGEERR '+str(e)))
     pg.on('console',lambda m: errs.append('CONSOLE '+m.text) if m.type=='error' and 'Failed to load' not in m.text else None)
     def go(h,w=1300): pg.goto(U+h); pg.wait_for_timeout(w)
-    go('#/admin/super', 1800)
+    go('#/admin/look', 1800)
     pg.select_option('#lookForm [name=pack]', 'easter')
     print('easter ticks:', [pg.is_checked(f'#lookForm [name=f_{k}]') for k in ['tree','santa','festive','music']])
     pg.click('#lookForm [type=submit]'); pg.wait_for_timeout(700); print('brand:', pg.inner_text('.brand').replace('\n',' '))

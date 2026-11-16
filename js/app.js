@@ -1,14 +1,14 @@
-import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=31';
-import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=31';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=31';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=31';
+import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=32';
+import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=32';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=32';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=32';
 
-import { music } from './music.js?v=31';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=31';
-import { snow } from './snow.js?v=31';
-import { track } from './track.js?v=31';
-import { metro } from './metronome.js?v=31';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=31';
+import { music } from './music.js?v=32';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=32';
+import { snow } from './snow.js?v=32';
+import { track } from './track.js?v=32';
+import { metro } from './metronome.js?v=32';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=32';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -128,7 +128,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=31');
+    const m = await import('./scene3d.js?v=32');
     if (m.initScene($('#scene'), { pack: document.body.dataset.pack })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -856,46 +856,81 @@ document.addEventListener('click', (e) => {
 }, true);
 
 // =============================================================== ADULT SIDE
-let adult = { role: null, myId: null };
-const isAdm = () => adult.role === 'admin' || adult.role === 'superadmin';
+// v32 (HANDOFF.md 5e): admins have a permission checklist per program; the super admin can do everything.
+let adult = { role: null, myId: null, access: null };
+const PERMS = ['points', 'kids', 'songs', 'shop', 'feedback', 'notice', 'settings'];
+const isSuper = () => adult.role === 'superadmin';
+const myPerms = (pid = program.id) => isSuper() ? PERMS : (adult.access?.programs?.[String(pid)] || []);
+const can = (perm) => !perm || isSuper() || myPerms().includes(perm);
+const isAdm = () => can('settings');
+// every admin page and the permission it needs (null = anyone who may open this program; 'super' = super admin only)
+const PAGES = {
+  attendance: ['points', () => pAttendance()], attsum: ['points', () => pAttSummary()], points: ['points', () => pPoints()], history: ['points', () => pHistory()],
+  kids: ['kids', () => pKids()], members: ['kids', () => pMembers()], notice: ['notice', () => pNotice()],
+  shop: ['shop', () => pShop()], redeem: ['shop', (x) => pRedeem(x)], pcats: ['settings', () => pPcats()],
+  songs: ['songs', () => pSongs()], song: ['songs', (x) => pSongEdit(x)], sync: ['songs', (x) => pSync(x)],
+  feedback: ['feedback', () => pFeedback()], musicset: ['settings', () => pMusicSet()], settings: ['settings', () => pSettings()],
+  weekly: [null, () => pWeekly()], export: [null, () => pExport()], about: [null, () => pAbout()],
+  admins: ['super', async (x) => x ? (await saMod()).pAdminEdit(saCtx(), x) : (await saMod()).pAdmins(saCtx())],
+  programs: ['super', async () => (await saMod()).pPrograms(saCtx())], look: ['super', async () => (await saMod()).pLook(saCtx())],
+  online: ['super', async () => (await saMod()).pOnline(saCtx())], ai: ['super', async () => (await saMod()).pAi(saCtx())],
+};
+const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? isSuper() : can(need); };
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
-const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys });
-const saMod = () => import('./superadmin.js?v=31');
+const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys,
+  PERMS, dTime, adult, renderSeq: () => renderSeq });
+const saMod = () => import('./superadmin.js?v=32');
+
+// "who is online" for the super admin: a ping when an admin page opens and about every 45 s while one stays open
+let pingAt = 0, pingPage = '';
+function adminPing(page) {
+  pingPage = page || 'home';
+  if (Date.now() - pingAt < 8000) return;
+  pingAt = Date.now(); api.adminPing?.(pingPage).catch(() => {});
+}
+setInterval(() => { if (location.hash.startsWith('#/admin') && adult.access && document.visibilityState === 'visible') { pingAt = 0; adminPing(pingPage); } }, 45000);
 
 async function adultGate(page) {
   const session = await api.session();
-  if (!session) return loginView();
+  if (!session) { adult.access = null; return loginView(); }
   adult.role = await api.myRole(); adult.myId = await api.myId();
+  adult.access = null;
   if (adult.role === 'pending') return pendingView();
+  if (adult.role === 'noaccess') return noAccessView();
   if (adult.role === 'superlocked' || adult.role === 'superclaim') return (await saMod()).superGate(saCtx(), adult.role);
-  const pages = { attendance: pAttendance, attsum: pAttSummary, points: pPoints, history: pHistory, kids: pKids, shop: pShop, pcats: pPcats, feedback: pFeedback, export: pExport,
-    redeem: pRedeem, notice: pNotice, weekly: pWeekly, about: pAbout,
-    songs: pSongs, song: pSongEdit, sync: pSync, ...(isAdm() ? { settings: pSettings, musicset: pMusicSet, members: pMembers } : {}),
-    ...(adult.role === 'superadmin' ? { super: async () => (await saMod()).pSuper(saCtx()) } : {}) };
-  if (!pages[page]) return adultHome();
-  await pages[page](location.hash.split('/')[3]);
+  try { adult.access = await api.myAccess(); } catch (e) { console.error(e); adult.access = { all: false, programs: {} }; }
+  if (!isSuper() && !myPerms().length) return otherProgramView();
+  if (page === 'super') { history.replaceState(null, '', '#/admin'); page = ''; }   // the old super admin page is part of the admin panel now
+  adminPing(PAGES[page] ? page : 'home');
+  if (!PAGES[page] || !pageOk(page)) return adultHome();
+  await PAGES[page][1](location.hash.split('/')[3]);
 }
 
 function adultHome() {
   const live = program.list.filter(x => !x.archived || x.id === program.id);
-  const progBar = live.length > 1 ? `<div class="card prog-bar"><span>📁 ${t('progNow')}</span><b>${esc(program.name)}</b>
+  // the program picker is the super admin's: normal admins only ever see the program of their own link
+  const progBar = isSuper() && live.length > 1 ? `<div class="card prog-bar"><span>📁 ${t('progNow')}</span><b>${esc(program.name)}</b>
       <select class="input" id="progSel" aria-label="${t('progNow')}">${live.map(x => `<option value="${esc(x.slug)}" ${x.id === program.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : '';
   const groups = [
-    ...(adult.role === 'superadmin' ? [['g_super', [['super', '👑']]]] : []),
-    ['g_daily', [['attendance', '✅'], ['points', '⭐'], ['weekly', '📊']]],
-    ['g_kids', [['kids', '👧'], ...(isAdm() ? [['members', '🔑']] : []), ['feedback', '💬'], ['notice', '📣']]],
-    ['g_rewards', [['pcats', '🏷️'], ['shop', '🎁'], ['redeem', '🎟️']]],
-    ['g_songs', [['songs', '🎵'], ...(isAdm() ? [['musicset', '🎛️']] : [])]],
-    ['g_system', [['export', '📥'], ...(isAdm() ? [['settings', '⚙️']] : []), ['about', 'ℹ️']]],
-  ];
+    ...(isSuper() ? [['g_super', [['admins', '👥', 'super'], ['programs', '📁', 'super'], ['look', '🎨', 'super'], ['online', '🟢', 'super'], ['ai', '🤖', 'super']]]] : []),
+    ['g_daily', [['attendance', '✅'], ['points', '⭐'], ['redeem', '🎟️'], ['weekly', '📊']]],
+    ['g_kids', [['kids', '👧'], ['members', '🔑'], ['notice', '📣']]],
+    ['g_songs', [['songs', '🎵']]],
+    ['g_settings', [['shop', '🎁'], ['pcats', '🏷️'], ['feedback', '💬'], ['musicset', '🎛️'], ['settings', '⚙️']]],
+    ['g_system', [['export', '📥'], ['about', 'ℹ️']]],
+  ].map(([g, items]) => [g, items.filter(([k]) => pageOk(k))]).filter(([, items]) => items.length);
   view.innerHTML = `
-    <div class="page-head"><a class="back" href="#/">‹ ${t('back')}</a><h1 class="page-title">${t('adultMenu')}</h1></div>
+    <div class="page-head"><a class="back" href="#/">‹ ${t('back')}</a><h1 class="page-title">${t('adultMenu')}</h1>
+      <button class="btn small head-btn" id="copyLink" title="${t('copyUserLinkSub')}">🔗 ${t('copyUserLink')}</button></div>
+    ${isSuper() ? '<div class="card sa-badge" id="saBadge"></div>' : ''}
     ${progBar}
-    ${groups.map(([g, items]) => `<h2 class="grp">${t(g)}</h2><nav class="menu grouped">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
+    ${groups.map(([g, items]) => `<h2 class="grp ${g === 'g_super' ? 'grp-super' : ''}">${g === 'g_super' ? '👑 ' : ''}${t(g)}</h2><nav class="menu grouped ${g === 'g_super' ? 'super-menu' : ''}">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
       <span class="mt"><b>${t('tab_' + k)}</b><span>${t('m_' + k, VERSION)}</span></span><span class="chev">›</span></a>`).join('')}</nav>`).join('')}
     <button class="btn wide" style="margin-top:24px" id="logout">${t('logout')}</button>
     ${MODE === 'preview' ? `<p class="preview-note">${t('previewNote')}</p>` : ''}`;
   $('#logout').onclick = async () => { await api.signOut(); location.hash = '#/admin'; render(); };
+  $('#copyLink').onclick = () => copyText(linkFor(program.slug), t('userLinkCopied'));
+  if (isSuper()) saMod().then(m => m.superBadge(saCtx(), $('#saBadge'))).catch(console.error);
   // switching program = opening that program's own link (a full reload, so no data from the old program stays on screen)
   const ps = $('#progSel'); if (ps) ps.onchange = () => { location.href = linkFor(ps.value) + '#/admin'; };
   // red indicators: things that still need filling in
@@ -910,14 +945,18 @@ function adultHome() {
     });
   }).catch(console.error);
 }
+async function copyText(txt, okMsg) {
+  try { await navigator.clipboard.writeText(txt); toast('✓ ' + okMsg); }
+  catch { const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); toast('✓ ' + okMsg); } catch { toast(txt); } ta.remove(); }
+}
 async function computeNeeds() {
   const n = {};
-  const [kids, shop, fb] = await Promise.all([api.kids(), api.shop(), api.feedback().catch(() => [])]);
+  const [kids, shop, fb] = await Promise.all([api.kids(), can('shop') ? api.shop() : { items: [1] }, can('feedback') ? api.feedback().catch(() => []) : []]);
   const active = kids.filter(k => k.active);
-  if (!active.length) n.kids = t('need_kids');
-  const live = shop.items.filter(i => i.active);
+  if (!active.length && can('kids')) n.kids = t('need_kids');
+  const live = shop.items.filter(i => i === 1 || i.active);
   if (!live.length) n.shop = t('need_shopEmpty');
-  if (active.length) {
+  if (active.length && can('points')) {
     const [rowsToday, round] = await Promise.all([api.attendance(today()), api.round(today())]);
     if (rowsToday.length && !round?.finished) n.attendance = t('need_att');
   }
@@ -958,12 +997,24 @@ function loginView() {
 
 function pendingView() {
   view.innerHTML = `${pageHead(t('adults'), '#/')}
-    <div class="card"><p>⏳ ${t('pendingMsg')}</p></div>
-    <div class="card"><p class="muted">${t('firstAdminHint')}</p>
-      <div class="field"><label>${t('yourName')}</label><input class="input" id="nm"></div>
-      <button class="btn primary wide" id="claim">${t('firstAdmin')}</button></div>
+    <div class="card"><p>⏳ ${t('pendingMsg2')}</p></div>
     <button class="btn wide" id="lo">${t('logout')}</button>`;
-  $('#claim').onclick = async () => { try { (await api.claimAdmin($('#nm').value.trim())) === 'ok' ? render() : toast(t('pendingMsg')); } catch (e) { fail(e); } };
+  $('#lo').onclick = async () => { await api.signOut(); render(); };
+}
+// v32: switched off by the super admin, or no program yet
+function noAccessView() {
+  view.innerHTML = `${pageHead(t('adults'), '#/')}
+    <div class="card"><p>🔒 ${t('noAccessMsg')}</p></div>
+    <button class="btn wide" id="lo">${t('logout')}</button>`;
+  $('#lo').onclick = async () => { await api.signOut(); render(); };
+}
+// v32: this link opens a program the admin has no access to: show the links of the programs they do have
+function otherProgramView() {
+  const mine = program.list.filter(p => (adult.access?.programs?.[String(p.id)] || []).length);
+  view.innerHTML = `${pageHead(t('adults'), '#/')}
+    <div class="card"><p>🔒 ${t('otherProgMsg', esc(program.name))}</p>
+      ${mine.length ? `<p class="muted" style="margin:10px 0 6px">${t('otherProgYours')}</p><nav class="menu grouped">${mine.map(p => `<a href="${esc(linkFor(p.slug))}#/admin"><span class="mi">📁</span><span class="mt"><b>${esc(p.name)}</b></span><span class="chev">›</span></a>`).join('')}</nav>` : ''}</div>
+    <button class="btn wide" id="lo">${t('logout')}</button>`;
   $('#lo').onclick = async () => { await api.signOut(); render(); };
 }
 
@@ -973,6 +1024,7 @@ async function pMembers() {
   const [list, kids] = await Promise.all([api.memberList(), api.kids()]);
   const mode = program.login || 'off';
   view.innerHTML = `${pageHead('🔑 ' + t('tab_members'))}
+    ${isSuper() ? `<div class="card super-card" id="loginCard"></div>` : ''}
     <div class="card"><p style="margin:0"><b>${t('memMode')}: ${t('lm_' + mode)}</b></p><p class="muted" style="margin:6px 0 0">${t('lm_' + mode + '_sub')}</p>
       ${mode === 'off' ? `<p class="hint" style="margin-top:8px">${t('memOffHint')}</p>` : ''}</div>
     <button class="btn primary wide" id="memAdd" style="margin-bottom:12px">➕ ${t('memAdd')}</button>
@@ -980,6 +1032,7 @@ async function pMembers() {
       <span class="av">${m.active ? (m.locked ? '⏳' : '👤') : '⛔'}</span>
       <span class="grow"><b>${esc(m.display_name || m.username)}</b><span class="sub">@${esc(m.username)} · ${m.kid_name ? '⭐ ' + esc(m.kid_name) : t('memNoKid')}${!m.active ? ' · ' + t('memIsOff') : m.locked ? ' · ' + t('memLockedNow') : ''}</span>
         <span class="sub">${t('memLast')}: ${dTime(m.last_login)}</span></span><span class="muted">${t('edit')} ›</span></div>`).join('') || `<p class="muted">${t('memNone')}</p>`}</div></div>`;
+  if (isSuper()) saMod().then(m => m.drawLogin(saCtx())).catch(console.error);   // v32: the login mode chooser lives here now (super admin only)
   $('#memAdd').onclick = () => memberForm(null, kids);
   view.querySelectorAll('.mem-li').forEach(b => b.onclick = () => memberForm(list.find(m => m.id === b.dataset.id), kids));
 }
@@ -1378,8 +1431,9 @@ async function pNotice() {
 // ---------------- Weekly summary: the last 7 days at a glance
 async function pWeekly() {
   const since = new Date(Date.now() - 7 * 864e5).toISOString();
-  const [kids, att, pts, evs, red, fb] = await Promise.all([api.kids(), api.attendanceAll(), api.pointsSince(since), api.kidEventsSince(since).catch(() => []),
-    api.redemptions(300), api.feedback().catch(() => []), pcats()]);
+  // v32: the kids' activity rows belong to the super admin; admins get only the counts (kid_week_stats)
+  const [kids, att, pts, ks, red, fb] = await Promise.all([api.kids(), api.attendanceAll(), api.pointsSince(since), api.kidWeekStats(since).catch(() => ({ phones: 0, songs: [] })),
+    api.redemptions(300), can('feedback') ? api.feedback().catch(() => []) : [], pcats()]);
   const active = kids.filter(k => k.active), kidOf = Object.fromEntries(kids.map(k => [k.id, k]));
   const days = [...new Set(att.map(a => a.day))].sort(), last2 = days.slice(-2);
   const stOf = (kid, day) => att.find(a => a.kid_id === kid && a.day === day)?.status || '';
@@ -1387,17 +1441,16 @@ async function pWeekly() {
   const missed = last2.length === 2 ? active.filter(k => last2.every(d => stOf(k.id, d) !== 'present')) : [];
   const gain = {}; pts.forEach(p => { gain[p.kid_id] = (gain[p.kid_id] || 0) + p.amount; });
   const top = Object.entries(gain).filter(([id, n]) => kidOf[id] && n > 0).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  const opened = {}; evs.filter(e => e.event === 'song_open' && e.detail).forEach(e => { const x = (opened[e.detail] ??= { n: 0, d: new Set() }); x.n++; x.d.add(e.device_id); });
-  const topSongs = Object.entries(opened).sort((a, b) => b[1].n - a[1].n).slice(0, 5);
+  const topSongs = (ks.songs || []).map(x => [x.title, { n: x.n, d: { size: x.devices } }]);
   const redW = red.filter(r => r.created_at >= since), fbW = fb.filter(f => f.created_at >= since).length;
-  const phones = new Set(evs.map(e => e.device_id)).size, given = pts.reduce((a, p) => a + (p.amount > 0 ? p.amount : 0), 0);
+  const phones = ks.phones || 0, given = pts.reduce((a, p) => a + (p.amount > 0 ? p.amount : 0), 0);
   const lastDay = days[days.length - 1], came = lastDay ? active.filter(k => stOf(k.id, lastDay) === 'present').length : 0;
   const card = (title, sub, inner) => `<div class="card"><b>${title}</b>${sub ? `<p class="muted" style="margin:2px 0 6px">${sub}</p>` : ''}<div class="list">${inner}</div></div>`;
   const none = `<p class="muted" style="margin:8px 0 4px">${t('none')}</p>`;
   view.innerHTML = `${pageHead(t('tab_weekly'))}
     <p class="muted" style="margin:-6px 2px 12px">${t('wkSub')}</p>
     <div class="summary"><div><b class="c-here">${given}</b><span>${t('wkPts')}</span></div><div><b>${came}<span class="muted" style="font-size:.9rem"> / ${active.length}</span></b><span>${t('wkCame')}</span></div>
-      <div><b>${phones}</b><span>${t('wkPhones')}</span></div><div><b>${fbW}</b><span>${t('wkFb')}</span></div></div>
+      <div><b>${phones}</b><span>${t('wkPhones')}</span></div>${can('feedback') ? `<div><b>${fbW}</b><span>${t('wkFb')}</span></div>` : ''}</div>
     ${card('🙋 ' + t('wkMissed'), last2.length === 2 ? t('wkMissedSub', dShort(last2[0]), dShort(last2[1])) : t('wkNeed2'),
       last2.length < 2 ? '' : missed.map(k => `<div class="li"><span class="av">${pic(k.avatar)}</span><span class="grow">${esc(k.nickname)}<span class="sub">${last2.map(d => `${dShort(d)}: ${stTxt(stOf(k.id, d))}`).join(' · ')}</span></span></div>`).join('') || `<p class="c-here" style="margin:8px 0 4px">✓ ${t('wkNoMiss')}</p>`)}
     ${card('⭐ ' + t('wkTop'), '', top.map(([id, n], i) => `<div class="li"><span class="av">${pic(kidOf[id].avatar)}</span><span class="grow">${esc(kidOf[id].nickname)}</span><span class="amt pos">+${n}</span></div>`).join('') || none)}
@@ -1411,17 +1464,26 @@ async function pAbout() {
   const dLong = (d) => new Date(d + 'T00:00:00').toLocaleDateString(th ? 'th-TH' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   const span = (u) => { const vs = u.versions.map(x => Number(x.v)); return `${t('clogVer')} ${Math.min(...vs)}${vs.length > 1 ? '–' + Math.max(...vs) : ''}`; };
   const dates = (u) => { const a = u.versions[u.versions.length - 1].date, b = u.versions[0].date; return dLong(a) + (a !== b ? ' – ' + dLong(b) : ''); };
-  view.innerHTML = `${pageHead(t('tab_about'))}
-    <div class="card ver-card"><div class="ver-now"><span>${t('verUsing')}</span><b>${esc(VERSION)}</b></div>
+  const verCard = `<div class="card ver-card"><div class="ver-now"><span>${t('verUsing')}</span><b>${esc(VERSION)}</b></div>
       <p id="verState" class="muted">${t('verChecking')}…</p>
-      <button class="btn primary wide" id="verUpd" hidden>🔄 ${t('verUpdate')}</button></div>
+      <button class="btn primary wide" id="verUpd" hidden>🔄 ${t('verUpdate')}</button></div>`;
+  // v32: normal admins get a short, simple "what's new" (last 5 versions, no area tags, no technical items);
+  // the full grouped change log with the Excel export is the super admin's
+  if (!isSuper()) {
+    const plain = new Set(['kids', 'admin', 'songs', 'look', 'fix']);
+    const recent = CHANGELOG.slice(0, 5).map(c => ({ ...c, list: c.short ? [th ? c.short.th : c.short.en] : c.items.filter(x => plain.has(x.a)).slice(0, 4).map(x => th ? x.th : x.en) })).filter(c => c.list.length);
+    view.innerHTML = `${pageHead(t('tab_about'))}${verCard}
+      <h2 class="grp">${t('clogNew')}</h2>
+      ${recent.map(c => `<div class="card clog-simple"><div class="clog-h"><b>${t('verN', c.v)}${c.v === VERSION ? ` <span class="now-tag">${t('verThis')}</span>` : ''}</b><span class="muted">${dLong(c.date)}</span></div>
+        <ul>${c.list.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}`;
+  } else view.innerHTML = `${pageHead(t('tab_about'))}${verCard}
     <button class="btn wide" id="clogXl" style="margin-bottom:6px">📥 ${t('clogExport')}</button>
     <h2 class="grp">${t('clogTitle')}</h2>
     ${UPDATES.map((u, ui) => `<details class="card upd" ${ui === 0 ? 'open' : ''}><summary><span class="ut"><b>${esc(th ? u.th : u.en)}</b><span class="muted">${span(u)} · ${dates(u)}</span></span><span class="chev">›</span></summary>
       ${u.versions.map(c => `<div class="clog ${c.v === VERSION ? 'now' : ''}"><div class="clog-h"><b>${t('verN', c.v)}${c.v === VERSION ? ` <span class="now-tag">${t('verThis')}</span>` : ''}</b><span class="muted">${dLong(c.date)}</span></div>
         <ul>${c.items.map(x => `<li><span class="area a-${x.a}">${esc(AREAS[x.a]?.[L] || x.a)}</span>${esc(th ? x.th : x.en)}</li>`).join('')}</ul></div>`).join('')}</details>`).join('')}`;
   $('#verUpd').onclick = async () => { try { await (await navigator.serviceWorker?.getRegistration())?.update(); } catch {} location.reload(); };
-  $('#clogXl').onclick = async (e) => {
+  if ($('#clogXl')) $('#clogXl').onclick = async (e) => {
     const b = e.currentTarget; b.disabled = true;
     try {
       const XLSX = await loadXLSX(), wb = XLSX.utils.book_new();
@@ -1552,7 +1614,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=31');
+      const { readSheet } = await import('./ocr.js?v=32');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1858,7 +1920,7 @@ function loadXLSX() {
 const XL_SHEETS = [['xs_summary', 'summary', '📊'], ['xs_points', 'points', '⭐'], ['xs_att', 'attendance', '✅'], ['xs_attsum', 'attendance-totals', '📈'], ['xs_feedback', 'feedback', '💬'], ['xs_shop', 'shop', '🎁'], ['xs_redeem', 'prizes-given', '🎟️'],
   ['xs_adminlog', 'admin-log', '📜'], ['xs_kidlog', 'kid-activity', '👆'], ['xs_kidsum', 'kid-activity-summary', '📈']];
 const LOG_SHEETS = ['xs_adminlog', 'xs_kidlog', 'xs_kidsum'];
-const TBL = { songs: 'lt_songs', kids: 'lt_kids', points: 'lt_points', attendance: 'lt_att', attendance_rounds: 'lt_round', shop_items: 'lt_shop', point_categories: 'lt_pcats', settings: 'lt_settings', staff: 'lt_staff', kid_events: 'lt_kidlog', redemptions: 'lt_redeem', members: 'lt_members', programs: 'lt_programs' };
+const TBL = { songs: 'lt_songs', kids: 'lt_kids', points: 'lt_points', attendance: 'lt_att', attendance_rounds: 'lt_round', shop_items: 'lt_shop', point_categories: 'lt_pcats', settings: 'lt_settings', staff: 'lt_staff', staff_programs: 'lt_staffprog', kid_events: 'lt_kidlog', redemptions: 'lt_redeem', members: 'lt_members', programs: 'lt_programs' };
 const SKIP_FIELDS = new Set(['updated_at', 'created_at', 'updated_by', 'given_by', 'created_by', 'finished_by', 'finished_at']);
 // one admin-log row -> readable text
 function describeLog(e, kidName) {
@@ -1872,7 +1934,8 @@ function describeLog(e, kidName) {
     case 'attendance_rounds': item = `${r.day} · ${r.finished ? t('finished') : t('reopen')}`; break;
     case 'shop_items': item = `${r.name} (${r.price} ⭐)`; break;
     case 'point_categories': item = r.name_th; break;
-    case 'staff': item = r.role; break;
+    case 'staff': item = r.display_name || r.role || (n.password_changed ? '🔑' : ''); break;
+    case 'staff_programs': item = `${program.list.find(x => x.id === r.program_id)?.name || r.program_id}: ${(r.perms || []).map(k => t('perm_' + k)).join(', ') || t('permNone')}`; break;
     case 'kid_events': item = t('logCleared', r.rows_deleted ?? 0); break;
     case 'songs': item = r.title; break;
     case 'redemptions': item = `${who(r.kid_id)} · ${r.item_name} (−${r.price} ⭐)`; break;
@@ -1896,11 +1959,11 @@ async function pExport() {
     <button class="btn primary wide" data-x="all" style="margin-bottom:6px">📥 ${t('exportAll')}</button>
     <p class="muted" style="margin:0 0 14px;text-align:center">${t('exportAllSub')}</p>
     <h2 class="grp">${t('exportEach')}</h2>
-    <nav class="menu grouped">${XL_SHEETS.filter(([k]) => !LOG_SHEETS.includes(k)).map(xlRow).join('')}</nav>
-    <h2 class="grp">${t('logsGrp')}</h2>
-    <nav class="menu grouped">${XL_SHEETS.filter(([k]) => LOG_SHEETS.includes(k)).map(xlRow).join('')}</nav>
-    <p class="muted" style="margin:6px 4px 0">🔒 ${t('adminLogNote')}</p>
-    ${isAdm() ? `<button class="btn danger wide" id="clearKid" style="margin-top:24px">🗑️ ${t('clearKidLog')}</button>
+    <nav class="menu grouped">${XL_SHEETS.filter(([k]) => !LOG_SHEETS.includes(k) && xlOk(k)).map(xlRow).join('')}</nav>
+    ${isSuper() ? `<h2 class="grp grp-super">👑 ${t('logsGrp')}</h2>
+    <nav class="menu grouped super-menu">${XL_SHEETS.filter(([k]) => LOG_SHEETS.includes(k)).map(xlRow).join('')}</nav>
+    <p class="muted" style="margin:6px 4px 0">🔒 ${t('adminLogNote')} · ${t('logsSuperNote')}</p>` : ''}
+    ${isSuper() ? `<button class="btn danger wide" id="clearKid" style="margin-top:24px">🗑️ ${t('clearKidLog')}</button>
     <p class="muted" style="margin:6px 4px 0">${t('clearKidNote')}</p>` : ''}`;
   view.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => {
     const keep = b.innerHTML; b.disabled = true; b.textContent = t('exporting');
@@ -1913,17 +1976,19 @@ async function pExport() {
       { okText: t('clearNow'), danger: true });
     if (!(r instanceof FormData)) return;
     try {
-      if (adult.role === 'superadmin') { const r2 = await api.superStart((await api.superInfo())?.username || '', r.get('pw')); if (!r2?.ok) throw new Error('wrong'); }
-      else await api.reauth(r.get('pw'));
+      const r2 = await api.superStart((await api.superInfo())?.username || '', r.get('pw')); if (!r2?.ok) throw new Error('wrong');
     } catch { toast(t('errLogin')); return; }
     try { const n = await api.clearKidEvents(); toast(t('logCleared', n)); } catch (e) { fail(e); }
   });
 }
+// v32: logs are the super admin's; feedback needs the feedback permission
+const xlOk = (k) => LOG_SHEETS.includes(k) ? isSuper() : k === 'xs_feedback' ? can('feedback') : true;
 const xlRow = ([k, , i]) => `<button class="xl-row" data-x="${k}"><span class="mi">${i}</span><span class="mt"><b>${t(k)}</b></span><span class="xl-dl">📥 ${t('exportOne')}</span></button>`;
 async function buildExcel(only = null) {
-  const want = (k) => !only || only.includes(k);
+  only = (only || XL_SHEETS.map(x => x[0])).filter(xlOk);
+  const want = (k) => only.includes(k);
   const [XLSX, kids, rows, cats, pts, att, fb, shop, alog, kev] = await Promise.all([loadXLSX(), api.kids(), leaderboard(true), pcats(true), api.allPoints(),
-    api.attendanceAll(), api.feedback().catch(() => []), api.shop(),
+    api.attendanceAll(), want('xs_feedback') ? api.feedback().catch(() => []) : [], api.shop(),
     want('xs_adminlog') ? api.auditAll() : [], (want('xs_kidlog') || want('xs_kidsum')) ? api.kidEvents() : []]);
   const kidName = Object.fromEntries(kids.map(k => [k.id, k.nickname]));
   const red = want('xs_redeem') ? await api.redemptions(5000) : [];
@@ -1952,13 +2017,13 @@ async function buildExcel(only = null) {
     ['xs_shop', shop.items.map(i => ({ [t('itemName')]: i.name, [t('xc_points')]: i.price, [t('xc_shown')]: i.active ? '✓' : t('hidden') }))],
   ];
   const wb = XLSX.utils.book_new();
-  for (const [k, data] of sheets.filter(([k]) => only ? only.includes(k) : true)) {
+  for (const [k, data] of sheets.filter(([k]) => only.includes(k))) {
     const ws = XLSX.utils.json_to_sheet(data.length ? data : [{ '-': t('none') }]);
     const cols = Object.keys(data[0] || { '-': 1 });
     ws['!cols'] = cols.map(c => ({ wch: Math.min(50, Math.max(c.length + 2, ...data.map(r => String(r[c] ?? '').length + 2))) }));
     XLSX.utils.book_append_sheet(wb, ws, t(k).slice(0, 31));
   }
-  const slug = only?.length === 1 ? (XL_SHEETS.find(s => s[0] === only[0])?.[1] + '-') : '';
+  const slug = only.length === 1 ? (XL_SHEETS.find(s => s[0] === only[0])?.[1] + '-') : '';
   XLSX.writeFile(wb, `youth-alpha-${slug}${bkkToday()}.xlsx`);
 }
 

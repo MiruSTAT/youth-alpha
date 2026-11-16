@@ -45,7 +45,7 @@ export async function superGate(c, role) {
   c.view.innerHTML = `${c.pageHead('👑 ' + c.t('saTitle'), '#/')}<div class="card sa-step"><p class="muted">${c.t('loading')}</p></div>`;
   let r = null;
   try { r = await c.api.superUnlock(); } catch (e) { console.error(e); }
-  if (r?.ok) { c.toast('👑 ' + c.t('saWelcome', c.esc(r.username || ''))); location.hash = '#/admin/super'; return c.render(); }
+  if (r?.ok) { c.toast('👑 ' + c.t('saWelcome', c.esc(r.username || ''))); location.hash = '#/admin'; return c.render(); }
   // the password step is missing or too old: ask for it here, then a new link is sent
   c.view.innerHTML = `${c.pageHead('👑 ' + c.t('saTitle'), '#/')}
     <form id="saf" class="card sa-step"><h2>${c.t('saNeedBoth')}</h2>
@@ -82,56 +82,52 @@ function claimView(c) {
     const b = form.querySelector('button'); b.disabled = true;
     try {
       const r = await c.api.superClaim(u, p);
-      if (r?.ok) { c.toast('👑 ' + c.t('saWelcome', c.esc(r.username))); location.hash = '#/admin/super'; return c.render(); }
+      if (r?.ok) { c.toast('👑 ' + c.t('saWelcome', c.esc(r.username))); location.hash = '#/admin'; return c.render(); }
       c.toast(c.t('saClaim_' + (r?.reason || 'x')));
     } catch (err) { c.fail(err); }
     b.disabled = false;
   };
 }
 
-// ---------- the super admin page
-export async function pSuper(c) {
-  const [info, s] = await Promise.all([c.api.superInfo().catch(() => null), c.api.settings()]);
+// ---------- v32: no separate super admin page any more. The admin panel shows this badge and a "Super admin"
+// group with the pages below (programs, look & layout, admins, online now, details for AI).
+export async function superBadge(c, box) {
+  if (!box) return;
+  const info = await c.api.superInfo().catch(() => null);
   const until = info?.until ? new Date(info.until).toLocaleTimeString(c.getLang() === 'th' ? 'th-TH' : 'en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-  c.view.innerHTML = `${c.pageHead('👑 ' + c.t('saTitle'))}
-    <p class="muted sa-intro">${c.t('saIntro')}</p>
-    <div class="card sa-who"><div class="sa-who-top"><span class="sa-crown">👑</span><span class="grow"><b>${c.esc(info?.username || '')}</b><span class="sub">${c.t('saUntil', until)}</span></span></div>
-      <button class="btn wide" id="saLock">🚪 ${c.t('saOutBtn')}</button>
-      <p class="hint" style="margin-top:8px">${c.t('saOutHint')}</p></div>
-
-    <h2 class="grp">${c.t('saKidsApp')}</h2>
-    <div class="card toggles"><div class="tg-row"><span class="tg-i">📲</span><span class="tg-t"><b>${c.t('installApp')}</b><span>${c.t('saInstallSub')}</span></span>
-      <button class="switch ${s.install_on ? 'on' : ''}" id="swInstall" role="switch" aria-checked="${!!s.install_on}" aria-label="${c.t('installApp')}"><span></span></button></div></div>
-
-    <h2 class="grp">🔑 ${c.t('saLogin')}</h2>
-    <div class="card" id="loginCard"></div>
-
-    <h2 class="grp">📁 ${c.t('progTitle')}</h2>
-    <div class="card"><p class="muted" style="margin:0 0 10px">${c.t('progSub')}</p><div id="progList"></div>
-      <button class="btn primary wide" id="progNew" style="margin-top:12px">➕ ${c.t('progNew')}</button></div>
-
-    <h2 class="grp">🎨 ${c.t('lookTitle')}</h2>
-    <div class="card look-card" id="lookCard"></div>
-
-    <h2 class="grp">🧩 ${c.t('layTitle')}</h2>
-    <div class="card lay-card" id="layCard"></div>
-
-    <h2 class="grp">🤖 ${c.t('saAi')}</h2>
-    <div class="card"><p class="muted" style="margin:0 0 10px">${c.t('saAiSub')}</p>
-      <p id="hoState" class="sa-ho muted">${c.t('loading')}…</p>
-      <div class="sa-btns"><button class="btn primary" id="hoCopy" disabled>📋 ${c.t('saCopy')}</button><button class="btn" id="hoDl" disabled>📥 ${c.t('saDownload')}</button></div></div>
-    <div id="hoBody"></div>
-
-    <h2 class="grp">${c.t('saNext')}</h2>
-    <div class="card"><ul class="sa-next">${['saN6'].map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
-
+  box.innerHTML = `<div class="sa-who-top"><span class="sa-crown">👑</span><span class="grow"><b>${c.t('saBadge')} · ${c.esc(info?.username || '')}</b><span class="sub">${c.t('saUntil', until)}</span></span></div>
+    <p class="hint" style="margin:0 0 10px">${c.t('saBadgeSub')}</p>
+    <button class="btn wide" id="saLock">🚪 ${c.t('saOutBtn')}</button>`;
   // sign out: end the super admin powers on this device AND sign out (next time: password + email link again)
-  c.$('#saLock').onclick = async () => {
+  box.querySelector('#saLock').onclick = async () => {
     if (!(await c.confirmBox(c.t('saOutWarn'), c.t('saOutBtn'), false))) return;
     try { await c.api.superLock(); } catch (e) { console.error(e); }
     try { await c.api.signOut(); } catch (e) { console.error(e); }
     location.hash = '#/admin'; c.render();
   };
+}
+
+// ---------- programs (was a section of the super admin page)
+export async function pPrograms(c) {
+  c.view.innerHTML = `${c.pageHead('📁 ' + c.t('tab_programs'))}
+    <div class="card"><p class="muted" style="margin:0 0 10px">${c.t('progSub')}</p><div id="progList"></div>
+      <button class="btn primary wide" id="progNew" style="margin-top:12px">➕ ${c.t('progNew')}</button></div>`;
+  drawPrograms(c);
+  c.$('#progNew').onclick = () => newProgram(c);
+}
+
+// ---------- this program's look: install switch, settings (v28), layout (v29)
+export async function pLook(c) {
+  const s = await c.api.settings();
+  c.view.innerHTML = `${c.pageHead('🎨 ' + c.t('tab_look'))}
+    <p class="muted sa-intro">${c.t('lookPageSub', c.esc(c.program.name))}</p>
+    <h2 class="grp">${c.t('saKidsApp')}</h2>
+    <div class="card toggles"><div class="tg-row"><span class="tg-i">📲</span><span class="tg-t"><b>${c.t('installApp')}</b><span>${c.t('saInstallSub')}</span></span>
+      <button class="switch ${s.install_on ? 'on' : ''}" id="swInstall" role="switch" aria-checked="${!!s.install_on}" aria-label="${c.t('installApp')}"><span></span></button></div></div>
+    <h2 class="grp">🎨 ${c.t('lookTitle')}</h2>
+    <div class="card look-card" id="lookCard"></div>
+    <h2 class="grp">🧩 ${c.t('layTitle')}</h2>
+    <div class="card lay-card" id="layCard"></div>`;
   c.$('#swInstall').onclick = async (e) => {
     const sw = e.currentTarget, on = !sw.classList.contains('on'); sw.disabled = true;
     try {
@@ -141,14 +137,19 @@ export async function pSuper(c) {
     } catch (err) { c.fail(err); }
     sw.disabled = false;
   };
-
-  drawPrograms(c);
-  c.$('#progNew').onclick = () => newProgram(c);
-  drawLogin(c);
   drawLook(c);
   drawLayout(c);
+}
 
-  // the handoff (HANDOFF.md, published with every release): shown by section, copied as a ready prompt
+// ---------- details for AI: the handoff (HANDOFF.md, published with every release), shown by section, copied as a ready prompt
+export async function pAi(c) {
+  c.view.innerHTML = `${c.pageHead('🤖 ' + c.t('tab_ai'))}
+    <div class="card"><p class="muted" style="margin:0 0 10px">${c.t('saAiSub')}</p>
+      <p id="hoState" class="sa-ho muted">${c.t('loading')}…</p>
+      <div class="sa-btns"><button class="btn primary" id="hoCopy" disabled>📋 ${c.t('saCopy')}</button><button class="btn" id="hoDl" disabled>📥 ${c.t('saDownload')}</button></div></div>
+    <div id="hoBody"></div>
+    <h2 class="grp">${c.t('saNext')}</h2>
+    <div class="card"><ul class="sa-next">${['saN7', 'saN8', 'saN9', 'saN10', 'saN11', 'saN6'].map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
   let md = '';
   try { md = await fetch('HANDOFF.md?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : Promise.reject(new Error('http ' + r.status))); }
   catch (e) { console.error(e); const st = c.$('#hoState'); if (st) st.textContent = c.t('saHoFail'); return; }
@@ -174,6 +175,126 @@ export async function pSuper(c) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([prompt], { type: 'text/markdown' }));
     a.download = `youth-alpha-ai-prompt-v${c.VERSION}.md`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
+}
+
+// ---------- v32 admins: who may open which program and do what (supabase/021_admin_access.sql)
+const permLine = (c, access) => {
+  const parts = Object.entries(access || {}).filter(([, a]) => a?.length).map(([pid, a]) => {
+    const p = c.program.list.find(x => String(x.id) === pid);
+    return `${c.esc(p?.name || '#' + pid)} (${a.length === c.PERMS.length ? c.t('permAll') : a.length + '/' + c.PERMS.length})`;
+  });
+  return parts.join(' · ') || c.t('permNoProg');
+};
+export async function pAdmins(c) {
+  const list = await c.api.adminList();
+  const waiting = list.filter(a => a.pending), team = list.filter(a => !a.pending);
+  const row = (a) => `<a class="li click adm-li ${a.pending || a.active ? '' : 'off'}" href="#/admin/admins/${a.user_id}">
+      <span class="av">${a.pending ? '⏳' : a.active ? '🧑‍💼' : '⛔'}</span>
+      <span class="grow"><b>${c.esc(a.name)}</b><span class="sub">@${c.esc(a.username)}${!a.pending && !a.active ? ' · ' + c.t('admIsOff') : ''}</span>
+        <span class="sub">${a.pending ? c.t('admWaiting') : permLine(c, a.access)}</span></span><span class="muted">${a.pending ? c.t('admApprove') : c.t('edit')} ›</span></a>`;
+  c.view.innerHTML = `${c.pageHead('👥 ' + c.t('tab_admins'))}
+    <p class="muted sa-intro">${c.t('admIntro')}</p>
+    <button class="btn primary wide" id="admNew" style="margin-bottom:12px">➕ ${c.t('admNew')}</button>
+    ${waiting.length ? `<h2 class="grp">⏳ ${c.t('admWaitingGrp', waiting.length)}</h2><div class="card"><div class="list">${waiting.map(row).join('')}</div></div>` : ''}
+    <h2 class="grp">${c.t('admTeam', team.length)}</h2>
+    <div class="card"><div class="list">${team.map(row).join('') || `<p class="muted">${c.t('none')}</p>`}</div></div>
+    <p class="hint" style="margin:8px 4px">${c.t('admSuperNote')}</p>`;
+  c.$('#admNew').onclick = () => newAdmin(c);
+}
+async function newAdmin(c, keep = {}) {
+  const r = await c.modal('➕ ' + c.t('admNew'), `
+    <div class="field"><label>${c.t('username')}</label><input class="input" name="u" required maxlength="30" autocapitalize="none" spellcheck="false" value="${c.esc(keep.u || '')}"><p class="hint">${c.t('memUserHint')}</p></div>
+    <div class="field"><label>${c.t('admName')}</label><input class="input" name="n" maxlength="40" value="${c.esc(keep.n || '')}"></div>
+    <div class="field"><label>${c.t('password')}</label><input class="input" name="p" type="text" required minlength="6" maxlength="72" autocomplete="off" spellcheck="false"><p class="hint">${c.t('admPwHint')}</p></div>
+    <p class="hint">${c.t('admNewHint')}</p>`, { okText: c.t('admCreate') });
+  if (!(r instanceof FormData)) return;
+  const u = String(r.get('u')).trim().toLowerCase(), n = String(r.get('n')).trim(), pw = String(r.get('p'));
+  if (!/^[a-z0-9][a-z0-9._-]{2,29}$/.test(u)) { c.toast(c.t('memUserHint')); return newAdmin(c, { u, n }); }
+  if (pw.length < 6) { c.toast(c.t('admPwHint')); return newAdmin(c, { u, n }); }
+  try {
+    const id = await c.api.adminCreate(u, pw, n);
+    c.toast('✓ ' + c.t('admMade', u));
+    location.hash = '#/admin/admins/' + id;             // next: pick its programs and permissions
+  } catch (e) {
+    if (/duplicate/i.test(String(e?.message || e))) { c.toast(c.t('admDup')); return newAdmin(c, { u, n }); }
+    c.fail(e);
+  }
+}
+export async function pAdminEdit(c, uid) {
+  const list = await c.api.adminList(), a = list.find(x => x.user_id === uid);
+  if (!a) { location.hash = '#/admin/admins'; return; }
+  const progs = c.program.list.filter(p => !p.archived || (a.access?.[String(p.id)] || []).length);
+  const has = (pid, k) => (a.access?.[String(pid)] || []).includes(k);
+  c.view.innerHTML = `${c.pageHead('👥 ' + c.esc(a.name), '#/admin/admins')}
+    <form id="admForm">
+      <div class="card">
+        <p class="muted" style="margin:0 0 8px">@${c.esc(a.username)} · ${c.t('admLast')}: ${c.dTime(a.last_sign_in_at)}</p>
+        ${a.pending ? `<p class="c-leave" style="margin:0 0 10px">⏳ ${c.t('admWaitingSub')}</p>` : ''}
+        <div class="field"><label>${c.t('admName')}</label><input class="input" name="n" maxlength="40" value="${c.esc(a.name || '')}"></div>
+        ${a.pending ? '' : `<div class="tg-row"><span class="tg-i">🔓</span><span class="tg-t"><b>${c.t('admActive')}</b><span>${c.t('admActiveSub')}</span></span>
+          <button type="button" class="switch ${a.active ? 'on' : ''}" id="admOn" role="switch" aria-checked="${!!a.active}" aria-label="${c.t('admActive')}"><span></span></button></div>`}
+      </div>
+      <h2 class="grp">${c.t('admPerms')}</h2>
+      <p class="muted" style="margin:-4px 4px 10px">${c.t('admPermsSub')}</p>
+      ${progs.map(p => `<div class="card perm-card" data-pid="${p.id}">
+        <div class="perm-top"><b>📁 ${c.esc(p.name)}</b><button type="button" class="btn small" data-all="${p.id}">${c.t('permTickAll')}</button></div>
+        <div class="perm-grid">${c.PERMS.map(k => `<label class="chk perm-chk"><input type="checkbox" name="p_${p.id}_${k}" ${has(p.id, k) ? 'checked' : ''}>
+          <span><b>${c.t('perm_' + k)}</b><span class="sub">${c.t('permSub_' + k)}</span></span></label>`).join('')}</div></div>`).join('')}
+      <div class="bottom-bar"><button class="btn primary" type="submit">💾 ${a.pending ? c.t('admApproveSave') : c.t('save')}</button></div>
+    </form>
+    ${a.app_login && !a.pending ? `<h2 class="grp">🔑 ${c.t('admPwTitle')}</h2>
+    <form class="card" id="admPw"><div class="field"><label>${c.t('memNewPw')}</label><input class="input" name="p" type="text" required minlength="6" maxlength="72" autocomplete="off" spellcheck="false">
+      <p class="hint">${c.t('admPwHint')}</p></div><button class="btn wide">${c.t('admPwSet')}</button></form>` : ''}
+    <div style="height:70px"></div>`;
+  const f = c.$('#admForm');
+  let active = a.pending ? true : !!a.active;
+  const sw = c.$('#admOn');
+  if (sw) sw.onclick = () => { active = !active; sw.classList.toggle('on', active); sw.setAttribute('aria-checked', String(active)); };
+  f.querySelectorAll('[data-all]').forEach(b => b.onclick = () => {
+    const boxes = [...f.querySelectorAll(`[name^="p_${b.dataset.all}_"]`)], on = !boxes.every(x => x.checked);
+    boxes.forEach(x => { x.checked = on; });
+  });
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const access = {};
+    progs.forEach(p => { const list = c.PERMS.filter(k => f[`p_${p.id}_${k}`].checked); if (list.length) access[String(p.id)] = list; });
+    const name = f.n.value.trim() || a.username;
+    if (!active && (a.active || a.pending) && !(await c.confirmBox(c.t('admOffWarn', name), c.t('admOff')))) return;
+    if (active && !Object.keys(access).length && !(await c.confirmBox(c.t('admNoProgWarn', name), c.t('save'), false))) return;
+    const btn = f.querySelector('[type=submit]'); btn.disabled = true;
+    try { await c.api.adminSave(a.user_id, name, active, access); c.toast('✓ ' + c.t('saved')); location.hash = '#/admin/admins'; }
+    catch (err) { c.fail(err); btn.disabled = false; }
+  };
+  const pw = c.$('#admPw');
+  if (pw) pw.onsubmit = async (e) => {
+    e.preventDefault();
+    const v = String(pw.p.value);
+    if (v.length < 6) { c.toast(c.t('admPwHint')); return; }
+    try { await c.api.adminPassword(a.user_id, v); pw.reset(); c.toast('✓ ' + c.t('admPwDone', a.username)); } catch (err) { c.fail(err); }
+  };
+}
+
+// ---------- v32 who is online now (admin pages ping about every 45 s; shown for 10 minutes)
+export async function pOnline(c) {
+  c.view.innerHTML = `${c.pageHead('🟢 ' + c.t('tab_online'))}<p class="muted sa-intro">${c.t('onlineIntro')}</p><div class="card"><div class="list" id="onList"><p class="muted">${c.t('loading')}…</p></div></div>
+    <p class="hint" style="margin:8px 4px" id="onAt"></p>`;
+  const seq = c.renderSeq();
+  const ago = (iso) => { const s = Math.max(0, Math.round((Date.now() - new Date(iso)) / 1000)); return s < 60 ? c.t('agoS', s) : c.t('agoM', Math.round(s / 60)); };
+  const draw = async () => {
+    if (seq !== c.renderSeq()) return clearInterval(timer);   // left the page
+    let rows = [];
+    try { rows = await c.api.adminOnline(); } catch (e) { console.error(e); }
+    const box = c.$('#onList'); if (!box) return clearInterval(timer);
+    box.innerHTML = rows.map(r => {
+      const live = Date.now() - new Date(r.seen_at) < 2 * 6e4, p = c.program.list.find(x => x.id === r.program_id);
+      const page = r.page && r.page !== 'home' ? c.t('tab_' + r.page) : c.t('adultMenu');
+      return `<div class="li on-li"><span class="av">${live ? '🟢' : '⚪'}</span><span class="grow"><b>${r.is_super ? '👑 ' : ''}${c.esc(r.name || '?')}</b>
+        <span class="sub">${c.esc(p?.name || '')} · ${c.esc(page)}</span></span><span class="muted">${ago(r.seen_at)}</span></div>`;
+    }).join('') || `<p class="muted">${c.t('onlineNone')}</p>`;
+    c.$('#onAt').textContent = c.t('onlineAuto');
+  };
+  const timer = setInterval(draw, 20000);
+  draw();
 }
 
 // ---------- programs: list with each one's own link, create, rename, archive (never delete)
@@ -232,7 +353,7 @@ async function newProgram(c) {
 
 // ---------- v28 program settings: name on screen, theme pack, font, text size, parts on/off, wording
 // ---------- v31 member login mode of the program this link opens (program_set_login, supabase/020_members.sql)
-async function drawLogin(c) {
+export async function drawLogin(c) {
   const box = c.$('#loginCard'); if (!box) return;
   let cur = c.program.login || 'off';
   const n = await c.api.memberList().then(l => l.length).catch(() => null);
