@@ -133,11 +133,11 @@ function sleighBell(t) {
   s.buffer = buf; s.connect(f).connect(g).connect(bus); s.start(t);
 }
 // brass: two detuned saws through a filter that opens on each note
-function brass(freq, t, dur, vol = 0.16, peak = 3200) {
+function brass(freq, t, dur, vol = 0.16, peak = 3200, thin = false) {     // thin: one oscillator (quiet inner parts)
   const f = ctx.createBiquadFilter(), g = ctx.createGain(), o = out(1, 0.35);
   f.type = 'lowpass'; f.Q.value = 2;
   f.frequency.setValueAtTime(Math.min(500, peak), t); f.frequency.exponentialRampToValueAtTime(peak, t + 0.06); f.frequency.exponentialRampToValueAtTime(Math.max(400, peak * 0.5), t + 0.35);
-  [-7, 7].forEach(c => { const s = ctx.createOscillator(); s.type = 'sawtooth'; s.frequency.value = freq; s.detune.value = c; s.connect(f); s.start(t); s.stop(t + dur + 0.3); });
+  (thin ? [0] : [-7, 7]).forEach(c => { const s = ctx.createOscillator(); s.type = 'sawtooth'; s.frequency.value = freq; s.detune.value = c; s.connect(f); s.start(t); s.stop(t + dur + 0.3); });
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.04);
   g.gain.setValueAtTime(vol * 0.8, t + Math.max(0.05, dur - 0.08)); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.25);
   f.connect(g).connect(o);
@@ -180,13 +180,13 @@ function scheduleJoy() {
     const d = (e.d || 0) * spb;
     if (e.k === 's') {                                            // melody: trumpets
       brass(hz(e.n), t, d, e.v === 3 ? 0.18 : 0.15, 3400);
-      if (e.v === 3) brass(hz(e.n) / 2, t, d, 0.07, 2400);        // last verse: doubled an octave below
+      if (e.v === 3) brass(hz(e.n) / 2, t, d, 0.1, 2400, true);        // last verse: doubled an octave below
       if (e.v === 1 || e.v === 3) bell(hz(e.n), t, d, 0.06);      // verses 2 and 4: bells on top
     } else if (e.k === 'a' || e.k === 't') {                      // inner voices: warm horns
-      brass(hz(e.n), t, d, e.v === 3 ? 0.06 : 0.05, 1500);
+      brass(hz(e.n), t, d, e.v === 3 ? 0.09 : 0.075, 1500, true);
     } else if (e.k === 'b') {                                     // bass line
       bassNote(hz(e.n), t, Math.max(0.2, d * 0.95), e.v === 3 ? 0.26 : 0.22);
-      brass(hz(e.n), t, d, 0.035, 700);
+      brass(hz(e.n), t, d, 0.05, 700, true);
     } else if (e.k === 'timp') {
       timpani(hz(e.n), t);
     } else if (e.k === 'roll') {

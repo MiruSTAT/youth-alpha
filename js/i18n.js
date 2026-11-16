@@ -408,3 +408,25 @@ Object.assign(DICT.en, {
   offlineBar: 'No internet — showing the last saved data', savedOffline: 'Songs are saved on this phone and open with no internet', videoNeedsNet: 'The video needs internet',
   xs_redeem: 'Prizes given', xc_spent: 'Points spent', lt_redeem: 'Prize given',
 });
+
+// ---- update 24: prize zoom, install as an app, change log export
+Object.assign(DICT.th, {
+  pzEnough: (n) => `${n} มีคะแนนพอแลกแล้ว!`, pzNeed: (n) => `สะสมอีก ${n} ⭐ ก็แลกได้`,
+  installApp: 'ติดตั้งเป็นแอป', installSub: 'มีไอคอนบนหน้าจอ เปิดได้แม้ไม่มีเน็ต',
+  insAnd1: 'แตะปุ่ม ⋮ มุมขวาบนของ Chrome', insAnd2: 'เลือก "ติดตั้งแอป" หรือ "เพิ่มลงในหน้าจอหลัก"', insAnd3: 'แตะ "ติดตั้ง"',
+  insAndNote: 'ถ้าไม่เห็นตัวเลือกนี้ ให้เปิดลิงก์ใน Chrome (ไม่ใช่ใน LINE หรือ Facebook)',
+  insIos1: 'แตะปุ่ม แชร์ (สี่เหลี่ยมมีลูกศรขึ้น) ด้านล่างของ Safari', insIos2: 'เลื่อนลงแล้วเลือก "เพิ่มไปยังหน้าจอโฮม"', insIos3: 'แตะ "เพิ่ม"',
+  insIosNote: 'ต้องเปิดใน Safari (ไม่ใช่ใน LINE หรือ Facebook)',
+  ev_prize_zoom: 'ดูของรางวัลแบบขยาย', ev_install: 'ติดตั้งเป็นแอป',
+  clogExport: 'ส่งออกรายการเปลี่ยนแปลงเป็น Excel', verThis: 'ตอนนี้', verThis: 'ตอนนี้', clogSheet: 'สิ่งที่เปลี่ยน', clogUpd: 'อัปเดต', clogVer: 'เวอร์ชัน', clogArea: 'ส่วน', clogItem: 'สิ่งที่เปลี่ยน', clogDate: 'วันที่',
+});
+Object.assign(DICT.en, {
+  pzEnough: (n) => `${n} has enough points for this!`, pzNeed: (n) => `Collect ${n} more ⭐ to get it`,
+  installApp: 'Install as an app', installSub: 'An icon on your home screen; works without internet',
+  insAnd1: 'Tap ⋮ at the top right of Chrome', insAnd2: 'Choose "Install app" or "Add to Home screen"', insAnd3: 'Tap "Install"',
+  insAndNote: "If you don't see it, open the link in Chrome (not inside LINE or Facebook)",
+  insIos1: 'Tap Share (the square with an up arrow) at the bottom of Safari', insIos2: 'Scroll down and choose "Add to Home Screen"', insIos3: 'Tap "Add"',
+  insIosNote: 'It has to be opened in Safari (not inside LINE or Facebook)',
+  ev_prize_zoom: 'Viewed a prize up close', ev_install: 'Installed as an app',
+  clogExport: 'Export the change log to Excel', verThis: 'now', verThis: 'now', clogSheet: 'Changes', clogUpd: 'Update', clogVer: 'Version', clogArea: 'Area', clogItem: 'Change', clogDate: 'Date',
+});

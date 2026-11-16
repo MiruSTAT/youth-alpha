@@ -6,21 +6,24 @@ const recolor = () => { color = getComputedStyle(document.body).getPropertyValue
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function size() {
-  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const dpr = Math.min(devicePixelRatio || 1, 1.5);
   w = innerWidth; h = innerHeight;
   c.width = w * dpr; c.height = h * dpr; c.style.width = w + 'px'; c.style.height = h + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const n = Math.round(Math.min(70, (w * h) / 9000));
   flakes = Array.from({ length: n }, () => ({ x: Math.random() * w, y: Math.random() * h, r: 1 + Math.random() * 2.2, v: 0.3 + Math.random() * 0.8, s: Math.random() * 6 }));
 }
+let lastDraw = 0;
 function draw(t) {
   if (!on) return;
   raf = requestAnimationFrame(draw);
+  if (t - lastDraw < 30) return;                    // ~30 pictures a second is plenty for falling snow
+  const k = Math.min(3, (t - lastDraw) / 16.7); lastDraw = t;
   if (w !== innerWidth || h !== innerHeight) size();
   ctx.clearRect(0, 0, w, h);
   ctx.fillStyle = color;
   for (const f of flakes) {
-    f.y += f.v; f.x += Math.sin(t / 1400 + f.s) * 0.3;
+    f.y += f.v * k; f.x += Math.sin(t / 1400 + f.s) * 0.3 * k;
     if (f.y > h + 4) { f.y = -4; f.x = Math.random() * w; }
     ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2); ctx.fill();
   }

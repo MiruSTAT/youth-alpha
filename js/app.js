@@ -1,12 +1,12 @@
-import { t, getLang, setLang } from './i18n.js?v=23';
-import { api, MODE, ranked, today, bkkToday, cached, net } from './data.js?v=23';
-import { VERSION, CHANGELOG } from './version.js?v=23';
-import { music } from './music.js?v=23';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=23';
-import { snow } from './snow.js?v=23';
-import { track } from './track.js?v=23';
-import { metro } from './metronome.js?v=23';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=23';
+import { t, getLang, setLang } from './i18n.js?v=24';
+import { api, MODE, ranked, today, bkkToday, cached, net } from './data.js?v=24';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=24';
+import { music } from './music.js?v=24';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=24';
+import { snow } from './snow.js?v=24';
+import { track } from './track.js?v=24';
+import { metro } from './metronome.js?v=24';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=24';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -107,7 +107,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=23');
+    const m = await import('./scene3d.js?v=24');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -235,14 +235,34 @@ async function kidMenu() {
       <button class="mrow" data-m="bible"><span class="mi">📖</span><span class="mt"><b>${t('bible')}</b><span>${t('bibleSub')}</span></span><span class="mv">›</span></button>
       <button class="mrow" data-m="credits"><span class="mi">🎵</span><span class="mt"><b>${t('songCredits')}</b><span>${t('songCreditsSub')}</span></span><span class="mv">›</span></button>
       <button class="mrow" data-m="lang"><span class="mi">🌐</span><span class="mt"><b>${t('language')}</b></span><span class="mv">${t('langName')}</span></button>
+      ${ev.install_on && !installed() ? `<button class="mrow" data-m="install"><span class="mi">📲</span><span class="mt"><b>${t('installApp')}</b><span>${t('installSub')}</span></span><span class="mv">›</span></button>` : ''}
       <button class="mrow" data-m="help"><span class="mi">❓</span><span class="mt"><b>${t('help')}</b><span>${t('helpSub')}</span></span><span class="mv">›</span></button>
       <a class="mrow quiet" href="#/admin"><span class="mi">🔒</span><span class="mt"><b>${t('adults')}</b><span>${t('adminSub')}</span></span><span class="mv">›</span></a>
     </div></section>`;
   const act = {
-    fb: () => openFeedback(), bible: openBible, credits: songCredits, help: () => { track('help_open'); showTour(TOUR); },
+    fb: () => openFeedback(), bible: openBible, install: installApp, credits: songCredits, help: () => { track('help_open'); showTour(TOUR); },
     lang: () => { setLang(getLang() === 'th' ? 'en' : 'th'); track('lang', getLang()); paintChrome(); kidMenu(); },
   };
   view.querySelectorAll('[data-m]').forEach(b => b.onclick = () => act[b.dataset.m]());
+}
+
+// ---- install as an app (Chrome on Android: real install; iPhone: Add to Home Screen steps).
+// Shown only when the super admin switches it on (settings.install_on, off by default).
+let installEv = null;
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEv = e; });
+window.addEventListener('appinstalled', () => { installEv = null; track('install', 'installed'); });
+const installed = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+async function installApp() {
+  if (installEv) {
+    const ev = installEv; installEv = null;
+    try { ev.prompt(); const { outcome } = await ev.userChoice; track('install', outcome); } catch { track('install', 'error'); }
+    return;
+  }
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  track('install', ios ? 'ios steps' : 'steps');
+  kidSheet(`<div class="panel-head"><h2>📲 ${t('installApp')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
+    <ol class="steps">${(ios ? [t('insIos1'), t('insIos2'), t('insIos3')] : [t('insAnd1'), t('insAnd2'), t('insAnd3')]).map(x => `<li>${x}</li>`).join('')}</ol>
+    <p class="muted-k">${t(ios ? 'insIosNote' : 'insAndNote')}</p>`);
 }
 
 // colour themes: the 🎨 button on the top bar
@@ -326,7 +346,23 @@ async function kidShop() {
     track('shop_tap', it?.name);
     b.classList.remove('popping'); void b.offsetWidth; b.classList.add('popping');
     burst(b.querySelector('.art'), it.icon === 'chipbag' ? 'chips' : '✨', 12); music.ding();
+    setTimeout(() => zoomPrize(it, me), 380);                   // then show it big (small pictures are hard to see)
   });
+}
+// a prize, big: the picture, its name and price, and how many points this kid can still spend
+function zoomPrize(it, me) {
+  track('prize_zoom', it.name);
+  const box = document.createElement('div');
+  box.className = 'lightbox prize-zoom'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true');
+  const left = me ? bal(me) - it.price : null;
+  box.innerHTML = `<div class="lb-inner pz">${art(it.icon, 'pz-art')}
+    <p class="pz-name">${esc(it.name)}</p><p class="pz-price">${it.price} ⭐</p>
+    ${me ? `<p class="pz-me">${left >= 0 ? t('pzEnough', esc(me.nickname)) : t('pzNeed', -left)}</p>` : ''}</div>
+    <button class="lb-x" aria-label="${t('close')}">✕</button>`;
+  const close = () => { box.remove(); document.removeEventListener('keydown', key); };
+  const key = (e) => { if (e.key === 'Escape') close(); };
+  box.onclick = close; document.addEventListener('keydown', key);
+  document.body.appendChild(box);
 }
 
 // =============================================================== SONGS
@@ -780,9 +816,9 @@ function startFestive() {
   const box = document.createElement('div'); box.className = 'cutscene';
   const things = ['🎁', '🎁', '🎁', '🎀', '⭐', '✨', '🎁', '🍬', '🧸', '🎄'];
   box.innerHTML = `<div class="flash" style="--x:${cx}px;--y:${cy}px"></div><div class="joy-title">✨ ${t('joyTitle')} ✨</div>` +
-    Array.from({ length: 32 }, (_, i) => {
+    Array.from({ length: 20 }, (_, i) => {
       const a = Math.random() * Math.PI * 2, d = 0.45 + Math.random() * 0.75, dx = Math.cos(a) * innerWidth * d, dy = Math.sin(a) * innerHeight * d * 0.9;
-      return `<span class="gift" style="left:${cx}px;top:${cy}px;--dx:${dx.toFixed(0)}px;--dy:${dy.toFixed(0)}px;--r:${(Math.random() * 720 - 360).toFixed(0)}deg;--s:${(0.8 + Math.random() * 0.9).toFixed(2)};animation-delay:${(i * 22)}ms">${things[i % things.length]}</span>`;
+      return `<span class="gift" style="left:${cx}px;top:${cy}px;--dx:${dx.toFixed(0)}px;--dy:${dy.toFixed(0)}px;--r:${(Math.random() * 720 - 360).toFixed(0)}deg;--s:${(0.8 + Math.random() * 0.9).toFixed(2)};animation-delay:${(i * 34)}ms">${things[i % things.length]}</span>`;
     }).join('');
   document.body.appendChild(box);
   setTimeout(() => document.body.classList.add('festive'), 1400);
@@ -1287,16 +1323,33 @@ async function pWeekly() {
 
 // ---------------- Version and what changed (for admins)
 async function pAbout() {
-  const th = getLang() === 'th';
+  const th = getLang() === 'th', L = th ? 0 : 1;
   const dLong = (d) => new Date(d + 'T00:00:00').toLocaleDateString(th ? 'th-TH' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  const span = (u) => { const vs = u.versions.map(x => Number(x.v)); return `${t('clogVer')} ${Math.min(...vs)}${vs.length > 1 ? '–' + Math.max(...vs) : ''}`; };
+  const dates = (u) => { const a = u.versions[u.versions.length - 1].date, b = u.versions[0].date; return dLong(a) + (a !== b ? ' – ' + dLong(b) : ''); };
   view.innerHTML = `${pageHead(t('tab_about'))}
     <div class="card ver-card"><div class="ver-now"><span>${t('verUsing')}</span><b>${esc(VERSION)}</b></div>
       <p id="verState" class="muted">${t('verChecking')}…</p>
       <button class="btn primary wide" id="verUpd" hidden>🔄 ${t('verUpdate')}</button></div>
+    <button class="btn wide" id="clogXl" style="margin-bottom:6px">📥 ${t('clogExport')}</button>
     <h2 class="grp">${t('clogTitle')}</h2>
-    ${CHANGELOG.map(c => `<div class="card clog ${c.v === VERSION ? 'now' : ''}"><div class="clog-h"><b>${t('verN', c.v)}</b><span class="muted">${dLong(c.date)}</span></div>
-      <ul>${(th ? c.th : c.en).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}`;
+    ${UPDATES.map((u, ui) => `<details class="card upd" ${ui === 0 ? 'open' : ''}><summary><span class="ut"><b>${esc(th ? u.th : u.en)}</b><span class="muted">${span(u)} · ${dates(u)}</span></span><span class="chev">›</span></summary>
+      ${u.versions.map(c => `<div class="clog ${c.v === VERSION ? 'now' : ''}"><div class="clog-h"><b>${t('verN', c.v)}${c.v === VERSION ? ` <span class="now-tag">${t('verThis')}</span>` : ''}</b><span class="muted">${dLong(c.date)}</span></div>
+        <ul>${c.items.map(x => `<li><span class="area a-${x.a}">${esc(AREAS[x.a]?.[L] || x.a)}</span>${esc(th ? x.th : x.en)}</li>`).join('')}</ul></div>`).join('')}</details>`).join('')}`;
   $('#verUpd').onclick = async () => { try { await (await navigator.serviceWorker?.getRegistration())?.update(); } catch {} location.reload(); };
+  $('#clogXl').onclick = async (e) => {
+    const b = e.currentTarget; b.disabled = true;
+    try {
+      const XLSX = await loadXLSX(), wb = XLSX.utils.book_new();
+      const rows = CHANGELOG.flatMap(c => c.items.map(x => ({ [t('clogUpd')]: th ? c.update.th : c.update.en, [t('clogVer')]: Number(c.v), [t('clogDate')]: c.date,
+        [t('clogArea')]: AREAS[x.a]?.[L] || x.a, [t('clogItem')]: th ? x.th : x.en, ...(th ? { English: x.en } : {}), Commit: c.commit || '' })));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      ws['!cols'] = [{ wch: 34 }, { wch: 9 }, { wch: 12 }, { wch: 13 }, { wch: 90 }, ...(th ? [{ wch: 90 }] : []), { wch: 18 }];
+      XLSX.utils.book_append_sheet(wb, ws, t('clogSheet').slice(0, 31));
+      XLSX.writeFile(wb, `youth-alpha-changelog-v${VERSION}.xlsx`);
+    } catch (err) { fail(err); }
+    b.disabled = false;
+  };
   const st = $('#verState');
   try {
     const txt = await fetch('js/version.js?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : Promise.reject(new Error('http')));
@@ -1415,7 +1468,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=23');
+      const { readSheet } = await import('./ocr.js?v=24');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1732,7 +1785,7 @@ function describeLog(e, kidName) {
   return { item, changes, op: t('op_' + e.op) || e.op, area: t(TBL[e.table_name] || '') || e.table_name };
 }
 const EVT_TH = ['open_app', 'view', 'tap_kid', 'tap_my_card', 'set_me', 'not_me', 'cat_info', 'shop_tap', 'bible_open', 'bible_link', 'theme_open', 'theme', 'lang', 'music', 'help_open', 'tour_next', 'tour_skip', 'tour_done', 'fb_pill', 'fb_open', 'fb_send', 'tree_tap',
-  'songs', 'song_open', 'metro', 'autoscroll', 'song_speed', 'transpose', 'yt_play', 'sheet_view', 'credits', 'santa_tap', 'festive', 'pic_view', 'fb_qr', 'song_lang'];
+  'songs', 'song_open', 'metro', 'autoscroll', 'song_speed', 'transpose', 'yt_play', 'sheet_view', 'credits', 'santa_tap', 'festive', 'pic_view', 'fb_qr', 'song_lang', 'prize_zoom', 'install'];
 const evName = (e) => EVT_TH.includes(e) ? t('ev_' + e) : e;
 
 async function pExport() {

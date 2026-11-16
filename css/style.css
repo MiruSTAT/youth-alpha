@@ -51,7 +51,7 @@ body.no-webgl #scene { display: none; }
 .topbar {
   position: sticky; top: 0; z-index: 10; height: 60px; padding: 0 16px; padding-top: env(safe-area-inset-top);
   display: flex; align-items: center; justify-content: space-between;
-  background: var(--topbar); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  background: var(--topbar);
 }
 .brand { display: flex; align-items: center; gap: 8px; color: var(--k-text); text-decoration: none; font-weight: 700; font-size: 1.05rem; }
 .top-actions { display: flex; gap: 8px; }
@@ -678,8 +678,8 @@ textarea.input { height: auto; padding: 12px; }
 
 /* ---------------- special mode (5 taps on the tree) */
 .cutscene { position: fixed; inset: 0; z-index: 35; pointer-events: none; overflow: hidden; }
-.cutscene .flash { position: absolute; inset: 0; background: radial-gradient(circle at var(--x) var(--y), rgba(255, 236, 160, .95), rgba(255, 200, 60, .45) 25%, transparent 60%); animation: flash 1.6s ease-out forwards; }
-.cutscene .gift { position: absolute; font-size: calc(34px * var(--s)); transform: translate(-50%, -50%); animation: giftFly 2.6s cubic-bezier(.12, .8, .3, 1) both; }
+.cutscene .flash { will-change: opacity; position: absolute; inset: 0; background: radial-gradient(circle at var(--x) var(--y), rgba(255, 236, 160, .95), rgba(255, 200, 60, .45) 25%, transparent 60%); animation: flash 1.6s ease-out forwards; }
+.cutscene .gift { will-change: transform, opacity; position: absolute; font-size: calc(34px * var(--s)); transform: translate(-50%, -50%); animation: giftFly 2.6s cubic-bezier(.12, .8, .3, 1) both; }
 .cutscene .joy-title { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%); white-space: nowrap; font-size: clamp(1.6rem, 8vw, 3rem); font-weight: 700;
   color: #fff6cc; text-shadow: 0 0 18px rgba(255, 190, 40, .95), 0 3px 0 #b8860b; animation: joyIn 3.6s ease forwards; }
 @keyframes flash { 0% { opacity: 0; } 12% { opacity: 1; } 100% { opacity: 0; } }
@@ -688,14 +688,14 @@ textarea.input { height: auto; padding: 12px; }
 @keyframes joyIn { 0%, 20% { opacity: 0; transform: translate(-50%, -50%) scale(.6); } 34% { opacity: 1; transform: translate(-50%, -50%) scale(1.08); }
   42%, 78% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -60%) scale(1); } }
 
-/* glow = a fixed golden shadow that only fades in and out (cheap for phones: no repainting) */
-body.festive:not(.adult) :is(.rank-row, .my-card, .mrow, .song-card, .kbtn, .icon-btn, .dk, .sheet) { position: relative; }
-body.festive:not(.adult) :is(.rank-row, .my-card, .mrow, .song-card, .kbtn, .icon-btn, .dk, .sheet)::after {
+/* glow: a steady golden ring on everything (drawn once, costs nothing while it stays),
+   and only ONE pulsing layer (the kid's own card). Thirty pulsing layers made phones lag. */
+body.festive:not(.adult) :is(.rank-row, .mrow, .song-card, .kbtn, .icon-btn, .dk, .sheet) { box-shadow: 0 0 0 2px rgba(255, 205, 60, .9), 0 0 12px 1px rgba(255, 180, 40, .45); }
+body.festive:not(.adult) .my-card { position: relative; }
+body.festive:not(.adult) .my-card::after {
   content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
   box-shadow: 0 0 0 2px rgba(255, 205, 60, .95), 0 0 18px 2px rgba(255, 180, 40, .65);
   animation: festiveGlow 2.4s ease-in-out infinite; will-change: opacity; }
-body.festive:not(.adult) :is(.rank-row, .mrow, .song-card):nth-child(3n+2)::after { animation-delay: -.8s; }
-body.festive:not(.adult) :is(.rank-row, .mrow, .song-card):nth-child(3n)::after { animation-delay: -1.6s; }
 body.festive:not(.adult) .kid-nav { box-shadow: 0 -4px 22px rgba(255, 190, 40, .55); }
 body.festive:not(.adult) .brand-tree { display: inline-block; animation: wiggle 1.2s infinite; }
 @keyframes festiveGlow { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
@@ -796,3 +796,29 @@ body[data-theme="snow"] .verse b { color: var(--dark-ink); }
 .clog ul { margin: 8px 0 0; padding-left: 22px; }
 .clog li { margin: 4px 0; line-height: 1.55; font-size: 1rem; }
 .clog.now { border-color: var(--primary); }
+
+/* ---- update 24: prize zoom, install steps */
+.prize-zoom .pz { background: #fff; color: var(--dark-ink); border-radius: 24px; padding: 26px 26px 20px; width: min(86vw, 380px); box-shadow: 0 14px 50px rgba(0, 0, 0, .45); animation: popout .45s cubic-bezier(.2, 1.4, .4, 1); }
+.prize-zoom .pz-art { display: block; font-size: min(46vw, 190px); line-height: 1.1; }
+.prize-zoom .pz-art.art-img img { width: min(70vw, 300px); height: min(70vw, 300px); max-height: none; object-fit: contain; border-radius: 16px; box-shadow: none; background: #fff; }
+.prize-zoom .pz-art.art-svg svg { width: min(46vw, 180px); height: auto; display: block; margin: 0 auto; }
+.prize-zoom .pz-name { margin: 14px 0 0; font-size: 1.5rem; font-weight: 700; overflow-wrap: anywhere; }
+.prize-zoom .pz-price { margin: 4px 0 0; font-size: 2rem; font-weight: 700; color: #d99a00; }
+.prize-zoom .pz-me { margin: 10px 0 0; font-size: 1.05rem; color: #5a6a8f; }
+.steps { margin: 0 0 14px; padding-left: 24px; font-size: 1.1rem; line-height: 1.7; }
+.steps li { margin: 6px 0; }
+.upd { padding: 0; }
+.upd > summary { list-style: none; display: flex; align-items: center; gap: 10px; padding: 14px 16px; cursor: pointer; }
+.upd > summary::-webkit-details-marker { display: none; }
+.upd .ut { flex: 1; min-width: 0; }
+.upd .ut b { display: block; font-size: 1.1rem; }
+.upd .chev { transition: transform .2s; color: var(--ink-2); font-size: 1.3rem; }
+.upd[open] .chev { transform: rotate(90deg); }
+.upd .clog { padding: 12px 16px; border-top: 1px solid var(--line); }
+.upd .clog.now { background: #f3f6fd; }
+.now-tag { font-size: .78rem; font-weight: 700; color: #fff; background: var(--primary); border-radius: 999px; padding: 1px 8px; margin-left: 4px; vertical-align: 2px; }
+.clog li { list-style: none; position: relative; }
+.clog ul { padding-left: 0; }
+.area { display: inline-block; font-size: .76rem; font-weight: 700; padding: 1px 8px; border-radius: 6px; margin-right: 6px; vertical-align: 1px; background: #eef1f7; color: var(--ink-2); }
+.area.a-kids { background: #e7f6ee; color: #1f7a45; } .area.a-admin { background: #e8eefc; color: #2c4591; } .area.a-songs { background: #f4ecfb; color: #7a3fae; }
+.area.a-speed { background: #fff3dc; color: #9a6a00; } .area.a-safety { background: #fde9ec; color: #b42a3d; }

@@ -2,7 +2,7 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js';
 
 let renderer, scene, camera, tree, star, snow, gifts = [], ornaments = [], sparks = null, sparkPos, sparkCol, sparkVel, sparkLife, sparkNext = 0;
-let running = false, raf = 0, spinVel = 0.004, dragging = false, lastX = 0, litCount = 0;
+let running = false, want = false, covered = false, quality = 0, qAcc = 0, qN = 0, qWarm = 0, skipFrame = false, raf = 0, spinVel = 0.004, dragging = false, lastX = 0, litCount = 0;
 let festive = false, flash = 0, camKick = 0, baseZ = 11, party = [], partyLight = null;
 let canvas;
 const clock = new THREE.Clock();
@@ -76,7 +76,7 @@ export function initScene(el) {
     g.userData.baseY = s / 2; g.userData.phase = i * 1.3;
     gifts.push(g); scene.add(g);
   });
-  for (let i = 0; i < 26; i++) { const g = makeGift(i, 0.32 + Math.random() * 0.3); g.visible = false; party.push(g); scene.add(g); }
+  for (let i = 0; i < 18; i++) { const g = makeGift(i, 0.32 + Math.random() * 0.3); g.visible = false; party.push(g); scene.add(g); }
   // light for the special mode: always there (switched off), so turning it on does not rebuild the shaders
   partyLight = new THREE.PointLight(0xffffff, 0, 14); partyLight.position.set(0, 6, 3); scene.add(partyLight);
   // sparkles: one reusable particle cloud
@@ -108,7 +108,13 @@ export function initScene(el) {
   window.addEventListener('resize', resize);
   window.visualViewport?.addEventListener('resize', resize);
   if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas);
-  document.addEventListener('visibilitychange', () => document.hidden ? stop() : start());
+  document.addEventListener('visibilitychange', () => document.hidden ? pause() : resume());
+  // the page scrolls over the tree: once the tree is fully covered there is nothing to draw
+  window.addEventListener('scroll', () => {
+    const c = window.scrollY > canvas.clientHeight * 0.92;
+    if (c === covered) return;
+    covered = c; covered ? pause() : resume();
+  }, { passive: true });
   resize();
   return true;
 }
@@ -150,7 +156,17 @@ function tick() {
   if (!running) return;
   raf = requestAnimationFrame(tick);
   if (canvas.clientWidth !== lastW || canvas.clientHeight !== lastH) resize();
-  const dt = Math.min(clock.getDelta(), 0.05), time = clock.elapsedTime;
+  if (quality >= 2 && (skipFrame = !skipFrame)) return;            // slow phone: draw every second frame
+  const raw = clock.getDelta(), dt = Math.min(raw, quality >= 2 ? 0.1 : 0.05), time = clock.elapsedTime;
+  // watch the speed for a moment; if the phone cannot keep up, lower the detail one step
+  if (qWarm < 40) qWarm++;
+  else if (quality < 2) {
+    qAcc += Math.min(raw, 0.2) / (quality >= 2 ? 2 : 1); qN++;
+    if (qN >= 90) {
+      if (qAcc / qN > 0.036) { quality++; if (quality === 1) { renderer.setPixelRatio(1); lastW = 0; } }
+      qAcc = 0; qN = 0;
+    }
+  }
   if (!dragging) { spinVel += (0.004 - spinVel) * 0.03; tree.rotation.y += spinVel; }
   star.rotation.y = time * 1.5;
   star.material.emissiveIntensity = 1 + Math.sin(time * 3) * 0.4 + flash * 5;
@@ -193,8 +209,11 @@ function tick() {
   renderer.render(scene, camera);
 }
 
-export function start() { if (!renderer || running || document.hidden) return; running = true; clock.getDelta(); tick(); }
-export function stop() { running = false; cancelAnimationFrame(raf); }
+function resume() { if (!renderer || running || !want || covered || document.hidden) return; running = true; clock.getDelta(); qWarm = 0; qAcc = 0; qN = 0; tick(); }
+function pause() { running = false; cancelAnimationFrame(raf); }
+export function start() { want = true; covered = window.scrollY > (canvas?.clientHeight || 1e9) * 0.92; resume(); }
+export function stop() { want = false; pause(); }
+export const info = () => ({ running, covered, quality });
 export function refresh() { resize(); }
 
 // ------------------------------------------------------------- special mode (5 quick taps on the tree)
