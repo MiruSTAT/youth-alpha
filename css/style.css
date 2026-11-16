@@ -888,9 +888,18 @@ body.off-tree #scene, body.off-music #musicBtn { display: none; }
 .look-card .look-words .lw span { font-size: .85rem; opacity: .75; overflow-wrap: anywhere; }
 .look-card .look-sample { padding: 10px 14px; border-radius: 12px; border: 1px dashed currentColor; opacity: .85; margin: 6px 0 10px; }
 @media (max-width: 460px) { .look-card .look-row { grid-template-columns: 1fr; } .look-card .look-words .lw { grid-template-columns: 1fr 1fr; } .look-card .look-words .lw span { grid-column: 1 / -1; } }
-body.off-tree:not(.adult):not(.song-page)::before { content: var(--look-emoji); position: fixed; top: 15vh; left: 0; right: 0; text-align: center; font-size: 5.5rem; pointer-events: none; animation: lookBob 4s ease-in-out infinite; }
+body.off-tree:not(.adult):not(.song-page)::before { content: var(--look-emoji); position: fixed; top: 15vh; left: 0; right: 0; text-align: center; font-size: calc(5.5rem * var(--logo-size, 1)); pointer-events: none; animation: lookBob 4s ease-in-out infinite; }
 @keyframes lookBob { 50% { transform: translateY(-8px); } }
 @media (prefers-reduced-motion: reduce) { body.off-tree::before { animation: none; } }
+/* v34: program logo as a picture (look.logo), with a size slider (--logo-size) */
+body.logo-img.off-tree:not(.adult):not(.song-page)::before { height: calc(7rem * var(--logo-size, 1)); background: var(--look-img) center / contain no-repeat; }
+.brand-tree img { height: calc(1.6em * min(var(--logo-size, 1), 1.4)); width: auto; max-width: 30vw; vertical-align: middle; border-radius: 6px; object-fit: contain; }
+body[data-mode="normal"].logo-img .brand-tree { display: inline-block; }
+.logo-pv { display: flex; align-items: center; justify-content: center; min-height: 96px; border-radius: 12px; border: 1px dashed currentColor; margin: 6px 0 10px; overflow: hidden; }
+.logo-pv img { height: calc(64px * var(--s, 1)); width: auto; max-width: 90%; object-fit: contain; }
+.logo-pv span { font-size: calc(48px * var(--s, 1)); line-height: 1; }
+.look-parts { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin: 6px 0 10px; }
+.look-parts label { display: grid; gap: 4px; font-weight: 400; }
 
 /* ---- update 29: layout editor */
 .kid-nav a.lay-hide { display: none !important; }
@@ -900,7 +909,7 @@ body.off-tree:not(.adult):not(.song-page)::before { content: var(--look-emoji); 
 .lay-item { display: flex; align-items: center; gap: 8px; padding: 8px 8px; border-radius: 12px; background: var(--a-soft, rgba(0,0,0,.04)); border: 1px solid transparent; user-select: none; }
 .lay-item.off { opacity: .45; }
 .lay-item.dragging { border-color: currentColor; box-shadow: 0 6px 18px rgba(0,0,0,.18); position: relative; z-index: 2; }
-.lay-item .lh { cursor: grab; font-size: 1.3rem; padding: 2px 6px; touch-action: none; }
+.lay-item .lh { cursor: grab; font-size: 1.5rem; padding: 4px 10px; touch-action: none; }
 .lay-item .ll { flex: 1; min-width: 0; }
 .lay-item button { min-width: 36px; min-height: 36px; border-radius: 10px; border: 0; background: transparent; font-size: 1rem; cursor: pointer; color: inherit; }
 .lay-item button:disabled { opacity: .25; cursor: default; }
@@ -914,7 +923,7 @@ body.off-tree:not(.adult):not(.song-page)::before { content: var(--look-emoji); 
 @media (max-width: 520px) { .lay-card .lay-wrap { grid-template-columns: 1fr; } .lay-phone { position: static; max-width: 190px; margin: 0 auto; order: -1; } }
 
 /* ---- update 30: Easter pack */
-body[data-pack="easter"] { --flake: rgba(255, 170, 205, .8); }
+body[data-fall="petals"] { --flake: rgba(255, 170, 205, .8); }
 .egg-hunt { position: fixed; inset: 0; z-index: 34; pointer-events: none; transition: opacity .8s; }
 .egg-hunt.done { opacity: 0; }
 .egg-hunt .egg { pointer-events: auto; position: absolute; width: 34px; height: 44px; border: 0; padding: 0; border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%;
@@ -1028,3 +1037,4 @@ body[data-mode="normal"] .sheet:not(.song-sheet) { margin-top: 16px; min-height:
 }
 @media (min-width: 1440px) { body.adult.has-side .menu.grouped { grid-template-columns: 1fr 1fr 1fr; }
   body.adult.has-side .menu.grouped > a:nth-child(odd) { border-right: 0; } body.adult.has-side .menu.grouped > a:not(:nth-child(3n)) { border-right: 1px solid var(--line); } }
+.look-card [hidden] { display: none !important; }

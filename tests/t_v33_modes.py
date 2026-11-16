@@ -69,7 +69,7 @@ with sync_playwright() as p:
     pg.click('#adminSide [data-k="look"]'); pg.wait_for_timeout(1300)
     check(pg.locator('#lookForm [name=mode]').count() == 1, 'Look page has the app style (mode) choice')
     pg.select_option('#lookForm [name=mode]', 'normal')
-    check(not any(pg.is_checked(f'#lookForm [name=f_{k}]') for k in ['tree', 'snow', 'santa', 'festive', 'music']), 'choosing Normal mode switches the playful parts off')
+    check(all(pg.input_value(f'#lookForm [name=p_{k}]') == 'off' for k in ['scene', 'fall', 'friend', 'special', 'music']), 'choosing Normal mode switches the playful parts off')
     pg.click('#lookForm [type=submit]'); pg.wait_for_timeout(800)
     check(dbnow(pg)['programs'][0]['look'].get('mode') == 'normal', 'Normal mode saved in programs.look.mode')
     check(mode(pg) == 'normal', 'Normal mode applied at once')

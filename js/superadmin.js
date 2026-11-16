@@ -384,14 +384,23 @@ function drawLook(c) {
   const box = c.$('#lookCard'); if (!box) return;
   const L = JSON.parse(JSON.stringify(c.program.look || {})), K = c.LOOK, off = L.off || {}, words = L.words || {};
   const opt = (v, cur, label) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${label}</option>`;
+  // v34: playful parts are choices (look.parts); the plain on/off switches are only the pages
+  const PK = Object.keys(K.PARTS), oldKeys = PK.map(k => K.PARTS[k].old), pageFeats = K.FEATS.filter(([k]) => !oldKeys.includes(k));
+  const lg = c.logoOf(L), logo = { type: lg.img ? 'image' : 'emoji', url: L.logo?.url || '', size: lg.size };
   box.innerHTML = `<p class="muted" style="margin:0 0 6px">${c.t('lookSub', c.esc(c.program.name))}</p>
     <form id="lookForm">
       <label>${c.t('lookMode')}<select class="input" name="mode">${opt('kids', L.mode === 'normal' ? 'normal' : 'kids', c.t('mode_kids'))}${opt('normal', L.mode === 'normal' ? 'normal' : 'kids', c.t('mode_normal'))}</select></label>
       <p class="hint" style="margin:-4px 0 10px">${c.t('lookModeHint')}</p>
       <div class="look-row">
         <label>${c.t('lookName')}<input class="input" name="title" maxlength="30" value="${c.esc(L.title || '')}" placeholder="Youth Alpha"></label>
-        <label>${c.t('lookEmoji')}<input class="input" name="emoji" maxlength="8" value="${c.esc(L.emoji || '')}" placeholder="${(K.PACKS[L.pack] || K.PACKS.christmas).emoji}"></label>
+        <label>${c.t('lookLogo')}<select class="input" name="logoType">${opt('emoji', logo.type, c.t('logo_emoji'))}${opt('image', logo.type, c.t('logo_image'))}</select></label>
       </div>
+      <label data-lg="emoji">${c.t('lookEmoji')}<input class="input" name="emoji" maxlength="8" value="${c.esc(L.emoji || '')}" placeholder="${(K.PACKS[L.pack] || K.PACKS.christmas).emoji}"></label>
+      <div data-lg="image"><button type="button" class="btn" id="logoPick"></button><input type="file" accept="image/*" id="logoFile" hidden>
+        <p class="hint" style="margin:4px 0 6px">${c.t('lookLogoHint')}</p></div>
+      <label>${c.t('lookLogoSize')} <span id="logoSizeV"></span>
+        <input type="range" name="logoSize" min="0.6" max="2" step="0.1" value="${logo.size}"></label>
+      <div class="logo-pv" id="logoPv" aria-hidden="true"></div>
       <div class="look-row">
         <label>${c.t('lookPack')}<select class="input" name="pack">${Object.keys(K.PACKS).map(k => opt(k, L.pack || 'christmas', c.t('pack_' + k))).join('')}</select></label>
         <label>${c.t('lookFont')}<select class="input" name="font">${Object.entries(K.FONTS).map(([k, f]) => opt(k, L.font || 'noto', f)).join('')}</select></label>
@@ -400,8 +409,12 @@ function drawLook(c) {
       <label>${c.t('lookSize')} <span id="lookSizeV">${Math.round((L.size || 1) * 100)}%</span>
         <input type="range" name="size" min="0.9" max="1.3" step="0.05" value="${L.size || 1}"></label>
       <div class="look-sample" id="lookSample">ตัวอย่างตัวอักษร · Sample text 123</div>
+      <b>${c.t('lookOnOff')}</b>
+      <div class="look-feats">${pageFeats.map(([k, i]) => `<label><input type="checkbox" name="f_${k}" ${off[k] ? '' : 'checked'}> ${i} ${c.t('feat_' + k)}</label>`).join('')}</div>
       <b>${c.t('lookParts')}</b>
-      <div class="look-feats">${K.FEATS.map(([k, i]) => `<label><input type="checkbox" name="f_${k}" ${off[k] ? '' : 'checked'}> ${i} ${c.t('feat_' + k)}</label>`).join('')}</div>
+      <div class="look-parts">${PK.map(k => `<label>${K.PARTS[k].icon} ${c.t('part_' + k)}<select class="input" name="p_${k}">${
+        [...Object.keys(K.PARTS[k].opts), 'off'].map(v => opt(v, c.partOf(L, k), c.t('opt_' + v))).join('')}</select></label>`).join('')}</div>
+      <p class="hint" style="margin:-4px 0 10px">${c.t('lookPartsHint')}</p>
       <details class="ho-sec"><summary><span>✏️ ${c.t('lookWords')}</span><span class="muted">${c.t('lookWordsSub')}</span></summary>
         <div class="look-words">${K.WORDS.map(k => `<div class="lw"><span>${c.esc(c.tBase(k, 'th'))}</span>
           <input class="input" name="th_${k}" maxlength="60" value="${c.esc(words.th?.[k] || '')}" placeholder="${c.esc(c.tBase(k, 'th'))}" aria-label="TH ${k}">
@@ -421,20 +434,37 @@ function drawLook(c) {
     }
   };
   f.font.onchange = f.size.oninput = paintSample; paintSample();
-  // plain church pack: no Christmas extras (untick them); Easter pack: its own versions (tick them). Both can be changed again
-  f.pack.onchange = () => {
-    if (f.pack.value === 'plain') ['tree', 'snow', 'santa', 'festive', 'music'].forEach(k => { f['f_' + k].checked = false; });
-    if (f.pack.value === 'easter') ['tree', 'santa', 'festive', 'music'].forEach(k => { f['f_' + k].checked = true; });   // Easter has its own scene, lamb, egg hunt and hymn
+  // v34 logo: emoji or picture, size slider, live preview
+  const paintLogo = () => {
+    logo.type = f.logoType.value; logo.size = Number(f.logoSize.value);
+    box.querySelectorAll('[data-lg]').forEach(el => { el.hidden = el.dataset.lg !== logo.type; });
+    c.$('#logoPick').textContent = logo.url ? c.t('lookLogoChange') : c.t('lookLogoUp');
+    c.$('#logoSizeV').textContent = Math.round(logo.size * 100) + '%';
+    const pv = c.$('#logoPv'), em = f.emoji.value.trim() || f.emoji.placeholder;
+    pv.style.setProperty('--s', logo.size);
+    pv.innerHTML = logo.type === 'image' ? (logo.url ? `<img src="${c.esc(logo.url)}" alt="">` : `<span class="muted" style="font-size:1rem">${c.t('lookLogoNone')}</span>`) : `<span>${c.esc(em)}</span>`;
   };
-  // v33: Normal mode switches the playful parts off; back to Kids mode switches them on again (not for the plain church pack). Both can be changed again
-  f.mode.onchange = () => {
-    const kids = f.mode.value === 'kids';
-    if (!kids || f.pack.value !== 'plain') ['tree', 'snow', 'santa', 'festive', 'music'].forEach(k => { f['f_' + k].checked = kids; });
+  f.logoType.onchange = f.logoSize.oninput = f.emoji.oninput = paintLogo; paintLogo();
+  const file = c.$('#logoFile');
+  c.$('#logoPick').onclick = () => file.click();
+  file.onchange = async () => {
+    const fl = file.files[0]; file.value = ''; if (!fl) return;
+    const b = c.$('#logoPick'); b.disabled = true; b.textContent = '⏳';
+    try { logo.url = await c.uploadImage(fl); } catch (err) { c.fail(err); }
+    b.disabled = false; paintLogo();
   };
+  // choosing a pack sets every part to that pack's choice (plain church pack: all off); each can be changed again
+  const setParts = (v) => PK.forEach(k => { f['p_' + k].value = v === 'off' ? 'off' : (K.PACK_PARTS[v] || K.PACK_PARTS.christmas)[k]; });
+  f.pack.onchange = () => setParts(f.pack.value === 'plain' || f.mode.value === 'normal' ? 'off' : f.pack.value);
+  // v33: Normal mode switches the playful parts off; back to Kids mode switches them on again (not for the plain church pack)
+  f.mode.onchange = () => setParts(f.mode.value === 'normal' || f.pack.value === 'plain' ? 'off' : f.pack.value);
   f.onsubmit = async (e) => {
     e.preventDefault();
     const look = { ...(c.program.look || {}), mode: f.mode.value, title: f.title.value.trim(), emoji: f.emoji.value.trim(), pack: f.pack.value, font: f.font.value, size: Number(f.size.value), off: {}, words: { th: {}, en: {} } };
-    K.FEATS.forEach(([k]) => { if (!f['f_' + k].checked) look.off[k] = true; });
+    pageFeats.forEach(([k]) => { if (!f['f_' + k].checked) look.off[k] = true; });
+    look.parts = Object.fromEntries(PK.map(k => [k, f['p_' + k].value]));
+    if (logo.type === 'image' && !logo.url) { c.toast(c.t('lookLogoNeed')); return; }
+    look.logo = { type: logo.type, size: logo.size, ...(logo.url ? { url: logo.url } : {}) };
     K.WORDS.forEach(k => ['th', 'en'].forEach(l => { const v = f[`${l}_${k}`].value.trim(); if (v) look.words[l][k] = v; }));
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     try {
@@ -467,19 +497,18 @@ function drawLayout(c) {
 
   const paint = () => {
     KINDS.forEach(kind => {
-      const ul = box.querySelector(`[data-kind="${kind}"]`), n = lay[kind].length;
-      ul.innerHTML = lay[kind].map((key, i) => {
+      const ul = box.querySelector(`[data-kind="${kind}"]`);
+      ul.innerHTML = lay[kind].map((key) => {
         const off = lay.hide[kind].includes(key), locked = K.LOCKED[kind].includes(key);
         return `<li class="lay-item ${off ? 'off' : ''}" data-key="${key}">
           <span class="lh" aria-hidden="true">⠿</span><span class="ll">${label(kind, key)}</span>
-          <button type="button" data-up ${i === 0 ? 'disabled' : ''} aria-label="${c.t('layUp')}">▲</button>
-          <button type="button" data-down ${i === n - 1 ? 'disabled' : ''} aria-label="${c.t('layDown')}">▼</button>
           <button type="button" data-eye ${locked ? 'disabled' : ''} aria-label="${off ? c.t('layShow') : c.t('layHide')}" title="${locked ? c.t('layLocked') : ''}">${locked ? '🔒' : off ? '🙈' : '👁️'}</button></li>`;
       }).join('');
     });
     const vis = (kind) => lay[kind].filter(k => !lay.hide[kind].includes(k));
     const L = c.program.look || {};
-    c.$('#layPhone').innerHTML = `<div class="pv-bar">${c.esc((L.emoji || '🎄') + ' ' + (L.title || 'Youth Alpha'))}</div>
+    const lgo = c.logoOf(L);
+    c.$('#layPhone').innerHTML = `<div class="pv-bar">${lgo.img ? `<img src="${c.esc(lgo.url)}" alt="" style="height:1.3em;width:auto;vertical-align:middle">` : c.esc(L.emoji || '🎄')} ${c.esc(L.title || 'Youth Alpha')}</div>
       <div class="pv-home">${vis('home').map(k => `<div class="${k === 'rank' ? 'big' : ''}">${label('home', k)}</div>`).join('')}</div>
       <div class="pv-menu">☰ ${vis('menu').map(k => info('menu', k)[1]).join(' ')}</div>
       <div class="pv-tabs">${vis('tabs').map(k => `<span>${info('tabs', k)[1]}</span>`).join('')}</div>`;
@@ -489,10 +518,8 @@ function drawLayout(c) {
   const move = (kind, from, to) => { const a = lay[kind]; if (to < 0 || to >= a.length || from === to) return; a.splice(to, 0, a.splice(from, 1)[0]); };
   box.addEventListener('click', (e) => {
     const b = e.target.closest('button'), li = e.target.closest('.lay-item'); if (!b || !li) return;
-    const kind = li.parentElement.dataset.kind, key = li.dataset.key, i = lay[kind].indexOf(key);
-    if (b.hasAttribute('data-up')) move(kind, i, i - 1);
-    else if (b.hasAttribute('data-down')) move(kind, i, i + 1);
-    else if (b.hasAttribute('data-eye')) { const h = lay.hide[kind]; h.includes(key) ? h.splice(h.indexOf(key), 1) : h.push(key); }
+    const kind = li.parentElement.dataset.kind, key = li.dataset.key;
+    if (b.hasAttribute('data-eye')) { const h = lay.hide[kind]; h.includes(key) ? h.splice(h.indexOf(key), 1) : h.push(key); }
     else return;
     paint();
   });

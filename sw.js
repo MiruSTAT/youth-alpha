@@ -2,7 +2,7 @@
 //  * app files carry ?v=N: taken from the phone first, replaced when a new version comes out
 //  * the page itself: internet first (3.5 s), otherwise the saved copy
 //  * libraries, fonts and uploaded pictures (song sheets, avatars): saved the first time, kept between versions
-const V = '33';
+const V = '34';
 const SHELL = 'ya-v' + V, KEEP = 'ya-keep-1';
 const FILES = ['./', 'manifest.json', 'icon.svg', 'config.js?v=' + V, 'css/style.css?v=' + V,
   ...['app', 'data', 'i18n', 'music', 'art', 'snow', 'track', 'metronome', 'videosync', 'scene3d', 'version', 'songtext', 'superadmin', 'ocr', 'icons'].map(n => `js/${n}.js?v=${V}`)];

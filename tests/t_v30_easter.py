@@ -14,7 +14,7 @@ with sync_playwright() as p:
     def go(h,w=1300): pg.goto(U+h); pg.wait_for_timeout(w)
     go('#/admin/look', 1800)
     pg.select_option('#lookForm [name=pack]', 'easter')
-    print('easter ticks:', [pg.is_checked(f'#lookForm [name=f_{k}]') for k in ['tree','santa','festive','music']])
+    print('easter parts:', [pg.input_value(f'#lookForm [name=p_{k}]') for k in ['scene','friend','special','music','fall']])
     pg.click('#lookForm [type=submit]'); pg.wait_for_timeout(700); print('brand:', pg.inner_text('.brand').replace('\n',' '))
     go('#/', 3000)
     print('pack:', pg.evaluate('document.body.dataset.pack'), '| flake:', pg.evaluate("getComputedStyle(document.body).getPropertyValue('--flake')"))

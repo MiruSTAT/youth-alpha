@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '33';
+export const VERSION = '34';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,20 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '33', date: '2026-11-17', commit: '',
+      { v: '34', date: '2026-11-17', commit: '',
+        short: { th: 'ตั้งค่าโปรแกรมง่ายขึ้น: โลโก้เป็นรูปภาพได้พร้อมปรับขนาด ส่วนตกแต่งแต่ละส่วนเลือกแบบได้เอง และจัดหน้าตาด้วยการลากอย่างเดียว',
+                 en: 'Easier program settings: the logo can be a picture with a size slider, each decoration has its own choice, and the layout is arranged by dragging only' },
+        items: [
+          { a: 'look', th: 'ผู้ดูแลสูงสุด: หน้า "หน้าตาโปรแกรมนี้" เลือกโลโก้เป็นอีโมจิหรือรูปภาพได้ อัปโหลดรูป (ระบบย่อรูปให้เอง) และมีแถบปรับขนาดโลโก้ 60–200% พร้อมตัวอย่าง โลโก้รูปภาพแสดงที่แถบด้านบน และแสดงใหญ่กลางหน้าเมื่อปิดฉาก 3 มิติ (ในโหมดปกติก็แสดงโลโก้รูปภาพด้วย)',
+            en: 'Super admin: on the "This program\'s look" page the logo can be an emoji or a picture. Upload a picture (it is made smaller automatically) and set its size with a 60–200% slider with a preview. A picture logo shows in the top bar, and big in the middle of the page when the 3D scene is off (also in Normal mode)' },
+          { a: 'look', th: 'ส่วนตกแต่งแต่ละส่วนเลือกแบบได้แทนการเปิด/ปิด: สิ่งที่ตกลงมา (หิมะ / กลีบดอกไม้ / ปิด) ฉาก 3 มิติ (ต้นคริสต์มาส / กางเขนบนเนินเขา / ปิด) ตัวละครโผล่ (ซานต้า / ลูกแกะ / นกพิราบ / ปิด) โหมดพิเศษ (กล่องของขวัญ / ล่าไข่ / ปิด) เพลงพื้นหลัง (Jingle Bells / Easter Hymn / ปิด) ผสมกันได้ เช่น ธีมคริสต์มาสแต่ใช้เพลงอีสเตอร์ การเลือกชุดธีมจะตั้งค่าเริ่มต้นให้ทุกส่วน',
+            en: 'Each decoration now has its own choice instead of on/off: falling (snow / petals / off), 3D scene (Christmas tree / cross on the hill / off), peeking friend (Santa / lamb / dove / off), special mode (gift boxes / egg hunt / off), background music (Jingle Bells / Easter Hymn / off). They can be mixed, e.g. a Christmas look with Easter music. Choosing a pack fills in every part' },
+          { a: 'admin', th: 'จัดหน้าตา: เรียงลำดับด้วยการลาก ⠿ อย่างเดียว (เอาปุ่ม ▲▼ ออก ปุ่มลากใหญ่ขึ้น) ซ่อน/แสดงด้วย 👁️ เหมือนเดิม',
+            en: 'Layout: reorder by dragging ⠿ only (the ▲▼ buttons are gone and the drag handle is bigger); hide/show with 👁️ as before' },
+          { a: 'safety', th: 'โปรแกรมที่ตั้งค่าไว้ก่อนแล้วยังเหมือนเดิมทุกอย่าง (ค่าเดิมถูกอ่านเป็นตัวเลือกใหม่ให้เอง) ไม่มีการเปลี่ยนฐานข้อมูล',
+            en: 'Programs set up before keep exactly the same look (the old switches are read as the new choices); no database change' },
+        ] },
+      { v: '33', date: '2026-11-17', commit: '04f533d',
         short: { th: 'แต่ละโปรแกรมเลือกได้ว่าเป็น "โหมดเด็ก" หรือ "โหมดปกติ" (เรียบ ดูเป็นมืออาชีพ สำหรับผู้ใหญ่) และหน้าผู้ดูแลบนคอมพิวเตอร์มีเมนูด้านซ้าย ใช้พื้นที่จอเต็มขึ้น',
                  en: 'Each program can be in "Kids mode" or "Normal mode" (calm and professional, for adults), and on a computer the admin area has a menu on the left and uses the whole screen' },
         items: [

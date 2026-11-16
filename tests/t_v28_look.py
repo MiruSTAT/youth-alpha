@@ -18,7 +18,7 @@ with sync_playwright() as p:
     pg.fill('#lookForm [name=title]', 'Easter Kids'); pg.fill('#lookForm [name=emoji]', '🐣')
     pg.select_option('#lookForm [name=pack]', 'plain'); pg.select_option('#lookForm [name=font]', 'kanit')
     pg.eval_on_selector('#lookForm [name=size]', 'e=>{e.value="1.2"; e.dispatchEvent(new Event("input"))}')
-    print('size label:', pg.inner_text('#lookSizeV'), '| tree box after pack:', pg.is_checked('#lookForm [name=f_tree]'))
+    print('size label:', pg.inner_text('#lookSizeV'), '| scene after pack:', pg.input_value('#lookForm [name=p_scene]'))
     pg.uncheck('#lookForm [name=f_shop]'); pg.uncheck('#lookForm [name=f_bible]')
     pg.click('#lookForm details summary'); pg.fill('#lookForm [name=th_ranking]', 'คะแนนรวม'); pg.fill('#lookForm [name=en_ranking]', 'Scores')
     pg.screenshot(path='/tmp/s23/61_look_filled.png', full_page=True)

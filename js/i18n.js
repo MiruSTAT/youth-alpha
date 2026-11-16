@@ -549,7 +549,7 @@ Object.assign(DICT.en, {
 
 // ---- update 29: layout editor (super admin page)
 Object.assign(DICT.th, {
-  layTitle: 'จัดหน้าตา', laySub: 'ลาก ⠿ หรือกด ▲▼ เพื่อเรียงลำดับ กด 👁️ เพื่อซ่อน/แสดง ดูตัวอย่างด้านข้าง แล้วกดบันทึก (ใช้กับโปรแกรมนี้เท่านั้น)',
+  layTitle: 'จัดหน้าตา', laySub: 'ลาก ⠿ ด้วยนิ้วหรือเมาส์เพื่อเรียงลำดับ กด 👁️ เพื่อซ่อน/แสดง ดูตัวอย่างด้านข้าง แล้วกดบันทึก (ใช้กับโปรแกรมนี้เท่านั้น)',
   lay_tabs: 'แท็บด้านล่าง', lay_home: 'หน้าแรกของเด็ก', lay_menu: 'หน้าเมนู',
   // v31 member login
   mLoginTitle: 'เข้าสู่ระบบ', mLoginSub: 'ใส่ชื่อผู้ใช้และรหัสผ่านที่ผู้ใหญ่ให้ไว้ เพื่อดูคะแนนของหนู', mLoginSubAll: 'ต้องเข้าสู่ระบบก่อนจึงจะใช้แอปได้ ใส่ชื่อผู้ใช้และรหัสผ่านที่ผู้ใหญ่ให้ไว้',
@@ -577,7 +577,7 @@ Object.assign(DICT.th, {
   laySave: 'บันทึกการจัดหน้า', layReset: 'กลับเป็นแบบเดิม', layResetWarn: 'กลับไปใช้ลำดับเดิมและแสดงทุกส่วนของโปรแกรมนี้?',
 });
 Object.assign(DICT.en, {
-  layTitle: 'Layout', laySub: 'Drag ⠿ or press ▲▼ to reorder, press 👁️ to hide/show, check the preview, then save (this program only)',
+  layTitle: 'Layout', laySub: 'Drag ⠿ with a finger or the mouse to reorder, press 👁️ to hide/show, check the preview, then save (this program only)',
   lay_tabs: 'Bottom tabs', lay_home: 'Kids’ home page', lay_menu: 'Menu page',
   // v31 member login
   mLoginTitle: 'Sign in', mLoginSub: 'Type the username and password an adult gave you to see your points', mLoginSubAll: 'Please sign in to use the app. Type the username and password an adult gave you',
@@ -703,4 +703,28 @@ Object.assign(DICT.en, {
   lookMode: 'App style', mode_kids: '🧒 Kids mode (playful, big, emoji)', mode_normal: '💼 Normal mode (calm, professional, for adults)',
   lookModeHint: 'Normal mode: calm colours, line icons instead of emoji, and the 3D scene, falling snow, peeking friend, special mode and music are switched off (you can switch them on again below)',
   sideKids: 'Open the users’ app',
+});
+
+// v34: program settings polish (logo picture + size, a choice for each playful part)
+Object.assign(DICT.th, {
+  lookLogo: 'โลโก้', logo_emoji: '😀 อีโมจิ', logo_image: '🖼️ รูปภาพ', lookLogoUp: '📷 เลือกรูปโลโก้', lookLogoChange: '📷 เปลี่ยนรูป',
+  lookLogoSize: 'ขนาดโลโก้', lookLogoNone: 'ยังไม่ได้เลือกรูป', lookLogoHint: 'รูปจะถูกย่อให้เล็กลงก่อนอัปโหลด (PNG พื้นใสดูดีที่สุด)',
+  lookLogoNeed: 'กรุณาเลือกรูปโลโก้ก่อน หรือเปลี่ยนกลับเป็นอีโมจิ', lookOnOff: 'หน้าที่เปิดใช้',
+  lookParts: 'ส่วนตกแต่ง (เลือกแบบของแต่ละส่วน)',
+  part_fall: 'สิ่งที่ตกลงมา', part_scene: 'ฉาก 3 มิติ', part_friend: 'ตัวละครโผล่', part_special: 'โหมดพิเศษ (แตะต้นไม้ 5 ครั้ง)', part_music: 'เพลงพื้นหลัง',
+  opt_off: '🚫 ปิด', opt_snow: '❄️ หิมะ', opt_petals: '🌸 กลีบดอกไม้', opt_tree: '🎄 ต้นคริสต์มาส', opt_cross: '✝️ กางเขนบนเนินเขา',
+  opt_santa: '🎅 ซานต้า', opt_lamb: '🐑 ลูกแกะ', opt_dove: '🕊️ นกพิราบ', opt_gifts: '🎁 กล่องของขวัญ', opt_eggs: '🥚 ล่าไข่อีสเตอร์',
+  opt_jingle: '🔔 Jingle Bells', opt_easter: '🎺 Easter Hymn',
+  lookPartsHint: 'การเลือกชุดธีมจะตั้งค่าเริ่มต้นให้ทุกส่วน แล้วเปลี่ยนทีละส่วนได้ ฉาก 3 มิติจะเปลี่ยนเมื่อเปิดแอปใหม่',
+});
+Object.assign(DICT.en, {
+  lookLogo: 'Logo', logo_emoji: '😀 Emoji', logo_image: '🖼️ Picture', lookLogoUp: '📷 Choose a logo picture', lookLogoChange: '📷 Change picture',
+  lookLogoSize: 'Logo size', lookLogoNone: 'No picture chosen yet', lookLogoHint: 'The picture is made smaller before upload (a PNG with a clear background looks best)',
+  lookLogoNeed: 'Choose a logo picture first, or switch back to emoji', lookOnOff: 'Pages that are on',
+  lookParts: 'Decorations (choose each part)',
+  part_fall: 'Falling', part_scene: '3D scene', part_friend: 'Peeking friend', part_special: 'Special mode (tap the tree 5 times)', part_music: 'Background music',
+  opt_off: '🚫 Off', opt_snow: '❄️ Snow', opt_petals: '🌸 Petals', opt_tree: '🎄 Christmas tree', opt_cross: '✝️ Cross on the hill',
+  opt_santa: '🎅 Santa', opt_lamb: '🐑 Lamb', opt_dove: '🕊️ Dove', opt_gifts: '🎁 Gift boxes', opt_eggs: '🥚 Easter egg hunt',
+  opt_jingle: '🔔 Jingle Bells', opt_easter: '🎺 Easter Hymn',
+  lookPartsHint: 'Choosing a pack sets every part to its default; then change any part on its own. The 3D scene changes the next time the app is opened',
 });
