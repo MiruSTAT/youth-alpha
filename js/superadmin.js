@@ -110,6 +110,9 @@ export async function pSuper(c) {
     <h2 class="grp">🎨 ${c.t('lookTitle')}</h2>
     <div class="card look-card" id="lookCard"></div>
 
+    <h2 class="grp">🧩 ${c.t('layTitle')}</h2>
+    <div class="card lay-card" id="layCard"></div>
+
     <h2 class="grp">🤖 ${c.t('saAi')}</h2>
     <div class="card"><p class="muted" style="margin:0 0 10px">${c.t('saAiSub')}</p>
       <p id="hoState" class="sa-ho muted">${c.t('loading')}…</p>
@@ -117,7 +120,7 @@ export async function pSuper(c) {
     <div id="hoBody"></div>
 
     <h2 class="grp">${c.t('saNext')}</h2>
-    <div class="card"><ul class="sa-next">${['saN3', 'saN4', 'saN5', 'saN6'].map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
+    <div class="card"><ul class="sa-next">${['saN4', 'saN5', 'saN6'].map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
 
   // sign out: end the super admin powers on this device AND sign out (next time: password + email link again)
   c.$('#saLock').onclick = async () => {
@@ -139,6 +142,7 @@ export async function pSuper(c) {
   drawPrograms(c);
   c.$('#progNew').onclick = () => newProgram(c);
   drawLook(c);
+  drawLayout(c);
 
   // the handoff (HANDOFF.md, published with every release): shown by section, copied as a ready prompt
   let md = '';
@@ -266,7 +270,7 @@ function drawLook(c) {
   f.pack.onchange = () => { if (f.pack.value !== 'christmas') ['tree', 'snow', 'santa', 'festive'].forEach(k => { f['f_' + k].checked = false; }); };
   f.onsubmit = async (e) => {
     e.preventDefault();
-    const look = { ...L, title: f.title.value.trim(), emoji: f.emoji.value.trim(), pack: f.pack.value, font: f.font.value, size: Number(f.size.value), off: {}, words: { th: {}, en: {} } };
+    const look = { ...(c.program.look || {}), title: f.title.value.trim(), emoji: f.emoji.value.trim(), pack: f.pack.value, font: f.font.value, size: Number(f.size.value), off: {}, words: { th: {}, en: {} } };
     K.FEATS.forEach(([k]) => { if (!f['f_' + k].checked) look.off[k] = true; });
     K.WORDS.forEach(k => ['th', 'en'].forEach(l => { const v = f[`${l}_${k}`].value.trim(); if (v) look.words[l][k] = v; }));
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
@@ -278,5 +282,96 @@ function drawLook(c) {
       c.applyLook(); c.toast('✓ ' + c.t('saved'));
     } catch (err) { c.fail(err); }
     btn.disabled = false;
+  };
+}
+
+
+// ---------- v29 layout editor: order and show/hide of the bottom tabs, the home page parts and the menu rows
+// saved as programs.look.layout = { tabs: [...], home: [...], menu: [...], hide: { tabs: [], home: [], menu: [] } }
+// (same program_set_look call as the program settings; app.js layKeys() reads it)
+function drawLayout(c) {
+  const box = c.$('#layCard'); if (!box) return;
+  const K = c.LOOK, KINDS = ['tabs', 'home', 'menu'];
+  const lay = { hide: {} };
+  KINDS.forEach(k => { lay[k] = c.layKeys(k, true); lay.hide[k] = (c.program.look?.layout?.hide?.[k] || []).filter(x => !K.LOCKED[k].includes(x)); });
+  const info = (kind, key) => K.LAYOUT[kind].find(x => x[0] === key);
+  const label = (kind, key) => { const [, i, w] = info(kind, key); return `${i} ${c.esc(c.t(w))}`; };
+
+  box.innerHTML = `<p class="muted" style="margin:0 0 6px">${c.t('laySub')}</p>
+    <div class="lay-wrap"><div>${KINDS.map(k => `<h3>${c.t('lay_' + k)}</h3><ul class="lay-list" data-kind="${k}"></ul>`).join('')}</div>
+      <div class="lay-phone" id="layPhone" aria-hidden="true"></div></div>
+    <div class="sa-btns" style="margin-top:14px"><button class="btn primary" id="laySave">💾 ${c.t('laySave')}</button><button class="btn" id="layReset">↺ ${c.t('layReset')}</button></div>`;
+
+  const paint = () => {
+    KINDS.forEach(kind => {
+      const ul = box.querySelector(`[data-kind="${kind}"]`), n = lay[kind].length;
+      ul.innerHTML = lay[kind].map((key, i) => {
+        const off = lay.hide[kind].includes(key), locked = K.LOCKED[kind].includes(key);
+        return `<li class="lay-item ${off ? 'off' : ''}" data-key="${key}">
+          <span class="lh" aria-hidden="true">⠿</span><span class="ll">${label(kind, key)}</span>
+          <button type="button" data-up ${i === 0 ? 'disabled' : ''} aria-label="${c.t('layUp')}">▲</button>
+          <button type="button" data-down ${i === n - 1 ? 'disabled' : ''} aria-label="${c.t('layDown')}">▼</button>
+          <button type="button" data-eye ${locked ? 'disabled' : ''} aria-label="${off ? c.t('layShow') : c.t('layHide')}" title="${locked ? c.t('layLocked') : ''}">${locked ? '🔒' : off ? '🙈' : '👁️'}</button></li>`;
+      }).join('');
+    });
+    const vis = (kind) => lay[kind].filter(k => !lay.hide[kind].includes(k));
+    const L = c.program.look || {};
+    c.$('#layPhone').innerHTML = `<div class="pv-bar">${c.esc((L.emoji || '🎄') + ' ' + (L.title || 'Youth Alpha'))}</div>
+      <div class="pv-home">${vis('home').map(k => `<div class="${k === 'rank' ? 'big' : ''}">${label('home', k)}</div>`).join('')}</div>
+      <div class="pv-menu">☰ ${vis('menu').map(k => info('menu', k)[1]).join(' ')}</div>
+      <div class="pv-tabs">${vis('tabs').map(k => `<span>${info('tabs', k)[1]}</span>`).join('')}</div>`;
+  };
+  paint();
+
+  const move = (kind, from, to) => { const a = lay[kind]; if (to < 0 || to >= a.length || from === to) return; a.splice(to, 0, a.splice(from, 1)[0]); };
+  box.addEventListener('click', (e) => {
+    const b = e.target.closest('button'), li = e.target.closest('.lay-item'); if (!b || !li) return;
+    const kind = li.parentElement.dataset.kind, key = li.dataset.key, i = lay[kind].indexOf(key);
+    if (b.hasAttribute('data-up')) move(kind, i, i - 1);
+    else if (b.hasAttribute('data-down')) move(kind, i, i + 1);
+    else if (b.hasAttribute('data-eye')) { const h = lay.hide[kind]; h.includes(key) ? h.splice(h.indexOf(key), 1) : h.push(key); }
+    else return;
+    paint();
+  });
+
+  // drag with a finger or the mouse on the ⠿ handle (pointer events, so it works on phones too)
+  let drag = null;
+  box.addEventListener('pointerdown', (e) => {
+    const h = e.target.closest('.lh'); if (!h) return;
+    const li = h.closest('.lay-item');
+    drag = { li, kind: li.parentElement.dataset.kind, y0: e.clientY };
+    li.classList.add('dragging'); h.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  box.addEventListener('pointermove', (e) => {
+    if (!drag) return;
+    const ul = drag.li.parentElement, items = [...ul.children];
+    drag.li.style.transform = `translateY(${e.clientY - drag.y0}px)`;
+    const over = items.find(x => x !== drag.li && (() => { const r = x.getBoundingClientRect(); return e.clientY > r.top && e.clientY < r.bottom; })());
+    if (!over) return;
+    const a = lay[drag.kind], from = a.indexOf(drag.li.dataset.key), to = a.indexOf(over.dataset.key);
+    move(drag.kind, from, to);
+    const r0 = drag.li.getBoundingClientRect().top;
+    to > from ? over.after(drag.li) : over.before(drag.li);
+    drag.y0 += drag.li.getBoundingClientRect().top - r0;            // keep the item under the finger after it jumps
+    drag.li.style.transform = `translateY(${e.clientY - drag.y0}px)`;
+  });
+  const end = () => { if (!drag) return; drag.li.classList.remove('dragging'); drag.li.style.transform = ''; drag = null; paint(); };
+  box.addEventListener('pointerup', end); box.addEventListener('pointercancel', end);
+
+  const save = async (layout) => {
+    const look = { ...(c.program.look || {}), layout };
+    try {
+      await c.api.programSetLook(c.program.id, look);
+      c.program.look = look;
+      const row = c.program.list.find(x => x.id === c.program.id); if (row) row.look = look;
+      try { Object.keys(localStorage).filter(k => k.includes('programs')).forEach(k => localStorage.removeItem(k)); } catch { }
+      c.applyLook(); c.toast('✓ ' + c.t('saved'));
+    } catch (err) { c.fail(err); }
+  };
+  c.$('#laySave').onclick = () => save(JSON.parse(JSON.stringify(lay)));
+  c.$('#layReset').onclick = async () => {
+    if (!(await c.confirmBox(c.t('layResetWarn'), c.t('layReset'), false))) return;
+    KINDS.forEach(k => { lay[k] = K.LAYOUT[k].map(x => x[0]); lay.hide[k] = []; });
+    paint(); await save({});
   };
 }

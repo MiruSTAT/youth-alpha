@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '28';
+export const VERSION = '29';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,14 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'super', th: 'อัปเดตผู้ดูแลสูงสุดและโปรแกรม', en: 'Super admin & programs update',
     versions: [
-      { v: '28', date: '2026-11-16', commit: '',
+      { v: '29', date: '2026-11-16', commit: '',
+        items: [
+          { a: 'admin', th: 'หน้าผู้ดูแลสูงสุดมีส่วน "จัดหน้าตา": เรียงลำดับและซ่อน/แสดง แท็บด้านล่าง ส่วนต่าง ๆ ของหน้าแรกเด็ก (ประกาศ การ์ดคะแนนของหนู อันดับ ข้อพระคัมภีร์ประจำสัปดาห์) และแถวในหน้าเมนู', en: 'The super admin page has a "Layout" section: reorder and hide/show the bottom tabs, the parts of the kids\' home page (announcement, my points card, ranking, verse of the week) and the rows of the menu page' },
+          { a: 'admin', th: 'ลากที่ ⠿ ด้วยนิ้วหรือเมาส์ หรือกด ▲▼ และกด 👁️ เพื่อซ่อน มีตัวอย่างหน้าจอโทรศัพท์ขนาดเล็กที่เปลี่ยนตามทันที กดบันทึกแล้วจึงใช้จริง', en: 'Drag ⠿ with a finger or the mouse, or press ▲▼, and press 👁️ to hide; a small phone preview changes as you go; nothing is used until you save' },
+          { a: 'safety', th: 'แท็บอันดับ แท็บเมนู ส่วนอันดับ และทางเข้าหน้าผู้ใหญ่ ซ่อนไม่ได้ (🔒) เพื่อไม่ให้หลงทางหรือเข้าหน้าผู้ดูแลไม่ได้ มีปุ่ม "กลับเป็นแบบเดิม" พร้อมคำเตือน', en: 'The ranking tab, menu tab, ranking part and the way to the adults\' area cannot be hidden (🔒), so nobody gets lost or locked out; a "Back to normal" button with a warning' },
+          { a: 'data', th: 'การจัดหน้าเก็บรวมกับการตั้งค่าโปรแกรม (แยกต่อโปรแกรม) ไม่ต้องเปลี่ยนฐานข้อมูล', en: 'The layout is stored with the program settings (per program); no database change was needed' },
+        ] },
+      { v: '28', date: '2026-11-16', commit: '7a666a2',
         items: [
           { a: 'admin', th: 'หน้าผู้ดูแลสูงสุดมีส่วน "ตั้งค่าโปรแกรมนี้" ใช้กับโปรแกรมของลิงก์ที่เปิดอยู่เท่านั้น บันทึกแล้วเห็นผลทันที', en: 'The super admin page has a "This program\'s settings" section; it changes only the program of the link that is open and shows right away when saved' },
           { a: 'look', th: 'ตั้งชื่อและอีโมจิบนแถบด้านบน (และชื่อแท็บของเบราว์เซอร์) ของแต่ละโปรแกรมได้ เว้นว่าง = Youth Alpha 🎄', en: 'Each program can set the name and emoji on the top bar (and the browser tab title); empty = Youth Alpha 🎄' },

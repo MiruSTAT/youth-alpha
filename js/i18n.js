@@ -546,3 +546,19 @@ Object.assign(DICT.en, {
   feat_songs: 'Songs', feat_shop: 'Shop', feat_feedback: 'Feedback', feat_bible: 'Bible', feat_music: 'Background music',
   feat_tree: '3D tree', feat_snow: 'Snow', feat_santa: 'Santa peeks', feat_festive: 'Special mode',
 });
+
+// ---- update 29: layout editor (super admin page)
+Object.assign(DICT.th, {
+  layTitle: 'จัดหน้าตา', laySub: 'ลาก ⠿ หรือกด ▲▼ เพื่อเรียงลำดับ กด 👁️ เพื่อซ่อน/แสดง ดูตัวอย่างด้านข้าง แล้วกดบันทึก (ใช้กับโปรแกรมนี้เท่านั้น)',
+  lay_tabs: 'แท็บด้านล่าง', lay_home: 'หน้าแรกของเด็ก', lay_menu: 'หน้าเมนู',
+  lay_notice: 'ประกาศ', lay_me: 'การ์ดคะแนนของหนู', lay_rank: 'อันดับ', lay_verse: 'ข้อพระคัมภีร์ประจำสัปดาห์',
+  layUp: 'เลื่อนขึ้น', layDown: 'เลื่อนลง', layShow: 'แสดง', layHide: 'ซ่อน', layLocked: 'ส่วนนี้ซ่อนไม่ได้',
+  laySave: 'บันทึกการจัดหน้า', layReset: 'กลับเป็นแบบเดิม', layResetWarn: 'กลับไปใช้ลำดับเดิมและแสดงทุกส่วนของโปรแกรมนี้?',
+});
+Object.assign(DICT.en, {
+  layTitle: 'Layout', laySub: 'Drag ⠿ or press ▲▼ to reorder, press 👁️ to hide/show, check the preview, then save (this program only)',
+  lay_tabs: 'Bottom tabs', lay_home: 'Kids’ home page', lay_menu: 'Menu page',
+  lay_notice: 'Announcement', lay_me: 'My points card', lay_rank: 'Ranking', lay_verse: 'Verse of the week',
+  layUp: 'Move up', layDown: 'Move down', layShow: 'Show', layHide: 'Hide', layLocked: 'This part cannot be hidden',
+  laySave: 'Save layout', layReset: 'Back to normal', layResetWarn: 'Go back to the normal order and show every part for this program?',
+});

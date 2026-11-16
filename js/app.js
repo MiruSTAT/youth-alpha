@@ -1,14 +1,14 @@
-import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=28';
-import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor } from './data.js?v=28';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=28';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=28';
+import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=29';
+import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor } from './data.js?v=29';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=29';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=29';
 
-import { music } from './music.js?v=28';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=28';
-import { snow } from './snow.js?v=28';
-import { track } from './track.js?v=28';
-import { metro } from './metronome.js?v=28';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=28';
+import { music } from './music.js?v=29';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=29';
+import { snow } from './snow.js?v=29';
+import { track } from './track.js?v=29';
+import { metro } from './metronome.js?v=29';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=29';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -122,7 +122,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=28');
+    const m = await import('./scene3d.js?v=29');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -164,18 +164,20 @@ async function kidRank() {
   const max = Math.max(1, ...rows.map(r => r.total));
   scene?.setGlow(me ? me.total / max : 0.6);
   const medal = ['🥇', '🥈', '🥉'];
-  view.innerHTML = `<section class="sheet">
-    ${ev?.announce ? `<div class="notice"><span class="ni">📣</span><p>${esc(ev.announce)}</p></div>` : ''}
-    ${me ? `<button class="my-card" id="myCard"><span class="av" data-pic="${me.id}">${pic(me.avatar)}</span>
+  const part = {
+    notice: () => ev?.announce ? `<div class="notice"><span class="ni">📣</span><p>${esc(ev.announce)}</p></div>` : '',
+    me: () => me ? `<button class="my-card" id="myCard"><span class="av" data-pic="${me.id}">${pic(me.avatar)}</span>
         <span class="who"><b>${esc(me.nickname)}</b><span>🏆 ${t('rank')} ${me.rank} ${t('of')} ${rows.length}</span>${me.spent ? `<span class="sp">🎁 ${t('canSpend')} ${bal(me)} ⭐</span>` : ''}</span>
         <span class="pts"><b id="tot">0</b><span>${t('points')}</span></span></button>`
-      : rows.length ? `<p class="my-hint">👇 ${t('tapYourName')}</p>` : ''}
-    <h1 class="sheet-title" style="margin-bottom:12px">🏆 ${t('ranking')}</h1>
+      : rows.length ? `<p class="my-hint">👇 ${t('tapYourName')}</p>` : '',
+    rank: () => `<h1 class="sheet-title" style="margin-bottom:12px">🏆 ${t('ranking')}</h1>
     ${rows.length ? `<div class="rank-list">${rows.map(k => `<button class="rank-row ${k.id === mineId ? 'mine' : ''}" data-id="${k.id}">
       <span class="n ${k.rank <= 3 ? 'medal' : ''}">${k.rank <= 3 ? medal[k.rank - 1] : k.rank}</span>
       <span class="av" data-pic="${k.id}">${pic(k.avatar)}</span><span class="nm">${esc(k.nickname)}</span><span class="pt">${k.total} ⭐</span></button>`).join('')}</div>`
-      : `<p class="empty">${t('noKids')}</p>`}
-    ${ev?.verse_text ? verseCard(ev) : ''}</section>`;
+      : `<p class="empty">${t('noKids')}</p>`}`,
+    verse: () => ev?.verse_text ? verseCard(ev) : '',
+  };
+  view.innerHTML = `<section class="sheet">${layKeys('home').map(k => part[k]()).join('\n')}</section>`;   // v29: order set in the layout editor
   wirePics(view, rows);
   view.querySelectorAll('.rank-row').forEach(b => b.onclick = () => { const k = rows.find(r => r.id === b.dataset.id); track('tap_kid', k?.id === localStorage.getItem(ME()) ? 'self' : 'other'); kidDetail(k, rows); });
   if (me) {
@@ -252,12 +254,14 @@ async function kidMenu() {
       <button class="mrow" data-m="lang"><span class="mi">🌐</span><span class="mt"><b>${t('language')}</b></span><span class="mv">${t('langName')}</span></button>
       ${ev.install_on && !installed() ? `<button class="mrow" data-m="install"><span class="mi">📲</span><span class="mt"><b>${t('installApp')}</b><span>${t('installSub')}</span></span><span class="mv">›</span></button>` : ''}
       <button class="mrow" data-m="help"><span class="mi">❓</span><span class="mt"><b>${t('help')}</b><span>${t('helpSub')}</span></span><span class="mv">›</span></button>
-      <a class="mrow quiet" href="#/admin"><span class="mi">🔒</span><span class="mt"><b>${t('adults')}</b><span>${t('adminSub')}</span></span><span class="mv">›</span></a>
+      <a class="mrow quiet" data-k="adult" href="#/admin"><span class="mi">🔒</span><span class="mt"><b>${t('adults')}</b><span>${t('adminSub')}</span></span><span class="mv">›</span></a>
     </div></section>`;
   const act = {
     fb: () => openFeedback(), bible: openBible, install: installApp, credits: songCredits, help: () => { track('help_open'); showTour(TOUR); },
     lang: () => { setLang(getLang() === 'th' ? 'en' : 'th'); track('lang', getLang()); paintChrome(); kidMenu(); },
   };
+  const ml = view.querySelector('.mlist'), keep = layKeys('menu');       // v29: menu order and hidden rows from the layout editor
+  layKeys('menu', true).forEach(k => { const el = ml.querySelector(`[data-m="${k}"], [data-k="${k}"]`); if (el) keep.includes(k) ? ml.appendChild(el) : el.remove(); });
   view.querySelectorAll('[data-m]').forEach(b => b.onclick = () => act[b.dataset.m]());
 }
 
@@ -720,8 +724,8 @@ document.addEventListener('click', (e) => {
 let adult = { role: null, myId: null };
 const isAdm = () => adult.role === 'admin' || adult.role === 'superadmin';
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
-const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK });
-const saMod = () => import('./superadmin.js?v=28');
+const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys });
+const saMod = () => import('./superadmin.js?v=29');
 
 async function adultGate(page) {
   const session = await api.session();
@@ -1366,7 +1370,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=28');
+      const { readSheet } = await import('./ocr.js?v=29');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1838,12 +1842,26 @@ const LOOK = {
   // the text an admin can change per program (others keep the normal wording)
   WORDS: ['ranking', 'songs', 'shop', 'menu', 'songsTitle', 'shopTitle', 'shopSub', 'santaHo'],
   // theme packs: default emoji + wording that fits the pack (the program's own wording still wins)
+  // v29 layout editor: default order of each list; LOCKED items cannot be hidden (the way home / to the adults' area)
+  LAYOUT: {
+    tabs: [['rank', '🏆', 'ranking'], ['songs', '🎵', 'songs'], ['shop', '🎁', 'shop'], ['menu', '☰', 'menu']],
+    home: [['notice', '📣', 'lay_notice'], ['me', '⭐', 'lay_me'], ['rank', '🏆', 'lay_rank'], ['verse', '📖', 'lay_verse']],
+    menu: [['fb', '💬', 'fb'], ['bible', '📖', 'bible'], ['credits', '🎵', 'songCredits'], ['lang', '🌐', 'language'], ['install', '📲', 'installApp'], ['help', '❓', 'help'], ['adult', '🔒', 'adults']],
+  },
+  LOCKED: { tabs: ['rank', 'menu'], home: ['rank'], menu: ['adult'] },
   PACKS: {
     christmas: { emoji: '🎄', words: {} },
     plain: { emoji: '⛪', words: { th: { songsTitle: 'เพลงนมัสการ' }, en: { songsTitle: 'Worship songs' } } },
   },
 };
 const feat = (k) => program.look?.off?.[k] !== true;
+// v29: keys of one list (tabs | home | menu) in the program's order, without the hidden ones
+function layKeys(kind, withHidden = false) {
+  const lay = program.look?.layout || {}, all = LOOK.LAYOUT[kind].map(x => x[0]);
+  const order = [...(lay[kind] || []).filter(k => all.includes(k)), ...all.filter(k => !(lay[kind] || []).includes(k))];
+  const hide = new Set((lay.hide?.[kind] || []).filter(k => !LOOK.LOCKED[kind].includes(k)));
+  return withHidden ? order : order.filter(k => !hide.has(k));
+}
 function applyLook() {
   const L = program.look || {}, pack = LOOK.PACKS[L.pack] || LOOK.PACKS.christmas;
   setOverrides({ th: { ...pack.words.th, ...L.words?.th }, en: { ...pack.words.en, ...L.words?.en } });
@@ -1864,6 +1882,8 @@ function applyLook() {
   root.style.fontSize = size === 1 ? '' : (18 * size).toFixed(1) + 'px';
   document.body.dataset.pack = L.pack || 'christmas';
   LOOK.FEATS.forEach(([k]) => document.body.classList.toggle('off-' + k, !feat(k)));
+  const nav = $('#kidNav'), shown = layKeys('tabs');                  // v29: bottom tab order and hidden tabs
+  layKeys('tabs', true).forEach(k => { const a = nav.querySelector(`[data-nav="${k}"]`); if (a) { nav.appendChild(a); a.classList.toggle('lay-hide', !shown.includes(k)); } });
   if (!feat('tree')) scene?.stop();
   if (!feat('snow')) snow.stop();
   applyAppOpts?.();

@@ -1,0 +1,38 @@
+# v29 layout editor: reorder with buttons and drag, hide, preview, save, applied on kid pages, reset
+from playwright.sync_api import sync_playwright
+V='/home/claude/youth-alpha/vendor/'; U='http://localhost:8766/'; errs=[]
+SEED=open('/tmp/t35.py').read().split('SEED="""')[1].split('"""')[0]
+with sync_playwright() as p:
+    b=p.chromium.launch(args=['--use-gl=swiftshader','--enable-unsafe-swiftshader','--ignore-gpu-blocklist'])
+    cx=b.new_context(viewport={'width':390,'height':844},device_scale_factor=2,is_mobile=True,has_touch=True,service_workers='block')
+    cx.add_init_script(SEED); pg=cx.new_page()
+    pg.route('**/three.module.min.js', lambda r: r.fulfill(path=V+'three.module.min.js', content_type='application/javascript'))
+    pg.route('**/fonts.googleapis.com/**', lambda r: r.fulfill(body='', content_type='text/css'))
+    pg.route('**/supabase.js', lambda r: r.fulfill(body='', content_type='application/javascript'))
+    pg.on('pageerror',lambda e: errs.append('PAGEERR '+str(e)))
+    pg.on('console',lambda m: errs.append('CONSOLE '+m.text) if m.type=='error' and 'Failed to load' not in m.text else None)
+    def go(h,w=1300): pg.goto(U+h); pg.wait_for_timeout(w)
+    keys=lambda k: pg.eval_on_selector_all(f'[data-kind={k}] .lay-item','e=>e.map(x=>x.dataset.key+(x.classList.contains("off")?"(off)":""))')
+    go('#/admin/super', 1800); pg.evaluate("document.querySelector('#layCard').scrollIntoView()")
+    print('start tabs:', keys('tabs'), '| home:', keys('home'))
+    pg.click('[data-kind=tabs] [data-key=shop] [data-up]'); print('shop up:', keys('tabs'))
+    pg.click('[data-kind=home] [data-key=verse] [data-up]'); pg.click('[data-kind=home] [data-key=verse] [data-up]'); print('verse up x2:', keys('home'))
+    pg.click('[data-kind=menu] [data-key=bible] [data-eye]'); print('bible hidden:', keys('menu'))
+    print('locked eye disabled:', pg.is_disabled('[data-kind=menu] [data-key=adult] [data-eye]'))
+    # drag help to the top of the menu list
+    h=pg.locator('[data-kind=menu] [data-key=help] .lh').bounding_box(); t=pg.locator('[data-kind=menu] [data-key=fb]').bounding_box()
+    pg.mouse.move(h['x']+5,h['y']+5); pg.mouse.down()
+    for i in range(1,11): pg.mouse.move(h['x']+5, h['y']+5+(t['y']+5-h['y']-5)*i/10); pg.wait_for_timeout(30)
+    pg.mouse.up(); print('help dragged:', keys('menu'))
+    print('preview:', pg.inner_text('#layPhone').replace('\n',' | '))
+    pg.screenshot(path='/tmp/s23/70_layout.png', full_page=True)
+    pg.click('#laySave'); pg.wait_for_timeout(600); print('toast:', pg.inner_text('#toast'))
+    go('#/', 1800); print('kid nav:', pg.eval_on_selector_all('.kid-nav a','e=>e.filter(x=>getComputedStyle(x).display!="none").map(x=>x.dataset.nav)'))
+    print('home parts:', pg.eval_on_selector_all('.sheet > *','e=>e.map(x=>x.className||x.tagName)'))
+    go('#/menu', 1200); print('menu rows:', pg.eval_on_selector_all('.mrow','e=>e.map(x=>x.dataset.m||x.dataset.k)'))
+    pg.click('[data-m=help]'); pg.wait_for_timeout(500); print('help opens tour:', pg.is_visible('#tour')); pg.evaluate("[...document.querySelectorAll('#tour button')].pop()?.click()"); pg.wait_for_timeout(300); pg.evaluate("document.querySelector('#tour').hidden=true")
+    go('#/admin/super', 1800); print('editor keeps:', keys('menu'))
+    pg.click('#layReset'); pg.wait_for_timeout(300); pg.click('#dlgForm button[value=ok]'); pg.wait_for_timeout(700)
+    go('#/menu', 1200); print('after reset menu:', pg.eval_on_selector_all('.mrow','e=>e.map(x=>x.dataset.m||x.dataset.k)'))
+    b.close()
+print('\n'.join(errs) or 'no errors')

@@ -80,7 +80,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
   - the YouTube IFrame API
   - `vendor/qrcode.js` (local copy) for QR codes
   - Google font **Noto Sans Thai**
-- **Versioning:** every import and asset carries `?v=N`. **The current version is `28`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
+- **Versioning:** every import and asset carries `?v=N`. **The current version is `29`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
 - **Service worker** (`sw.js`) makes the app work offline and open fast on weak Wi-Fi:
   - Files with `?v=` and same-origin pictures are served from the phone first (cache `ya-v<N>`, replaced on each version).
   - The page itself tries the internet first for 3.5 s, then uses the saved copy.
@@ -264,7 +264,7 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
 - **Tested on the live database** inside a rolled-back transaction (simulated super admin): program created as id 2 with settings, `_p2` categories, kids, songs, prizes; attendance gave `attendance_p2` points in program 2 only; rounds and leaderboard stayed separate; a negative `bonus_p2` was refused; feedback refused while closed. (Sequence note: that test used program id 2, so the first real new program will be id 3.)
 - **Preview mode** keeps only the program list (create/rename/archive work); its data is not split by program.
 
-### 5c. Program settings (v28, `supabase/019_program_look.sql`)
+### 5c. Program settings and layout (v28–v29, `supabase/019_program_look.sql`)
 
 - **Where it is stored:** `programs.look` (jsonb) of each program. Written only by `program_set_look(p_id int, p_look jsonb)` (security definer, super admin only, must be a JSON object, max 20 000 characters). Every change is in `audit_log` via the `audit_programs` trigger (018). The public can read it (programs is public-read), so **never put secrets in `look`**.
 - **Shape** (every key optional; missing = the normal app):
@@ -273,6 +273,8 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
 - **What each switch does:** songs → nav tab hidden (`body.off-songs`) and `#/songs` redirects home (same check as the music switch `songsTab`); shop → tab hidden, `#/shop` redirects; feedback → menu row hidden, `#/feedback` redirects; bible → menu row hidden; music → `music.setAllowed(false)`, 🔇 button hidden; tree → `ensureScene()` is not called, `#scene` hidden, and the program emoji floats big in its place (`body.off-tree::before`); snow → `snow.stop()`; santa → `santaPeek` treats the page as busy; festive → 5 taps on the tree do nothing. Data is never touched, only hidden. The admin side is not affected.
 - **i18n.js:** `setOverrides({th, en})` and `tBase(key, lang)` (the built-in text, used as placeholders). `t()` checks the override first, only for plain-string keys (function keys cannot be overridden).
 - **Super admin page:** card "🎨 This program's settings" (`drawLook(c)` in superadmin.js) edits the program of the link that is open. Choosing a non-Christmas pack unticks tree, snow, Santa and special mode (they can be ticked again). Save → `api.programSetLook` → `c.program.look` updated, `ya_c_*programs*` cache cleared, `c.applyLook()`. The context `saCtx()` now also passes `tBase`, `applyLook`, `LOOK`.
+- **v29 layout (`look.layout`):** `{ tabs: [order], home: [order], menu: [order], hide: { tabs: [], home: [], menu: [] } }`. Lists and defaults in `LOOK.LAYOUT` (tabs rank/songs/shop/menu; home parts notice/me/rank/verse; menu rows fb/bible/credits/lang/install/help/adult), items that can never be hidden in `LOOK.LOCKED` (tabs rank + menu, home rank, menu adult). `layKeys(kind, withHidden)` in app.js returns the order (unknown/new keys appended in default order, so adding a new part later is safe). Applied in `applyLook()` (re-appends `#kidNav` links in order, class `lay-hide`), `kidRank()` (built from a `part` map joined in order) and `kidMenu()` (rows re-appended by `data-m` / `data-k="adult"`, hidden ones removed). Layout hiding is visual only; a hidden page still opens from a direct link (use the v28 part switches to really turn a page off). Feature switches (v28) still win.
+- **Layout editor:** card "🧩 Layout" (`drawLayout(c)` in superadmin.js): ⠿ handle drag with pointer events (works with fingers; `touch-action: none` on the list), ▲▼ buttons, 👁️/🙈 hide, 🔒 for locked items, mini phone preview (`#layPhone`, placed above the lists on narrow screens), Save, "Back to normal" (confirm, saves `layout: {}`). Saves with the same `program_set_look`, merging into the current `c.program.look` (the settings card also merges at submit time, so the two cards never overwrite each other).
 - **Program copies:** `program_create` (018) does not copy `look`; set it on the new program's link.
 - **Tested:** preview (tests/t_v28_look.py: save title/emoji/pack/font/size/switches/words, reload, shop redirect, menu rows, worship-song title, English words, form keeps values) and regression tests/t_v27_programs.py. Live: 019 run on 2026-11-16 (function exists, security definer); live program 1 `look` is still `{}`.
 
@@ -594,7 +596,8 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 25. v25, 2026-11-16: super admin "Miruku" with two-step sign-in (own password + emailed link, `017_superadmin.sql`), super admin page (install switch, "Details for AI" from HANDOFF.md with copy/download), AGENTS.md / CLAUDE.md rules for AIs, `songtext.js` and `superadmin.js` split out of app.js, login accepts 4-character passwords.
 26. v26, 2026-11-16: owner feedback on v25: super admin page explained, "Lock" became "Sign out of super admin", handoff folded into one card; music switches grouped and foldable; new "All songs: video + original sheet only" switch (`settings.music.simpleSongs`), switched on live; the song editor now loads the music switches (`eventInfo(true)`) so its card knows about that mode.
 27. v27, 2026-11-16: programs (`018_programs.sql`): many programs in one database, each with its own `?p=` link and its own data; program 1 = all earlier data; super admin Programs section; admin program picker; per-program phone storage. Backup tables `private.bk_20261116_*` made first.
-28. v28 (current), 2026-11-16: program settings (`019_program_look.sql`, section 5c): name/emoji on the top bar, theme pack (Christmas / plain church), font and text size, parts on/off per program, wording overrides in Thai and English; super admin card "This program's settings".
+28. v28, 2026-11-16: program settings (`019_program_look.sql`, section 5c): name/emoji on the top bar, theme pack (Christmas / plain church), font and text size, parts on/off per program, wording overrides in Thai and English; super admin card "This program's settings".
+29. v29 (current), 2026-11-16: layout editor (section 5c): reorder and hide bottom tabs, kid home parts and menu rows per program, drag/▲▼/👁️ with a live mini preview; stored in `look.layout`, no database change.
 
 ## 14. Ideas and open items
 
@@ -602,7 +605,7 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 - **v25 (super admin): DONE**, see 5b. Live database updated (017 run, with row level security switched on for the three private tables; the owner's email stored in `private.owner`). The owner's Supabase login was created with "Invite user" on 2026-11-16; **still to do by the owner:** open that invitation email, choose the username and password on the set-up page. Until then the real two-step sign-in is untested on the live site (it was tested in the preview copy). Split of app.js started (songtext.js, superadmin.js); the rest of app.js (~1780 lines: kid pages, admin pages, song player) can be split further when touched.
 - **v27 (programs): DONE**, see 5a. Original plan: each customised app is a saved "program" with its own look, settings, people, points, shop and songs, and **its own link**. One live program per link; today's data becomes program 1 "Youth Alpha Christmas 2026", untouched. Never delete existing data. A new program can copy the people list or the look from an old one. Named saved versions of a program's look as a safety net.
 - **v28 (program settings): DONE**, see 5c. Easter is added as a pack in v30.
-- **v29:** drag-and-drop layout editor (reorder and show/hide sections, tabs and menu items, live preview; not a free-form designer).
+- **v29 (layout editor): DONE**, see 5c.
 - **v30:** Easter pack (3D scene from simple shapes, public-domain hymn, egg-hunt special mode, a mascot in place of Santa).
 - **v31:** member login switch: real username + password accounts (future programs may be for adults), toggleable per program (off / personal details only / everything).
 - **Also requested:** SQL export and data science tools for the super admin (separate release after the programs work).

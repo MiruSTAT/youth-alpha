@@ -891,3 +891,24 @@ body.off-tree #scene, body.off-music #musicBtn { display: none; }
 body.off-tree:not(.adult):not(.song-page)::before { content: var(--look-emoji); position: fixed; top: 15vh; left: 0; right: 0; text-align: center; font-size: 5.5rem; pointer-events: none; animation: lookBob 4s ease-in-out infinite; }
 @keyframes lookBob { 50% { transform: translateY(-8px); } }
 @media (prefers-reduced-motion: reduce) { body.off-tree::before { animation: none; } }
+
+/* ---- update 29: layout editor */
+.kid-nav a.lay-hide { display: none !important; }
+.lay-card .lay-wrap { display: grid; grid-template-columns: 1fr 150px; gap: 14px; align-items: start; }
+.lay-card h3 { font-size: 1rem; margin: 14px 0 6px; }
+.lay-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; touch-action: none; }
+.lay-item { display: flex; align-items: center; gap: 8px; padding: 8px 8px; border-radius: 12px; background: var(--a-soft, rgba(0,0,0,.04)); border: 1px solid transparent; user-select: none; }
+.lay-item.off { opacity: .45; }
+.lay-item.dragging { border-color: currentColor; box-shadow: 0 6px 18px rgba(0,0,0,.18); position: relative; z-index: 2; }
+.lay-item .lh { cursor: grab; font-size: 1.3rem; padding: 2px 6px; touch-action: none; }
+.lay-item .ll { flex: 1; min-width: 0; }
+.lay-item button { min-width: 36px; min-height: 36px; border-radius: 10px; border: 0; background: transparent; font-size: 1rem; cursor: pointer; color: inherit; }
+.lay-item button:disabled { opacity: .25; cursor: default; }
+.lay-phone { position: sticky; top: 70px; border: 3px solid currentColor; border-radius: 22px; padding: 8px 6px 0; font-size: .62rem; min-height: 250px; display: flex; flex-direction: column; opacity: .9; }
+.lay-phone .pv-bar { font-weight: 700; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lay-phone .pv-home { flex: 1; display: grid; gap: 4px; align-content: start; }
+.lay-phone .pv-home div { border-radius: 6px; padding: 5px 6px; background: var(--a-soft, rgba(0,0,0,.06)); }
+.lay-phone .pv-home .big { min-height: 48px; }
+.lay-phone .pv-menu { margin-top: 6px; border-top: 1px dashed currentColor; padding-top: 4px; }
+.lay-phone .pv-tabs { display: flex; justify-content: space-around; border-top: 1px solid currentColor; padding: 5px 0; margin-top: 6px; font-size: .9rem; }
+@media (max-width: 520px) { .lay-card .lay-wrap { grid-template-columns: 1fr; } .lay-phone { position: static; max-width: 190px; margin: 0 auto; order: -1; } }
