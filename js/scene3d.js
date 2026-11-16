@@ -1,14 +1,16 @@
-// Interactive 3D Christmas scene (Three.js). Drag to spin the tree, tap for sparkles.
+// Interactive 3D scene (Three.js). Drag to spin the tree, tap for sparkles.
+// Christmas: tree, star, ornaments, presents, snow. Easter pack (v30, initScene(el, { pack: 'easter' })):
+// green hill with a wooden cross and a glowing halo, pastel eggs that light up, falling petals, eggs in the special mode.
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js';
 
 let renderer, scene, camera, tree, star, snow, gifts = [], ornaments = [], sparks = null, sparkPos, sparkCol, sparkVel, sparkLife, sparkNext = 0;
 let running = false, want = false, covered = false, quality = 0, qAcc = 0, qN = 0, qWarm = 0, skipFrame = false, raf = 0, spinVel = 0.004, dragging = false, lastX = 0, litCount = 0;
 let festive = false, flash = 0, camKick = 0, baseZ = 11, party = [], partyLight = null;
-let canvas;
+let canvas, EASTER = false;
 const clock = new THREE.Clock();
 
-export function initScene(el) {
-  canvas = el;
+export function initScene(el, opts = {}) {
+  canvas = el; EASTER = opts.pack === 'easter';
   try {
     renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'low-power' });
   } catch (e) { document.body.classList.add('no-webgl'); return false; }
@@ -18,17 +20,24 @@ export function initScene(el) {
   camera.position.set(0, 3.2, 10.5);
   camera.lookAt(0, 2.4, 0);
 
-  scene.add(new THREE.HemisphereLight(0xbfd8ff, 0x1a1030, 1.1));
+  scene.add(new THREE.HemisphereLight(EASTER ? 0xfff1d6 : 0xbfd8ff, EASTER ? 0x2a4a20 : 0x1a1030, 1.1));
   const key = new THREE.DirectionalLight(0xffffff, 1.6); key.position.set(4, 8, 6); scene.add(key);
   const warm = new THREE.PointLight(0xffb347, 30, 12); warm.position.set(-2, 3, 3); scene.add(warm);
 
   // ground (snow)
   const ground = new THREE.Mesh(new THREE.CircleGeometry(7, 48),
-    new THREE.MeshStandardMaterial({ color: 0xe8f0ff, roughness: 0.9 }));
+    new THREE.MeshStandardMaterial({ color: EASTER ? 0x9fd88f : 0xe8f0ff, roughness: 0.9 }));
   ground.rotation.x = -Math.PI / 2; scene.add(ground);
 
-  // tree
   tree = new THREE.Group(); scene.add(tree);
+  if (EASTER) buildEaster(); else buildTree();
+  buildGifts();
+  buildRest();
+  resize();
+  return true;
+}
+
+function buildTree() {
   const green = new THREE.MeshStandardMaterial({ color: 0x1f8a4c, roughness: 0.6, flatShading: true });
   const green2 = new THREE.MeshStandardMaterial({ color: 0x27a55c, roughness: 0.6, flatShading: true });
   [[2.3, 2.0, 1.4], [1.8, 1.8, 2.5], [1.3, 1.6, 3.5], [0.8, 1.3, 4.3]].forEach(([r, hgt, y], i) => {
@@ -65,7 +74,9 @@ export function initScene(el) {
     }
   });
 
-  // gifts
+}
+
+function buildGifts() {
   // presents: every box shares the same few shapes and colours, so the special mode can add
   // many more of them without the phone having to build anything new (no stutter)
   GIFT_COLS.forEach(([c1, c2]) => GIFT_MATS.push([new THREE.MeshStandardMaterial({ color: c1, roughness: 0.4 }), new THREE.MeshStandardMaterial({ color: c2, roughness: 0.3, metalness: 0.3 })]));
@@ -77,6 +88,9 @@ export function initScene(el) {
     gifts.push(g); scene.add(g);
   });
   for (let i = 0; i < 18; i++) { const g = makeGift(i, 0.32 + Math.random() * 0.3); g.visible = false; party.push(g); scene.add(g); }
+}
+
+function buildRest() {
   // light for the special mode: always there (switched off), so turning it on does not rebuild the shaders
   partyLight = new THREE.PointLight(0xffffff, 0, 14); partyLight.position.set(0, 6, 3); scene.add(partyLight);
   // sparkles: one reusable particle cloud
@@ -95,7 +109,7 @@ export function initScene(el) {
   const COUNT = 300, pos = new Float32Array(COUNT * 3);
   for (let i = 0; i < COUNT; i++) { pos[i * 3] = (Math.random() - 0.5) * 20; pos[i * 3 + 1] = Math.random() * 12; pos[i * 3 + 2] = (Math.random() - 0.5) * 14; }
   const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-  snow = new THREE.Points(sg, new THREE.PointsMaterial({ color: 0xffffff, size: 0.08, transparent: true, opacity: 0.85, depthWrite: false }));
+  snow = new THREE.Points(sg, new THREE.PointsMaterial({ color: EASTER ? 0xffb6d5 : 0xffffff, size: EASTER ? 0.13 : 0.08, transparent: true, opacity: 0.85, depthWrite: false }));
   scene.add(snow);
 
   // interaction
@@ -115,9 +129,38 @@ export function initScene(el) {
     if (c === covered) return;
     covered = c; covered ? pause() : resume();
   }, { passive: true });
-  resize();
-  return true;
 }
+
+// Easter: a green hill, a wooden cross with a glowing halo (uses the `star` slot), eggs (use the `ornaments` slot)
+function buildEaster() {
+  const hill = new THREE.Mesh(new THREE.SphereGeometry(2.7, 28, 14, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0x5fb85a, roughness: 0.85, flatShading: true }));
+  hill.scale.y = 0.55; tree.add(hill);
+  const wood = new THREE.MeshStandardMaterial({ color: 0x8a5a33, roughness: 0.8 });
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.32, 3.6, 0.32), wood); post.position.y = 1.4 + 1.8; tree.add(post);
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.32, 0.32), wood); beam.position.y = 4.1; tree.add(beam);
+  // white cloth over the beam: He is risen
+  const cloth = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 0.36), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }));
+  cloth.position.set(0, 3.85, 0.02); tree.add(cloth);
+  star = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.09, 10, 40),
+    new THREE.MeshStandardMaterial({ color: 0xffe08a, emissive: 0xffc400, emissiveIntensity: 1.2, metalness: 0.4, roughness: 0.3 }));
+  star.position.y = 4.95; tree.add(star);
+  // eggs on the hill (light up as points grow)
+  const cols = [0xff9ec7, 0x9ed8ff, 0xfff08a, 0xb9f5a8, 0xd2b4ff, 0xffc79e];
+  const ringR = [1.0, 1.55, 2.05, 2.45], perRing = [5, 7, 8, 8];
+  let n = 0;
+  ringR.forEach((r, li) => {
+    for (let i = 0; i < perRing[li]; i++) {
+      const a = (i / perRing[li]) * Math.PI * 2 + li * 0.7;
+      const col = cols[n % cols.length];
+      const m = new THREE.Mesh(eggGeo(), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0, roughness: 0.35, metalness: 0.1 }));
+      const y = 0.55 * Math.sqrt(Math.max(0, 2.7 * 2.7 - r * r));
+      m.position.set(Math.cos(a) * r, y + 0.16, Math.sin(a) * r); m.scale.setScalar(0.42); m.rotation.z = (Math.random() - 0.5) * 0.5;
+      m.userData.color = col; ornaments.push(m); tree.add(m); n++;
+    }
+  });
+}
+const eggGeo = () => (GEO.egg ??= (() => { const g = new THREE.SphereGeometry(0.5, 16, 12); g.scale(0.8, 1.05, 0.8); return g; })());
 let tapStart = 0, tapX = 0, lastW = 0, lastH = 0;
 
 function resize() {
@@ -135,7 +178,7 @@ function resize() {
   camera.updateProjectionMatrix();
 }
 
-const SPARK_COLS = [[1, 0.83, 0.3], [0.95, 0.25, 0.3], [1, 1, 1]];
+const SPARK_COLS = [[1, 0.83, 0.3], [0.95, 0.25, 0.3], [1, 1, 1]], SPARK_EASTER = [[1, 0.62, 0.78], [0.62, 0.85, 1], [1, 0.95, 0.55]];
 export function burst(count = 40) {
   if (!sparks) return;
   for (let k = 0; k < count; k++) {
@@ -143,7 +186,7 @@ export function burst(count = 40) {
     sparkPos.set([0, 5.2, 0], i * 3);
     sparkVel.set([(Math.random() - 0.5) * 15, Math.random() * 13 + 3, (Math.random() - 0.5) * 15], i * 3);
     sparkLife[i] = 1;
-    sparkCol.set(SPARK_COLS[k % 3], i * 3);
+    sparkCol.set((EASTER ? SPARK_EASTER : SPARK_COLS)[k % 3], i * 3);
   }
 }
 
@@ -168,7 +211,7 @@ function tick() {
     }
   }
   if (!dragging) { spinVel += (0.004 - spinVel) * 0.03; tree.rotation.y += spinVel; }
-  star.rotation.y = time * 1.5;
+  star.rotation.y = EASTER ? Math.sin(time * 0.8) * 0.4 : time * 1.5;
   star.material.emissiveIntensity = 1 + Math.sin(time * 3) * 0.4 + flash * 5;
   star.scale.setScalar(1 + flash * 0.9 + (festive ? 0.15 + Math.sin(time * 4) * 0.08 : 0));
   flash *= 0.96;
@@ -221,6 +264,7 @@ const GIFT_COLS = [[0xd93a4a, 0xf6c445], [0x2a7de1, 0xffffff], [0x27a55c, 0xd93a
 const GIFT_MATS = [];
 const GEO = {};
 function makeGift(i, s) {
+  if (EASTER) return makeEgg(i, s);
   GEO.box ??= new THREE.BoxGeometry(1, 1, 1); GEO.r1 ??= new THREE.BoxGeometry(1.02, 1.02, 0.16); GEO.r2 ??= new THREE.BoxGeometry(0.16, 1.02, 1.02);
   GEO.bow ??= new THREE.TorusGeometry(0.18, 0.06, 6, 12);
   const [m1, m2] = GIFT_MATS[i % GIFT_MATS.length], g = new THREE.Group(), inner = new THREE.Group();
@@ -228,6 +272,19 @@ function makeGift(i, s) {
   inner.add(new THREE.Mesh(GEO.box, m1), new THREE.Mesh(GEO.r1, m2), new THREE.Mesh(GEO.r2, m2), bow);
   inner.scale.setScalar(s); g.add(inner);
   g.userData.half = s / 2; g.userData.size = s;
+  return g;
+}
+// Easter: a painted egg with a band round the middle (same few shapes and colours, reused)
+const EGG_COLS = [[0xff9ec7, 0xffffff], [0x9ed8ff, 0xfff08a], [0xfff08a, 0xff9ec7], [0xb9f5a8, 0xd2b4ff], [0xd2b4ff, 0xffffff], [0xffc79e, 0x9ed8ff]];
+const EGG_MATS = [];
+function makeEgg(i, s) {
+  if (!EGG_MATS.length) EGG_COLS.forEach(([a, b]) => EGG_MATS.push([new THREE.MeshStandardMaterial({ color: a, roughness: 0.35 }), new THREE.MeshStandardMaterial({ color: b, roughness: 0.3, metalness: 0.2 })]));
+  GEO.band ??= new THREE.TorusGeometry(0.405, 0.05, 6, 24);
+  const [m1, m2] = EGG_MATS[i % EGG_MATS.length], g = new THREE.Group(), inner = new THREE.Group();
+  const band = new THREE.Mesh(GEO.band, m2); band.rotation.x = Math.PI / 2;
+  inner.add(new THREE.Mesh(eggGeo(), m1), band);
+  inner.scale.setScalar(s * 1.15); inner.position.y = 0; g.add(inner);
+  g.userData.half = s * 0.6; g.userData.size = s;
   return g;
 }
 // presents burst out of the tree and land all around it

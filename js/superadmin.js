@@ -120,7 +120,7 @@ export async function pSuper(c) {
     <div id="hoBody"></div>
 
     <h2 class="grp">${c.t('saNext')}</h2>
-    <div class="card"><ul class="sa-next">${['saN4', 'saN5', 'saN6'].map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
+    <div class="card"><ul class="sa-next">${['saN5', 'saN6'].map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
 
   // sign out: end the super admin powers on this device AND sign out (next time: password + email link again)
   c.$('#saLock').onclick = async () => {
@@ -242,6 +242,7 @@ function drawLook(c) {
         <label>${c.t('lookPack')}<select class="input" name="pack">${Object.keys(K.PACKS).map(k => opt(k, L.pack || 'christmas', c.t('pack_' + k))).join('')}</select></label>
         <label>${c.t('lookFont')}<select class="input" name="font">${Object.entries(K.FONTS).map(([k, f]) => opt(k, L.font || 'noto', f)).join('')}</select></label>
       </div>
+      <p class="hint" style="margin:-4px 0 10px">${c.t('lookPackHint')}</p>
       <label>${c.t('lookSize')} <span id="lookSizeV">${Math.round((L.size || 1) * 100)}%</span>
         <input type="range" name="size" min="0.9" max="1.3" step="0.05" value="${L.size || 1}"></label>
       <div class="look-sample" id="lookSample">ตัวอย่างตัวอักษร · Sample text 123</div>
@@ -266,8 +267,11 @@ function drawLook(c) {
     }
   };
   f.font.onchange = f.size.oninput = paintSample; paintSample();
-  // a plain church pack has no Christmas extras: untick them when it is chosen (they can be ticked again)
-  f.pack.onchange = () => { if (f.pack.value !== 'christmas') ['tree', 'snow', 'santa', 'festive'].forEach(k => { f['f_' + k].checked = false; }); };
+  // plain church pack: no Christmas extras (untick them); Easter pack: its own versions (tick them). Both can be changed again
+  f.pack.onchange = () => {
+    if (f.pack.value === 'plain') ['tree', 'snow', 'santa', 'festive', 'music'].forEach(k => { f['f_' + k].checked = false; });
+    if (f.pack.value === 'easter') ['tree', 'santa', 'festive', 'music'].forEach(k => { f['f_' + k].checked = true; });   // Easter has its own scene, lamb, egg hunt and hymn
+  };
   f.onsubmit = async (e) => {
     e.preventDefault();
     const look = { ...(c.program.look || {}), title: f.title.value.trim(), emoji: f.emoji.value.trim(), pack: f.pack.value, font: f.font.value, size: Number(f.size.value), off: {}, words: { th: {}, en: {} } };

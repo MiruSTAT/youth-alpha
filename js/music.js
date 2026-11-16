@@ -1,6 +1,8 @@
 // Background music, synthesized live (no audio files):
 // "Jingle Bells" (James Lord Pierpont, 1857 — public domain melody) with bells,
 // and a majestic "Joy to the World" for the special tree mode.
+// Easter pack (v30): "Easter Hymn" (Lyra Davidica, 1708 — public domain), melody as printed in the
+// English Hymnal (1906, public domain): soft bells normally, trumpets and timpani in the special mode.
 const N = { G3: 196.0, A3: 220.0, B3: 246.94, C4: 261.63, D4: 293.66, E4: 329.63, F4: 349.23, G4: 392.0, A4: 440.0, C5: 523.25, C3: 130.81, F3: 174.61, G2: 98.0 };
 const q = 1, h = 2, w = 4, e = 0.5, dq = 1.5, dh = 3;
 // Verse ("Dashing through the snow ...") — 16 bars
@@ -80,6 +82,23 @@ function buildJoy() {
   return { ev, len: endB + 8 };
 }
 const JOY_TL = buildJoy();
+
+// ---- Easter Hymn ("Jesus Christ is risen today"), key C, 1 = a quarter note; each line ends with its Alleluia
+const EASTER = [
+  ['C4', 2], ['E4', 2], ['G4', 2], ['C4', 2], ['F4', 2], ['A4', 2], ['A4', 2], ['G4', 2],
+  ['E4', 1], ['F4', 1], ['G4', 1], ['C4', 1], ['F4', 2], ['E4', 1], ['F4', 1], ['E4', 2], ['D4', 2], ['C4', 4],
+  ['F4', 2], ['G4', 2], ['A4', 2], ['G4', 2], ['F4', 2], ['E4', 2], ['E4', 2], ['D4', 2],
+  ['E4', 1], ['F4', 1], ['G4', 1], ['C4', 1], ['F4', 2], ['E4', 1], ['F4', 1], ['E4', 2], ['D4', 2], ['C4', 4],
+  ['B4', 2], ['C5', 2], ['D5', 2], ['G4', 2], ['C5', 2], ['D5', 2], ['E5', 4],
+  ['B4', 1], ['C5', 1], ['D5', 1], ['G4', 1], ['C5', 2], ['B4', 1], ['C5', 1], ['B4', 2], ['A4', 2], ['G4', 4],
+  ['G4', 1], ['A4', 1], ['B4', 1], ['G4', 1], ['C5', 2], ['E4', 2], ['F4', 2], ['A4', 2], ['A4', 2], ['G4', 2],
+  ['C5', 1], ['B4', 1], ['C5', 1], ['G4', 1], ['A4', 1], ['B4', 1], ['C5', 1], ['D5', 1], ['C5', 2], ['B4', 2], ['C5', 4],
+];
+// one bass note per bar (4 beats), following the harmony of each bar
+const EASTER_BASS = ['C3', 'C3', 'F3', 'C3', 'C3', 'F3', 'G2', 'C3', 'F3', 'C3', 'F3', 'G2', 'C3', 'F3', 'G2', 'C3',
+  'G2', 'G2', 'C3', 'C3', 'G2', 'C3', 'D3', 'G2', 'G2', 'C3', 'F3', 'C3', 'F3', 'F3', 'G2', 'C3'];
+const EASTER_BPM = 104, EASTER_JOY_BPM = 88;
+let pack = 'christmas';
 
 let ctx = null, master = null, bus = null, rev = null, playing = false, timer = null, nextTime = 0, idx = 0, beatPos = 0;
 let track = 'jingle', joyStart = 0, joyIdx = 0, held = false, resumeAfter = false, allowed = true;
@@ -194,7 +213,23 @@ function scheduleJoy() {
     }
   }
 }
-function schedule() { track === 'joy' ? scheduleJoy() : scheduleJingle(); }
+function scheduleEaster(joy) {
+  const spb = 60 / (joy ? EASTER_JOY_BPM : EASTER_BPM);
+  while (nextTime < ctx.currentTime + 0.3) {
+    const [note, beats] = EASTER[idx], f = hz(note), d = beats * spb;
+    if (joy) { brass(f, nextTime, d * 0.95, 0.16, 3400); brass(f / 2, nextTime, d * 0.95, 0.07, 2000, true); }
+    else bell(f, nextTime, d, 0.22);
+    for (let b = Math.ceil(beatPos - 1e-6); b < beatPos + beats - 1e-6; b++) {
+      if (b % 4) continue;
+      const bt = nextTime + (b - beatPos) * spb, bn = hz(EASTER_BASS[(b / 4) % EASTER_BASS.length]);
+      bassNote(bn, bt, 4 * spb * 0.9, joy ? 0.22 : 0.15);
+      if (joy) timpani(bn / 2 < 60 ? bn : bn / 2, bt, 0.4);
+    }
+    nextTime += d; beatPos += beats; idx++;
+    if (idx >= EASTER.length) { idx = 0; beatPos = 0; nextTime += spb * 2; }      // short breath, then again
+  }
+}
+function schedule() { pack === 'easter' ? scheduleEaster(track === 'joy') : track === 'joy' ? scheduleJoy() : scheduleJingle(); }
 
 function ensureCtx() {
   if (ctx) return true;
@@ -244,6 +279,8 @@ export const music = {
     else if (resumeAfter) { resumeAfter = false; this.start(); }
   },
   setAllowed(on) { allowed = on; if (!on && playing) this.stop(false); },
+  // v30: which background song belongs to the program's theme pack (easter = Easter Hymn, else Jingle Bells)
+  setPack(p) { const n = p === 'easter' ? 'easter' : 'christmas'; if (n === pack) return; pack = n; if (ctx && playing) restart(); },
   // little "ding" when points pop
   ding() {
     if (!ctx || !playing) return;

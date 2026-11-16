@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '29';
+export const VERSION = '30';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -20,9 +20,19 @@ export const AREAS = {
 };
 
 export const UPDATES = [
-  { id: 'super', th: 'อัปเดตผู้ดูแลสูงสุดและโปรแกรม', en: 'Super admin & programs update',
+  { id: 'super', th: 'อัปเดตผู้ดูแลสูงสุด โปรแกรม และชุดธีม', en: 'Super admin, programs & theme packs update',
     versions: [
-      { v: '29', date: '2026-11-16', commit: '',
+      { v: '30', date: '2026-11-16', commit: '',
+        items: [
+          { a: 'look', th: 'ชุดธีมใหม่ "อีสเตอร์" เลือกได้ในตั้งค่าโปรแกรม: อีโมจิ 🐣 สีกลีบดอกไม้แทนหิมะ และคำที่เข้ากับอีสเตอร์ (เพลงอีสเตอร์ สุขสันต์วันอีสเตอร์ พระเยซูทรงคืนพระชนม์)', en: 'New "Easter" theme pack in the program settings: 🐣, petals instead of snow, and Easter wording (Easter songs, Happy Easter, He is risen)' },
+          { a: 'kids', th: 'ฉาก 3 มิติอีสเตอร์: เนินหญ้าสีเขียว ไม้กางเขนพร้อมผ้าขาวและวงแสงสีทอง ไข่อีสเตอร์สีพาสเทลบนเนินที่สว่างขึ้นตามคะแนน และกลีบดอกไม้สีชมพูโปรยลงมา หมุนและแตะได้เหมือนต้นคริสต์มาส', en: 'Easter 3D scene: a green hill, a wooden cross with a white cloth and a golden halo, pastel eggs on the hill that light up with points, and pink petals falling; spin and tap like the Christmas tree' },
+          { a: 'kids', th: 'เพลงพื้นหลังอีสเตอร์: "Easter Hymn" (Lyra Davidica ปี 1708 เป็นสาธารณสมบัติ ทำนองตามหนังสือ English Hymnal ปี 1906) เสียงระฆังเบา ๆ และในโหมดพิเศษเป็นแตรกับกลองทิมปานี', en: 'Easter background song: "Easter Hymn" (Lyra Davidica, 1708, public domain; melody as in the English Hymnal, 1906), soft bells, and trumpets with timpani in the special mode' },
+          { a: 'kids', th: 'โหมดพิเศษอีสเตอร์ (แตะฉาก 5 ครั้ง): ไข่และดอกไม้พุ่งออกมา แล้วเริ่มล่าไข่ มีไข่ 8 ใบซ่อนอยู่ทั่วจอ แตะเพื่อเก็บ มีตัวนับเล็ก ๆ ด้านบน (ไม่มีหน้าต่างเด้ง)', en: 'Easter special mode (tap the scene 5 times): eggs and flowers burst out, then an egg hunt: 8 eggs hidden around the screen, tap to find them, with a small counter at the top (no pop-ups)' },
+          { a: 'kids', th: 'ในชุดอีสเตอร์ ลูกแกะ 🐑 โผล่มาทักแทนซานต้า แตะแล้วมีไข่กระจาย', en: 'In the Easter pack a lamb 🐑 peeks in instead of Santa; tapping it scatters eggs' },
+          { a: 'admin', th: 'เลือกชุดอีสเตอร์แล้วจะติ๊กฉาก 3 มิติ ตัวละครโผล่ โหมดพิเศษ และเพลงให้อัตโนมัติ ชุดโบสถ์ (เรียบ ๆ) ปิดเพลงพื้นหลังด้วย ฉากและเพลงของชุดธีมเปลี่ยนเมื่อเปิดแอปใหม่', en: 'Choosing Easter ticks the 3D scene, peeking friend, special mode and music; the plain church pack also unticks background music. The pack\'s scene and song change the next time the app is opened' },
+          { a: 'data', th: 'บันทึกการใช้งานของเด็กมีเหตุการณ์ใหม่ "ล่าไข่อีสเตอร์" เมื่อเก็บไข่ครบ', en: 'The kids\' activity log has a new event, "Easter egg hunt", when every egg is found' },
+        ] },
+      { v: '29', date: '2026-11-16', commit: '37fa056',
         items: [
           { a: 'admin', th: 'หน้าผู้ดูแลสูงสุดมีส่วน "จัดหน้าตา": เรียงลำดับและซ่อน/แสดง แท็บด้านล่าง ส่วนต่าง ๆ ของหน้าแรกเด็ก (ประกาศ การ์ดคะแนนของหนู อันดับ ข้อพระคัมภีร์ประจำสัปดาห์) และแถวในหน้าเมนู', en: 'The super admin page has a "Layout" section: reorder and hide/show the bottom tabs, the parts of the kids\' home page (announcement, my points card, ranking, verse of the week) and the rows of the menu page' },
           { a: 'admin', th: 'ลากที่ ⠿ ด้วยนิ้วหรือเมาส์ หรือกด ▲▼ และกด 👁️ เพื่อซ่อน มีตัวอย่างหน้าจอโทรศัพท์ขนาดเล็กที่เปลี่ยนตามทันที กดบันทึกแล้วจึงใช้จริง', en: 'Drag ⠿ with a finger or the mouse, or press ▲▼, and press 👁️ to hide; a small phone preview changes as you go; nothing is used until you save' },

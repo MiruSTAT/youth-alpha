@@ -562,3 +562,15 @@ Object.assign(DICT.en, {
   layUp: 'Move up', layDown: 'Move down', layShow: 'Show', layHide: 'Hide', layLocked: 'This part cannot be hidden',
   laySave: 'Save layout', layReset: 'Back to normal', layResetWarn: 'Go back to the normal order and show every part for this program?',
 });
+
+// ---- update 30: Easter pack
+Object.assign(DICT.th, {
+  pack_easter: '🐣 อีสเตอร์', lookPackHint: 'ฉาก 3 มิติและเพลงพื้นหลังของชุดธีมจะเปลี่ยนเมื่อเปิดแอปใหม่',
+  eggFind: 'ไข่อีสเตอร์', eggAll: 'เจอไข่ครบแล้ว!', ev_egg_hunt: 'ล่าไข่อีสเตอร์',
+  feat_tree: 'ฉาก 3 มิติ', feat_santa: 'ตัวละครโผล่ (ซานต้า / ลูกแกะ)', feat_festive: 'โหมดพิเศษ (ล่าไข่ในชุดอีสเตอร์)', feat_snow: 'หิมะ / กลีบดอกไม้',
+});
+Object.assign(DICT.en, {
+  pack_easter: '🐣 Easter', lookPackHint: 'The pack’s 3D scene and background song change the next time the app is opened',
+  eggFind: 'Easter egg', eggAll: 'You found every egg!', ev_egg_hunt: 'Easter egg hunt',
+  feat_tree: '3D scene', feat_santa: 'Peeking friend (Santa / lamb)', feat_festive: 'Special mode (egg hunt in Easter)', feat_snow: 'Snow / petals',
+});

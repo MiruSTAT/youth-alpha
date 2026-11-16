@@ -80,7 +80,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
   - the YouTube IFrame API
   - `vendor/qrcode.js` (local copy) for QR codes
   - Google font **Noto Sans Thai**
-- **Versioning:** every import and asset carries `?v=N`. **The current version is `29`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
+- **Versioning:** every import and asset carries `?v=N`. **The current version is `30`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
 - **Service worker** (`sw.js`) makes the app work offline and open fast on weak Wi-Fi:
   - Files with `?v=` and same-origin pictures are served from the phone first (cache `ya-v<N>`, replaced on each version).
   - The page itself tries the internet first for 3.5 s, then uses the saved copy.
@@ -264,7 +264,7 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
 - **Tested on the live database** inside a rolled-back transaction (simulated super admin): program created as id 2 with settings, `_p2` categories, kids, songs, prizes; attendance gave `attendance_p2` points in program 2 only; rounds and leaderboard stayed separate; a negative `bonus_p2` was refused; feedback refused while closed. (Sequence note: that test used program id 2, so the first real new program will be id 3.)
 - **Preview mode** keeps only the program list (create/rename/archive work); its data is not split by program.
 
-### 5c. Program settings and layout (v28–v29, `supabase/019_program_look.sql`)
+### 5c. Program settings, layout and theme packs (v28–v30, `supabase/019_program_look.sql`)
 
 - **Where it is stored:** `programs.look` (jsonb) of each program. Written only by `program_set_look(p_id int, p_look jsonb)` (security definer, super admin only, must be a JSON object, max 20 000 characters). Every change is in `audit_log` via the `audit_programs` trigger (018). The public can read it (programs is public-read), so **never put secrets in `look`**.
 - **Shape** (every key optional; missing = the normal app):
@@ -275,6 +275,12 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
 - **Super admin page:** card "🎨 This program's settings" (`drawLook(c)` in superadmin.js) edits the program of the link that is open. Choosing a non-Christmas pack unticks tree, snow, Santa and special mode (they can be ticked again). Save → `api.programSetLook` → `c.program.look` updated, `ya_c_*programs*` cache cleared, `c.applyLook()`. The context `saCtx()` now also passes `tBase`, `applyLook`, `LOOK`.
 - **v29 layout (`look.layout`):** `{ tabs: [order], home: [order], menu: [order], hide: { tabs: [], home: [], menu: [] } }`. Lists and defaults in `LOOK.LAYOUT` (tabs rank/songs/shop/menu; home parts notice/me/rank/verse; menu rows fb/bible/credits/lang/install/help/adult), items that can never be hidden in `LOOK.LOCKED` (tabs rank + menu, home rank, menu adult). `layKeys(kind, withHidden)` in app.js returns the order (unknown/new keys appended in default order, so adding a new part later is safe). Applied in `applyLook()` (re-appends `#kidNav` links in order, class `lay-hide`), `kidRank()` (built from a `part` map joined in order) and `kidMenu()` (rows re-appended by `data-m` / `data-k="adult"`, hidden ones removed). Layout hiding is visual only; a hidden page still opens from a direct link (use the v28 part switches to really turn a page off). Feature switches (v28) still win.
 - **Layout editor:** card "🧩 Layout" (`drawLayout(c)` in superadmin.js): ⠿ handle drag with pointer events (works with fingers; `touch-action: none` on the list), ▲▼ buttons, 👁️/🙈 hide, 🔒 for locked items, mini phone preview (`#layPhone`, placed above the lists on narrow screens), Save, "Back to normal" (confirm, saves `layout: {}`). Saves with the same `program_set_look`, merging into the current `c.program.look` (the settings card also merges at submit time, so the two cards never overwrite each other).
+- **v30 Easter pack (`look.pack = 'easter'`):** `LOOK.PACKS` entries now carry `emoji`, `mascot` (peeking friend: 🎅 / 🕊️ / 🐑), `gift` (what bursts when it is tapped), `things` (cutscene items) and `words` (easter: songsTitle, santaHo, joyTitle). `packInfo()` returns the current pack. `applyLook()` sets `body.dataset.pack` and calls `music.setPack(pack)`.
+  - **3D (`scene3d.js`):** `initScene(el, { pack })` (app.js `ensureScene` passes `document.body.dataset.pack`; the scene is built once, so a pack change shows after the app is opened again — the super admin card says so). `buildEaster()` makes a green half-sphere hill, a wooden cross (two boxes) with a white cloth, a golden torus halo in the `star` slot (sways instead of spinning), 28 pastel eggs on the hill in the `ornaments` slot (they light up with points like the ornaments), and `makeGift()` returns `makeEgg()` (egg + band) so the two bobbing items and the special-mode burst are eggs. Pink petals instead of white 3D snow; pastel sparkles. The Christmas build was only moved into `buildTree()/buildGifts()/buildRest()`, unchanged.
+  - **Music (`music.js`):** `EASTER` = "Easter Hymn" (Lyra Davidica 1708, public domain), melody copied from the English Hymnal 1906 (public domain) score, key C, 32 bars of 4 beats; `EASTER_BASS` one root per bar; `scheduleEaster(joy)`: bells at 104 bpm normally, brass + timpani at 88 bpm in the special mode. `music.setPack(p)` switches (restarts if playing). The plain pack keeps Jingle Bells but its editor unticks background music.
+  - **Special mode in Easter:** same 5-taps start, cutscene title "พระเยซูทรงคืนพระชนม์! / He is risen!", then `eggHunt()` in app.js: a fixed layer `.egg-hunt` with 8 CSS-drawn striped eggs at random spots (14–76% of the screen height) and a small counter pill (no pop-ups); tap → 🐣, sparkle, ding; all found → "เจอไข่ครบแล้ว!", event `egg_hunt` (label added to `EVT_TH`), layer fades out. `endFestive()` removes the layer; hidden on adult pages.
+  - **Editor:** choosing Easter ticks tree/santa/festive/music; choosing plain unticks tree/snow/santa/festive/music. Labels of the switches became pack-neutral ("3D scene", "Peeking friend (Santa / lamb)", "Snow / petals", "Special mode (egg hunt in Easter)").
+  - Tested: tests/t_v30_easter.py (pack saved, petals colour, cutscene title, 8 eggs, counter, all found, layer removed, Easter songs title) + v28/v29 tests.
 - **Program copies:** `program_create` (018) does not copy `look`; set it on the new program's link.
 - **Tested:** preview (tests/t_v28_look.py: save title/emoji/pack/font/size/switches/words, reload, shop redirect, menu rows, worship-song title, English words, form keeps values) and regression tests/t_v27_programs.py. Live: 019 run on 2026-11-16 (function exists, security definer); live program 1 `look` is still `{}`.
 
@@ -597,7 +603,8 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 26. v26, 2026-11-16: owner feedback on v25: super admin page explained, "Lock" became "Sign out of super admin", handoff folded into one card; music switches grouped and foldable; new "All songs: video + original sheet only" switch (`settings.music.simpleSongs`), switched on live; the song editor now loads the music switches (`eventInfo(true)`) so its card knows about that mode.
 27. v27, 2026-11-16: programs (`018_programs.sql`): many programs in one database, each with its own `?p=` link and its own data; program 1 = all earlier data; super admin Programs section; admin program picker; per-program phone storage. Backup tables `private.bk_20261116_*` made first.
 28. v28, 2026-11-16: program settings (`019_program_look.sql`, section 5c): name/emoji on the top bar, theme pack (Christmas / plain church), font and text size, parts on/off per program, wording overrides in Thai and English; super admin card "This program's settings".
-29. v29 (current), 2026-11-16: layout editor (section 5c): reorder and hide bottom tabs, kid home parts and menu rows per program, drag/▲▼/👁️ with a live mini preview; stored in `look.layout`, no database change.
+29. v29, 2026-11-16: layout editor (section 5c): reorder and hide bottom tabs, kid home parts and menu rows per program, drag/▲▼/👁️ with a live mini preview; stored in `look.layout`, no database change.
+30. v30 (current), 2026-11-16: Easter theme pack (section 5c): cross-on-a-hill 3D scene with eggs and petals, Easter Hymn (public domain) bells / trumpets, egg-hunt special mode, lamb instead of Santa, Easter wording. No database change.
 
 ## 14. Ideas and open items
 
@@ -606,7 +613,7 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 - **v27 (programs): DONE**, see 5a. Original plan: each customised app is a saved "program" with its own look, settings, people, points, shop and songs, and **its own link**. One live program per link; today's data becomes program 1 "Youth Alpha Christmas 2026", untouched. Never delete existing data. A new program can copy the people list or the look from an old one. Named saved versions of a program's look as a safety net.
 - **v28 (program settings): DONE**, see 5c. Easter is added as a pack in v30.
 - **v29 (layout editor): DONE**, see 5c.
-- **v30:** Easter pack (3D scene from simple shapes, public-domain hymn, egg-hunt special mode, a mascot in place of Santa).
+- **v30 (Easter pack): DONE**, see 5c.
 - **v31:** member login switch: real username + password accounts (future programs may be for adults), toggleable per program (off / personal details only / everything).
 - **Also requested:** SQL export and data science tools for the super admin (separate release after the programs work).
 - **Name:** stays "Youth Alpha" for now (no repo rename).

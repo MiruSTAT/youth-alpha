@@ -1,14 +1,14 @@
-import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=29';
-import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor } from './data.js?v=29';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=29';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=29';
+import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=30';
+import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor } from './data.js?v=30';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=30';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=30';
 
-import { music } from './music.js?v=29';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=29';
-import { snow } from './snow.js?v=29';
-import { track } from './track.js?v=29';
-import { metro } from './metronome.js?v=29';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=29';
+import { music } from './music.js?v=30';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=30';
+import { snow } from './snow.js?v=30';
+import { track } from './track.js?v=30';
+import { metro } from './metronome.js?v=30';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=30';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -122,8 +122,8 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=29');
-    if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
+    const m = await import('./scene3d.js?v=30');
+    if (m.initScene($('#scene'), { pack: document.body.dataset.pack })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
 }
@@ -673,10 +673,10 @@ function santaPeek() {
   if (!busy) {
     const side = ['left', 'right', 'bottom'][Math.floor(Math.random() * 3)];
     const el = document.createElement('button');
-    el.className = `santa from-${side}`; el.setAttribute('aria-label', 'Santa');
-    el.innerHTML = `<span class="s-bubble">${t('santaHo')}</span><span class="s-face">🎅</span>`;
+    el.className = `santa from-${side}`; el.setAttribute('aria-label', document.body.dataset.pack === 'easter' ? 'Lamb' : 'Santa');
+    el.innerHTML = `<span class="s-bubble">${t('santaHo')}</span><span class="s-face">${packInfo().mascot}</span>`;
     if (side === 'bottom') el.style.left = (15 + Math.random() * 60) + '%'; else el.style.top = (28 + Math.random() * 40) + '%';
-    el.onclick = (e) => { e.stopPropagation(); track('santa_tap'); burst(el, '🎁', 12); music.ding(); el.classList.add('tapped'); };
+    el.onclick = (e) => { e.stopPropagation(); track('santa_tap'); burst(el, packInfo().gift, 12); music.ding(); el.classList.add('tapped'); };
     b.appendChild(el);
     setTimeout(() => el.remove(), 4600);
   }
@@ -699,7 +699,7 @@ function startFestive() {
   // the cutscene: a golden flash, presents flying everywhere, a title
   const cv = $('#scene').getBoundingClientRect(), cx = cv.left + cv.width / 2, cy = cv.top + cv.height * 0.55;
   const box = document.createElement('div'); box.className = 'cutscene';
-  const things = ['🎁', '🎁', '🎁', '🎀', '⭐', '✨', '🎁', '🍬', '🧸', '🎄'];
+  const things = packInfo().things;
   box.innerHTML = `<div class="flash" style="--x:${cx}px;--y:${cy}px"></div><div class="joy-title">✨ ${t('joyTitle')} ✨</div>` +
     Array.from({ length: 20 }, (_, i) => {
       const a = Math.random() * Math.PI * 2, d = 0.45 + Math.random() * 0.75, dx = Math.cos(a) * innerWidth * d, dy = Math.sin(a) * innerHeight * d * 0.9;
@@ -708,10 +708,36 @@ function startFestive() {
   document.body.appendChild(box);
   setTimeout(() => document.body.classList.add('festive'), 1400);
   setTimeout(() => box.remove(), 4200);
+  if (document.body.dataset.pack === 'easter') setTimeout(() => { if (festive) eggHunt(); }, 2600);
+}
+// v30 Easter special mode: eggs hidden around the screen; tap to find them all (a quiet counter, no pop-ups)
+function eggHunt() {
+  document.querySelector('.egg-hunt')?.remove();
+  const N = 8, layer = document.createElement('div'); layer.className = 'egg-hunt';
+  const cols = ['#ff9ec7', '#9ed8ff', '#fff08a', '#b9f5a8', '#d2b4ff', '#ffc79e'];
+  layer.innerHTML = `<div class="egg-count" aria-live="polite">🥚 <b>0</b>/${N}</div>` + Array.from({ length: N }, (_, i) => {
+    const x = 6 + Math.random() * 82, y = 14 + Math.random() * 62, r = Math.round(Math.random() * 50 - 25);
+    return `<button class="egg" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;--r:${r}deg;--c:${cols[i % cols.length]}" aria-label="${t('eggFind')}"></button>`;
+  }).join('');
+  document.body.appendChild(layer);
+  let found = 0;
+  layer.querySelectorAll('.egg').forEach(b => b.onclick = (e) => {
+    e.stopPropagation();
+    if (b.classList.contains('found')) return;
+    b.classList.add('found'); b.textContent = '🐣'; found++;
+    layer.querySelector('.egg-count b').textContent = found;
+    burst(b, '✨', 8); music.ding();
+    if (found === N) {
+      layer.querySelector('.egg-count').innerHTML = `🎉 ${t('eggAll')}`;
+      track('egg_hunt', 'all');
+      setTimeout(() => layer.classList.add('done'), 2600); setTimeout(() => layer.remove(), 3400);
+    }
+  });
 }
 function endFestive() {
   festive = false; track('festive', 'off');
   document.body.classList.remove('festive');
+  document.querySelector('.egg-hunt')?.remove();
   scene?.calm?.(); music.setTrack('jingle');
 }
 // in special mode every tap makes a magic sound (kids only)
@@ -725,7 +751,7 @@ let adult = { role: null, myId: null };
 const isAdm = () => adult.role === 'admin' || adult.role === 'superadmin';
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys });
-const saMod = () => import('./superadmin.js?v=29');
+const saMod = () => import('./superadmin.js?v=30');
 
 async function adultGate(page) {
   const session = await api.session();
@@ -1370,7 +1396,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=29');
+      const { readSheet } = await import('./ocr.js?v=30');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1704,7 +1730,7 @@ function describeLog(e, kidName) {
   return { item, changes, op: t('op_' + e.op) || e.op, area: t(TBL[e.table_name] || '') || e.table_name };
 }
 const EVT_TH = ['open_app', 'view', 'tap_kid', 'tap_my_card', 'set_me', 'not_me', 'cat_info', 'shop_tap', 'bible_open', 'bible_link', 'theme_open', 'theme', 'lang', 'music', 'help_open', 'tour_next', 'tour_skip', 'tour_done', 'fb_pill', 'fb_open', 'fb_send', 'tree_tap',
-  'songs', 'song_open', 'metro', 'autoscroll', 'song_speed', 'transpose', 'yt_play', 'sheet_view', 'credits', 'santa_tap', 'festive', 'pic_view', 'fb_qr', 'song_lang', 'prize_zoom', 'install'];
+  'songs', 'song_open', 'metro', 'autoscroll', 'song_speed', 'transpose', 'yt_play', 'sheet_view', 'credits', 'santa_tap', 'festive', 'pic_view', 'fb_qr', 'song_lang', 'prize_zoom', 'install', 'egg_hunt'];
 const evName = (e) => EVT_TH.includes(e) ? t('ev_' + e) : e;
 
 async function pExport() {
@@ -1850,11 +1876,16 @@ const LOOK = {
   },
   LOCKED: { tabs: ['rank', 'menu'], home: ['rank'], menu: ['adult'] },
   PACKS: {
-    christmas: { emoji: '🎄', words: {} },
-    plain: { emoji: '⛪', words: { th: { songsTitle: 'เพลงนมัสการ' }, en: { songsTitle: 'Worship songs' } } },
+    christmas: { emoji: '🎄', mascot: '🎅', gift: '🎁', things: ['🎁', '🎁', '🎁', '🎀', '⭐', '✨', '🎁', '🍬', '🧸', '🎄'], words: {} },
+    plain: { emoji: '⛪', mascot: '🕊️', gift: '✨', things: ['✨', '⭐', '🕊️', '💛', '🌟'], words: { th: { songsTitle: 'เพลงนมัสการ' }, en: { songsTitle: 'Worship songs' } } },
+    // v30: Easter — cross on a hill in 3D, Easter Hymn, egg hunt in the special mode, a lamb peeks in instead of Santa
+    easter: { emoji: '🐣', mascot: '🐑', gift: '🥚', things: ['🥚', '🐣', '🌷', '🌸', '✨', '🥚', '🌼', '🦋', '🥚', '🌷'],
+      words: { th: { songsTitle: 'เพลงอีสเตอร์', santaHo: 'สุขสันต์วันอีสเตอร์!', joyTitle: 'พระเยซูทรงคืนพระชนม์!' },
+               en: { songsTitle: 'Easter songs', santaHo: 'Happy Easter!', joyTitle: 'He is risen!' } } },
   },
 };
 const feat = (k) => program.look?.off?.[k] !== true;
+const packInfo = () => LOOK.PACKS[program.look?.pack] || LOOK.PACKS.christmas;
 // v29: keys of one list (tabs | home | menu) in the program's order, without the hidden ones
 function layKeys(kind, withHidden = false) {
   const lay = program.look?.layout || {}, all = LOOK.LAYOUT[kind].map(x => x[0]);
@@ -1880,7 +1911,8 @@ function applyLook() {
   if (f) root.style.setProperty('--font', `'${f}', 'Noto Sans Thai', 'Sarabun', system-ui, sans-serif`); else root.style.removeProperty('--font');
   const size = Math.min(1.3, Math.max(0.9, Number(L.size) || 1));
   root.style.fontSize = size === 1 ? '' : (18 * size).toFixed(1) + 'px';
-  document.body.dataset.pack = L.pack || 'christmas';
+  document.body.dataset.pack = LOOK.PACKS[L.pack] ? L.pack : 'christmas';
+  music.setPack?.(document.body.dataset.pack);
   LOOK.FEATS.forEach(([k]) => document.body.classList.toggle('off-' + k, !feat(k)));
   const nav = $('#kidNav'), shown = layKeys('tabs');                  // v29: bottom tab order and hidden tabs
   layKeys('tabs', true).forEach(k => { const a = nav.querySelector(`[data-nav="${k}"]`); if (a) { nav.appendChild(a); a.classList.toggle('lay-hide', !shown.includes(k)); } });
