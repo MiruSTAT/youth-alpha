@@ -161,6 +161,7 @@ function supabaseApi() {
     async programs() { return ok(await sb.from('programs').select('*').order('id')); },
     async programCreate(o) { return ok(await sb.rpc('program_create', { p_name: o.name, p_slug: o.slug, p_from: o.from, p_people: !!o.people, p_shop: !!o.shop, p_songs: !!o.songs })); },
     async programUpdate(id, name, archived) { ok(await sb.rpc('program_update', { p_id: id, p_name: name, p_archived: !!archived })); },
+    async programSetLook(id, look) { ok(await sb.rpc('program_set_look', { p_id: id, p_look: look })); },   // v28, see 019_program_look.sql
 
     // ---- prizes given, announcement + verse, weekly summary
     async redemptions(limit = 1000) { return ok(await sb.from('redemptions').select('*, kids(nickname, avatar)').eq('program_id', P()).order('created_at', { ascending: false }).limit(limit)); },
@@ -316,7 +317,7 @@ function previewApi() {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=27'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=28'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {
@@ -367,6 +368,7 @@ function previewApi() {
       return { ok: true, id };
     },
     async programUpdate(id, name, archived) { const p = (await this.programs()).find(x => x.id === id); if (p) Object.assign(p, { name, archived: id === 1 ? false : !!archived }); save(); },
+    async programSetLook(id, look) { const p = (await this.programs()).find(x => x.id === id); if (p) p.look = JSON.parse(JSON.stringify(look)); save(); },
     async clearKidEvents() { const n = db.events.length; db.events = []; audit('kid_events', 'CLEAR', null, { rows_deleted: n }); save(); return n; },
 
     async redemptions(limit = 1000) { return [...db.redemptions].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit).map(r => ({ ...r, kids: kidOf(r.kid_id) })); },

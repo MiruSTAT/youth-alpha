@@ -875,3 +875,19 @@ body[data-theme="snow"] .verse b { color: var(--dark-ink); }
 .prog-bar select { grid-column: 1 / -1; }
 .chk { display: flex; align-items: center; gap: 10px; font-size: 1.02rem; margin: 10px 0; }
 .chk input { width: 22px; height: 22px; }
+
+/* ---- update 28: program settings (switched off per program on the super admin page) */
+body.off-shop .kid-nav [data-nav="shop"], body.off-songs .kid-nav [data-nav="songs"] { display: none; }
+body.off-tree #scene, body.off-music #musicBtn { display: none; }
+.look-card .look-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+.look-card label { display: grid; gap: 4px; font-weight: 600; }
+.look-card .look-feats { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 8px 0 12px; }
+.look-card .look-feats label { display: flex; align-items: center; gap: 8px; font-weight: 400; padding: 8px 10px; border-radius: 12px; background: var(--a-soft, rgba(0,0,0,.04)); }
+.look-card .look-words { display: grid; gap: 8px; }
+.look-card .look-words .lw { display: grid; grid-template-columns: 7.5em 1fr 1fr; gap: 6px; align-items: center; }
+.look-card .look-words .lw span { font-size: .85rem; opacity: .75; overflow-wrap: anywhere; }
+.look-card .look-sample { padding: 10px 14px; border-radius: 12px; border: 1px dashed currentColor; opacity: .85; margin: 6px 0 10px; }
+@media (max-width: 460px) { .look-card .look-row { grid-template-columns: 1fr; } .look-card .look-words .lw { grid-template-columns: 1fr 1fr; } .look-card .look-words .lw span { grid-column: 1 / -1; } }
+body.off-tree:not(.adult):not(.song-page)::before { content: var(--look-emoji); position: fixed; top: 15vh; left: 0; right: 0; text-align: center; font-size: 5.5rem; pointer-events: none; animation: lookBob 4s ease-in-out infinite; }
+@keyframes lookBob { 50% { transform: translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) { body.off-tree::before { animation: none; } }

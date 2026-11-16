@@ -235,7 +235,13 @@ const DICT = {
 let lang = localStorage.getItem('ya_lang') || 'th';
 export const getLang = () => lang;
 export function setLang(l) { lang = l; localStorage.setItem('ya_lang', l); document.documentElement.lang = l; }
+// v28: wording set per program on the super admin page (programs.look.words) wins over the built-in text
+let OVR = { th: {}, en: {} };
+export function setOverrides(w) { OVR = { th: { ...(w?.th || {}) }, en: { ...(w?.en || {}) } }; }
+export const tBase = (key, l = lang) => { const v = DICT[l][key] ?? DICT.en[key] ?? key; return typeof v === 'function' ? '' : v; };
 export function t(key, ...args) {
+  const o = OVR[lang]?.[key];
+  if (typeof o === 'string' && o.trim()) return o;
   const v = DICT[lang][key] ?? DICT.en[key] ?? key;
   return typeof v === 'function' ? v(...args) : v;
 }
@@ -521,4 +527,22 @@ Object.assign(DICT.en, {
   progPeople: 'Copy the kids list (points start at 0)', progShop: 'Copy the prizes', progSongs: 'Copy the songs', progCreate: 'Create',
   progSlugBad: 'The link name needs at least 2 characters (a–z, 0–9, -)', progSlugUsed: 'Another program already uses this link name', progMade: (n) => `Created "${n}"`,
   progNow: 'Program', progUnknown: 'No program has this link, so the main program opened instead',
+});
+
+// ---- update 28: program settings (super admin page)
+Object.assign(DICT.th, {
+  lookTitle: 'ตั้งค่าโปรแกรมนี้', lookSub: (n) => `ใช้กับ "${n}" เท่านั้น (โปรแกรมของลิงก์ที่เปิดอยู่)`,
+  lookName: 'ชื่อบนแถบด้านบน', lookEmoji: 'อีโมจิ', lookPack: 'ชุดธีม', lookFont: 'แบบตัวอักษร', lookSize: 'ขนาดตัวอักษร',
+  lookParts: 'ส่วนที่เปิดใช้', lookWords: 'เปลี่ยนคำในแอป', lookWordsSub: 'ไม่บังคับ', lookWordsHint: 'เว้นว่างไว้ = ใช้คำเดิม (คำเดิมแสดงเป็นตัวจาง)', lookSave: 'บันทึกการตั้งค่า',
+  pack_christmas: '🎄 คริสต์มาส', pack_plain: '⛪ โบสถ์ (เรียบ ๆ)',
+  feat_songs: 'เพลง', feat_shop: 'ร้านค้า', feat_feedback: 'ความคิดเห็น', feat_bible: 'พระคัมภีร์', feat_music: 'เสียงเพลงพื้นหลัง',
+  feat_tree: 'ต้นไม้ 3 มิติ', feat_snow: 'หิมะ', feat_santa: 'ซานต้าโผล่', feat_festive: 'โหมดพิเศษ',
+});
+Object.assign(DICT.en, {
+  lookTitle: 'This program’s settings', lookSub: (n) => `Only for "${n}" (the program of the link that is open)`,
+  lookName: 'Name on the top bar', lookEmoji: 'Emoji', lookPack: 'Theme pack', lookFont: 'Font', lookSize: 'Text size',
+  lookParts: 'Parts that are on', lookWords: 'Change words in the app', lookWordsSub: 'optional', lookWordsHint: 'Leave empty = normal words (shown faded)', lookSave: 'Save settings',
+  pack_christmas: '🎄 Christmas', pack_plain: '⛪ Church (plain)',
+  feat_songs: 'Songs', feat_shop: 'Shop', feat_feedback: 'Feedback', feat_bible: 'Bible', feat_music: 'Background music',
+  feat_tree: '3D tree', feat_snow: 'Snow', feat_santa: 'Santa peeks', feat_festive: 'Special mode',
 });

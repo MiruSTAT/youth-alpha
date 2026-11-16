@@ -107,6 +107,9 @@ export async function pSuper(c) {
     <div class="card"><p class="muted" style="margin:0 0 10px">${c.t('progSub')}</p><div id="progList"></div>
       <button class="btn primary wide" id="progNew" style="margin-top:12px">➕ ${c.t('progNew')}</button></div>
 
+    <h2 class="grp">🎨 ${c.t('lookTitle')}</h2>
+    <div class="card look-card" id="lookCard"></div>
+
     <h2 class="grp">🤖 ${c.t('saAi')}</h2>
     <div class="card"><p class="muted" style="margin:0 0 10px">${c.t('saAiSub')}</p>
       <p id="hoState" class="sa-ho muted">${c.t('loading')}…</p>
@@ -114,7 +117,7 @@ export async function pSuper(c) {
     <div id="hoBody"></div>
 
     <h2 class="grp">${c.t('saNext')}</h2>
-    <div class="card"><ul class="sa-next">${['saN1', 'saN2', 'saN3', 'saN4', 'saN5', 'saN6'].map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
+    <div class="card"><ul class="sa-next">${['saN3', 'saN4', 'saN5', 'saN6'].map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
 
   // sign out: end the super admin powers on this device AND sign out (next time: password + email link again)
   c.$('#saLock').onclick = async () => {
@@ -135,6 +138,7 @@ export async function pSuper(c) {
 
   drawPrograms(c);
   c.$('#progNew').onclick = () => newProgram(c);
+  drawLook(c);
 
   // the handoff (HANDOFF.md, published with every release): shown by section, copied as a ready prompt
   let md = '';
@@ -215,4 +219,64 @@ async function newProgram(c) {
     c.toast('✓ ' + c.t('progMade', name));
     drawPrograms(c);
   } catch (e) { c.fail(e); }
+}
+
+
+// ---------- v28 program settings: name on screen, theme pack, font, text size, parts on/off, wording
+// saved in programs.look of the program this link opens (program_set_look, supabase/019_program_look.sql)
+function drawLook(c) {
+  const box = c.$('#lookCard'); if (!box) return;
+  const L = JSON.parse(JSON.stringify(c.program.look || {})), K = c.LOOK, off = L.off || {}, words = L.words || {};
+  const opt = (v, cur, label) => `<option value="${v}" ${v === cur ? 'selected' : ''}>${label}</option>`;
+  box.innerHTML = `<p class="muted" style="margin:0 0 6px">${c.t('lookSub', c.esc(c.program.name))}</p>
+    <form id="lookForm">
+      <div class="look-row">
+        <label>${c.t('lookName')}<input class="input" name="title" maxlength="30" value="${c.esc(L.title || '')}" placeholder="Youth Alpha"></label>
+        <label>${c.t('lookEmoji')}<input class="input" name="emoji" maxlength="8" value="${c.esc(L.emoji || '')}" placeholder="${(K.PACKS[L.pack] || K.PACKS.christmas).emoji}"></label>
+      </div>
+      <div class="look-row">
+        <label>${c.t('lookPack')}<select class="input" name="pack">${Object.keys(K.PACKS).map(k => opt(k, L.pack || 'christmas', c.t('pack_' + k))).join('')}</select></label>
+        <label>${c.t('lookFont')}<select class="input" name="font">${Object.entries(K.FONTS).map(([k, f]) => opt(k, L.font || 'noto', f)).join('')}</select></label>
+      </div>
+      <label>${c.t('lookSize')} <span id="lookSizeV">${Math.round((L.size || 1) * 100)}%</span>
+        <input type="range" name="size" min="0.9" max="1.3" step="0.05" value="${L.size || 1}"></label>
+      <div class="look-sample" id="lookSample">ตัวอย่างตัวอักษร · Sample text 123</div>
+      <b>${c.t('lookParts')}</b>
+      <div class="look-feats">${K.FEATS.map(([k, i]) => `<label><input type="checkbox" name="f_${k}" ${off[k] ? '' : 'checked'}> ${i} ${c.t('feat_' + k)}</label>`).join('')}</div>
+      <details class="ho-sec"><summary><span>✏️ ${c.t('lookWords')}</span><span class="muted">${c.t('lookWordsSub')}</span></summary>
+        <div class="look-words">${K.WORDS.map(k => `<div class="lw"><span>${c.esc(c.tBase(k, 'th'))}</span>
+          <input class="input" name="th_${k}" maxlength="60" value="${c.esc(words.th?.[k] || '')}" placeholder="${c.esc(c.tBase(k, 'th'))}" aria-label="TH ${k}">
+          <input class="input" name="en_${k}" maxlength="60" value="${c.esc(words.en?.[k] || '')}" placeholder="${c.esc(c.tBase(k, 'en'))}" aria-label="EN ${k}"></div>`).join('')}</div>
+        <p class="hint">${c.t('lookWordsHint')}</p></details>
+      <button class="btn primary wide" type="submit" style="margin-top:12px">💾 ${c.t('lookSave')}</button>
+    </form>`;
+  const f = c.$('#lookForm'), sample = c.$('#lookSample');
+  const paintSample = () => {
+    const fn = K.FONTS[f.font.value];
+    sample.style.fontFamily = `'${fn}', 'Noto Sans Thai', sans-serif`;
+    sample.style.fontSize = (18 * Number(f.size.value)).toFixed(1) + 'px';
+    c.$('#lookSizeV').textContent = Math.round(Number(f.size.value) * 100) + '%';
+    if (fn && !document.querySelector(`link[data-font="${f.font.value}"]`) && f.font.value !== 'noto') {
+      const l = document.createElement('link'); l.rel = 'stylesheet'; l.dataset.font = f.font.value;
+      l.href = `https://fonts.googleapis.com/css2?family=${fn.replace(/ /g, '+')}:wght@400;600;700&display=swap`; document.head.appendChild(l);
+    }
+  };
+  f.font.onchange = f.size.oninput = paintSample; paintSample();
+  // a plain church pack has no Christmas extras: untick them when it is chosen (they can be ticked again)
+  f.pack.onchange = () => { if (f.pack.value !== 'christmas') ['tree', 'snow', 'santa', 'festive'].forEach(k => { f['f_' + k].checked = false; }); };
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const look = { ...L, title: f.title.value.trim(), emoji: f.emoji.value.trim(), pack: f.pack.value, font: f.font.value, size: Number(f.size.value), off: {}, words: { th: {}, en: {} } };
+    K.FEATS.forEach(([k]) => { if (!f['f_' + k].checked) look.off[k] = true; });
+    K.WORDS.forEach(k => ['th', 'en'].forEach(l => { const v = f[`${l}_${k}`].value.trim(); if (v) look.words[l][k] = v; }));
+    const btn = f.querySelector('[type=submit]'); btn.disabled = true;
+    try {
+      await c.api.programSetLook(c.program.id, look);
+      c.program.look = look;
+      const row = c.program.list.find(x => x.id === c.program.id); if (row) row.look = look;
+      try { Object.keys(localStorage).filter(k => k.includes('programs')).forEach(k => localStorage.removeItem(k)); } catch { }
+      c.applyLook(); c.toast('✓ ' + c.t('saved'));
+    } catch (err) { c.fail(err); }
+    btn.disabled = false;
+  };
 }

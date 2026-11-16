@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '27';
+export const VERSION = '28';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,17 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'super', th: 'อัปเดตผู้ดูแลสูงสุดและโปรแกรม', en: 'Super admin & programs update',
     versions: [
-      { v: '27', date: '2026-11-16', commit: '',
+      { v: '28', date: '2026-11-16', commit: '',
+        items: [
+          { a: 'admin', th: 'หน้าผู้ดูแลสูงสุดมีส่วน "ตั้งค่าโปรแกรมนี้" ใช้กับโปรแกรมของลิงก์ที่เปิดอยู่เท่านั้น บันทึกแล้วเห็นผลทันที', en: 'The super admin page has a "This program\'s settings" section; it changes only the program of the link that is open and shows right away when saved' },
+          { a: 'look', th: 'ตั้งชื่อและอีโมจิบนแถบด้านบน (และชื่อแท็บของเบราว์เซอร์) ของแต่ละโปรแกรมได้ เว้นว่าง = Youth Alpha 🎄', en: 'Each program can set the name and emoji on the top bar (and the browser tab title); empty = Youth Alpha 🎄' },
+          { a: 'look', th: 'ชุดธีม: คริสต์มาส หรือ โบสถ์ (เรียบ ๆ) ชุดโบสถ์ใช้อีโมจิ ⛪ เรียกหน้าเพลงว่า "เพลงนมัสการ" และปิดต้นไม้ หิมะ ซานต้า และโหมดพิเศษไว้ก่อน (เปิดกลับได้)', en: 'Theme pack: Christmas or Church (plain). The church pack uses ⛪, calls the songs page "Worship songs", and unticks the tree, snow, Santa and special mode (they can be ticked again)' },
+          { a: 'look', th: 'เลือกแบบตัวอักษร 5 แบบ (Noto Sans Thai, Sarabun, Kanit, Mitr, Prompt) และขนาดตัวอักษรทั้งแอป 90%–130% มีตัวอย่างให้ดูก่อนบันทึก', en: 'Choose one of 5 fonts (Noto Sans Thai, Sarabun, Kanit, Mitr, Prompt) and the text size of the whole app, 90%–130%, with a sample before saving' },
+          { a: 'kids', th: 'เปิด/ปิดส่วนต่าง ๆ ต่อโปรแกรม: เพลง ร้านค้า ความคิดเห็น พระคัมภีร์ เสียงเพลงพื้นหลัง ต้นไม้ 3 มิติ หิมะ ซานต้า โหมดพิเศษ ส่วนที่ปิดจะหายจากหน้าเด็ก (ข้อมูลยังอยู่ครบ)', en: 'Switch parts on/off per program: songs, shop, feedback, Bible, background music, 3D tree, snow, Santa, special mode. Parts that are off disappear from the kids\' pages (their data stays)' },
+          { a: 'look', th: 'เปลี่ยนคำในแอปได้ทั้งไทยและอังกฤษ (ชื่อแท็บด้านล่าง หัวข้อหน้าเพลงและร้านค้า คำทักของซานต้า) เว้นว่าง = คำเดิม', en: 'Change words in the app in Thai and English (bottom tab names, songs and shop titles, Santa\'s greeting); empty = the normal words' },
+          { a: 'safety', th: 'การตั้งค่าเก็บในตารางโปรแกรม เปลี่ยนได้เฉพาะผู้ดูแลสูงสุด และทุกการเปลี่ยนบันทึกในบันทึกการแก้ไขถาวร', en: 'Settings are stored with the program, only the super admin can change them, and every change is kept in the permanent audit log' },
+        ] },
+      { v: '27', date: '2026-11-16', commit: '0805d13',
         items: [
           { a: 'data', th: 'โปรแกรม: แอปเดียวรองรับหลายโปรแกรม (เช่น คริสต์มาส อีสเตอร์) แต่ละโปรแกรมมีลิงก์ของตัวเอง (?p=ชื่อ) และมีรายชื่อเด็ก คะแนน การเช็กชื่อ ร้านค้า เพลง หมวดคะแนน ความคิดเห็น บันทึกการใช้งาน และการตั้งค่าแยกกัน', en: 'Programs: one app holds many programs (e.g. Christmas, Easter), each with its own link (?p=name) and its own kids, points, attendance, shop, songs, point categories, feedback, activity log and settings' },
           { a: 'safety', th: 'ข้อมูลเดิมทั้งหมดเป็นโปรแกรมที่ 1 "Youth Alpha Christmas 2026" ไม่มีอะไรถูกลบหรือเปลี่ยน ลิงก์เดิมและ QR ที่พิมพ์ไว้ยังเปิดโปรแกรมนี้เหมือนเดิม และสำรองข้อมูลไว้ในฐานข้อมูลก่อนเปลี่ยน', en: 'All existing data became program 1, "Youth Alpha Christmas 2026"; nothing was deleted or changed, the old link and printed QR still open it, and a backup was saved in the database first' },

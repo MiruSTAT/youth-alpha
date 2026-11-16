@@ -1,14 +1,14 @@
-import { t, getLang, setLang } from './i18n.js?v=27';
-import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor } from './data.js?v=27';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=27';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=27';
+import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=28';
+import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor } from './data.js?v=28';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=28';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=28';
 
-import { music } from './music.js?v=27';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=27';
-import { snow } from './snow.js?v=27';
-import { track } from './track.js?v=27';
-import { metro } from './metronome.js?v=27';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=27';
+import { music } from './music.js?v=28';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=28';
+import { snow } from './snow.js?v=28';
+import { track } from './track.js?v=28';
+import { metro } from './metronome.js?v=28';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=28';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -97,9 +97,9 @@ let songOpts = {};                                                  // switches 
 const moApp = (k) => evCache?.music?.[k] !== false;
 const mo = (k) => moApp(k) && (simpleSongs() && PLAYER_KEYS.includes(k) ? SIMPLE_KEEP.has(k) : songOpts[k] !== false);
 function applyAppOpts() {
-  document.body.classList.toggle('no-bgm', !mo('bgMusic'));
-  document.body.classList.toggle('no-songs', !mo('songsTab'));
-  music.setAllowed(mo('bgMusic'));
+  document.body.classList.toggle('no-bgm', !mo('bgMusic') || !feat('music'));
+  document.body.classList.toggle('no-songs', !mo('songsTab') || !feat('songs'));
+  music.setAllowed(mo('bgMusic') && feat('music'));
   if (typeof paintChrome === 'function') paintChrome();
 }
 
@@ -122,7 +122,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=27');
+    const m = await import('./scene3d.js?v=28');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -245,9 +245,9 @@ async function kidMenu() {
   view.innerHTML = `<section class="sheet">
     <h1 class="sheet-title" style="margin-bottom:16px">☰ ${t('menu')}</h1>
     <div class="mlist">
-      <button class="mrow" data-m="fb"><span class="mi">💬</span><span class="mt"><b>${t('fb')}</b>
-        <span>${ev.fb_open ? t('fbOpenSub') : t('fbClosedSub')}</span></span><span class="mv">›</span></button>
-      <button class="mrow" data-m="bible"><span class="mi">📖</span><span class="mt"><b>${t('bible')}</b><span>${t('bibleSub')}</span></span><span class="mv">›</span></button>
+      ${feat('feedback') ? `<button class="mrow" data-m="fb"><span class="mi">💬</span><span class="mt"><b>${t('fb')}</b>
+        <span>${ev.fb_open ? t('fbOpenSub') : t('fbClosedSub')}</span></span><span class="mv">›</span></button>` : ''}
+      ${feat('bible') ? `<button class="mrow" data-m="bible"><span class="mi">📖</span><span class="mt"><b>${t('bible')}</b><span>${t('bibleSub')}</span></span><span class="mv">›</span></button>` : ''}
       <button class="mrow" data-m="credits"><span class="mi">🎵</span><span class="mt"><b>${t('songCredits')}</b><span>${t('songCreditsSub')}</span></span><span class="mv">›</span></button>
       <button class="mrow" data-m="lang"><span class="mi">🌐</span><span class="mt"><b>${t('language')}</b></span><span class="mv">${t('langName')}</span></button>
       ${ev.install_on && !installed() ? `<button class="mrow" data-m="install"><span class="mi">📲</span><span class="mt"><b>${t('installApp')}</b><span>${t('installSub')}</span></span><span class="mv">›</span></button>` : ''}
@@ -664,7 +664,7 @@ async function maybeTour() {
 function santaSoon(first = false) { setTimeout(santaPeek, (first ? 25 + Math.random() * 20 : 60 + Math.random() * 70) * 1000); }
 function santaPeek() {
   const b = document.body;
-  const busy = b.classList.contains('adult') || b.classList.contains('song-page') || location.hash === '#/feedback' || document.hidden || !$('#kidSheet').hidden || !$('#tour').hidden
+  const busy = !feat('santa') || b.classList.contains('adult') || b.classList.contains('song-page') || location.hash === '#/feedback' || document.hidden || !$('#kidSheet').hidden || !$('#tour').hidden
     || $('.cutscene') || $('.santa') || matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (!busy) {
     const side = ['left', 'right', 'bottom'][Math.floor(Math.random() * 3)];
@@ -684,7 +684,7 @@ let festive = false, tapTimes = [];
 function treeTapped() {
   const now = Date.now();
   tapTimes = tapTimes.filter(x => now - x < 2500); tapTimes.push(now);
-  if (tapTimes.length < 5 || document.body.classList.contains('adult') || (!festive && !mo('festive'))) return;
+  if (tapTimes.length < 5 || document.body.classList.contains('adult') || (!festive && (!mo('festive') || !feat('festive')))) return;
   tapTimes = [];
   festive ? endFestive() : startFestive();
 }
@@ -720,8 +720,8 @@ document.addEventListener('click', (e) => {
 let adult = { role: null, myId: null };
 const isAdm = () => adult.role === 'admin' || adult.role === 'superadmin';
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
-const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; } });
-const saMod = () => import('./superadmin.js?v=27');
+const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK });
+const saMod = () => import('./superadmin.js?v=28');
 
 async function adultGate(page) {
   const session = await api.session();
@@ -1366,7 +1366,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=27');
+      const { readSheet } = await import('./ocr.js?v=28');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1784,17 +1784,18 @@ async function render() {
   document.querySelectorAll('.lightbox').forEach(x => x.remove());
   stopPlayer();                                                   // leaving a song: stop scrolling / metronome / video
   syncCleanup?.(); syncCleanup = null;
-  isAdult ? snow.stop() : snow.start();
+  isAdult || !feat('snow') ? snow.stop() : snow.start();
   paintChrome();
   try {
     if (isAdult) { scene?.stop(); return await adultGate(h.split('/')[2]); }
-    await Promise.all([ensureScene(), eventInfo()]);             // eventInfo: the admin's music switches
+    await Promise.all([feat('tree') ? ensureScene() : null, eventInfo()]);             // eventInfo: the admin's music switches
     if (seq !== renderSeq) return;
     const page = h === '#/shop' ? 'shop' : h === '#/menu' ? 'menu' : h.startsWith('#/songs') ? 'songs' : h === '#/feedback' ? 'feedback' : 'ranking';
     track('view', page);
+    if ((h === '#/shop' && !feat('shop')) || (h === '#/feedback' && !feat('feedback'))) { location.hash = '#/'; return; }
     if (h === '#/shop') return await kidShop();
     if (h === '#/menu') return await kidMenu();
-    if (h.startsWith('#/songs')) { await eventInfo(); if (!mo('songsTab')) { location.hash = '#/'; return; } }
+    if (h.startsWith('#/songs')) { await eventInfo(); if (!mo('songsTab') || !feat('songs')) { location.hash = '#/'; return; } }
     if (h === '#/songs') return await kidSongs();
     if (h.startsWith('#/songs/')) return await kidSong(h.split('/')[2]);
     if (h === '#/feedback') return await kidFeedbackPage();
@@ -1827,6 +1828,45 @@ async function loadProgram() {
   if (pr) Object.assign(program, { id: pr.id, slug: pr.slug, name: pr.name, look: pr.look || {} });
   else if (want) setTimeout(() => toast(t('progUnknown')), 600);
   window.YA_PID = program.id;
+  applyLook();
+}
+// ---- v28 program settings (programs.look; set on the super admin page, see supabase/019_program_look.sql)
+// look = { title, emoji, pack, font, size, off: { songs, shop, feedback, bible, santa, festive, snow, tree, music }, words: { th: {}, en: {} } }
+const LOOK = {
+  FONTS: { noto: 'Noto Sans Thai', sarabun: 'Sarabun', kanit: 'Kanit', mitr: 'Mitr', prompt: 'Prompt' },
+  FEATS: [['songs', '🎵'], ['shop', '🎁'], ['feedback', '💬'], ['bible', '📖'], ['music', '🔔'], ['tree', '🌲'], ['snow', '❄️'], ['santa', '🎅'], ['festive', '✨']],
+  // the text an admin can change per program (others keep the normal wording)
+  WORDS: ['ranking', 'songs', 'shop', 'menu', 'songsTitle', 'shopTitle', 'shopSub', 'santaHo'],
+  // theme packs: default emoji + wording that fits the pack (the program's own wording still wins)
+  PACKS: {
+    christmas: { emoji: '🎄', words: {} },
+    plain: { emoji: '⛪', words: { th: { songsTitle: 'เพลงนมัสการ' }, en: { songsTitle: 'Worship songs' } } },
+  },
+};
+const feat = (k) => program.look?.off?.[k] !== true;
+function applyLook() {
+  const L = program.look || {}, pack = LOOK.PACKS[L.pack] || LOOK.PACKS.christmas;
+  setOverrides({ th: { ...pack.words.th, ...L.words?.th }, en: { ...pack.words.en, ...L.words?.en } });
+  const title = (L.title || '').trim() || 'Youth Alpha', emoji = (L.emoji || '').trim() || pack.emoji;
+  $('.brand-tree').textContent = emoji;
+  $('.brand-tree').nextElementSibling.textContent = title;
+  document.title = `${title} ${emoji}`;
+  document.documentElement.style.setProperty('--look-emoji', JSON.stringify(emoji));   // shown big when the 3D tree is off
+  const f = LOOK.FONTS[L.font], root = document.documentElement;
+  if (f && L.font !== 'noto' && !document.querySelector(`link[data-font="${L.font}"]`)) {
+    const l = document.createElement('link');
+    l.rel = 'stylesheet'; l.dataset.font = L.font;
+    l.href = `https://fonts.googleapis.com/css2?family=${f.replace(/ /g, '+')}:wght@400;600;700&display=swap`;
+    document.head.appendChild(l);
+  }
+  if (f) root.style.setProperty('--font', `'${f}', 'Noto Sans Thai', 'Sarabun', system-ui, sans-serif`); else root.style.removeProperty('--font');
+  const size = Math.min(1.3, Math.max(0.9, Number(L.size) || 1));
+  root.style.fontSize = size === 1 ? '' : (18 * size).toFixed(1) + 'px';
+  document.body.dataset.pack = L.pack || 'christmas';
+  LOOK.FEATS.forEach(([k]) => document.body.classList.toggle('off-' + k, !feat(k)));
+  if (!feat('tree')) scene?.stop();
+  if (!feat('snow')) snow.stop();
+  applyAppOpts?.();
 }
 await loadProgram();
 render();
