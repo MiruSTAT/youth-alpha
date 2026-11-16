@@ -565,7 +565,7 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 ## 14. Ideas and open items
 
 ### Agreed plan (owner approved on 2026-11-16; build one release at a time, summary first, wait for "go")
-- **v25 (super admin): DONE**, see 5b. Split of app.js started (songtext.js, superadmin.js); the rest of app.js (~1780 lines: kid pages, admin pages, song player) can be split further when touched.
+- **v25 (super admin): DONE**, see 5b. Live database updated (017 run, with row level security switched on for the three private tables; the owner's email stored in `private.owner`). The owner's Supabase login was created with "Invite user" on 2026-11-16; **still to do by the owner:** open that invitation email, choose the username and password on the set-up page. Until then the real two-step sign-in is untested on the live site (it was tested in the preview copy). Split of app.js started (songtext.js, superadmin.js); the rest of app.js (~1780 lines: kid pages, admin pages, song player) can be split further when touched.
 - **v26 (programs):** each customised app is a saved "program" with its own look, settings, people, points, shop and songs, and **its own link**. One live program per link; today's data becomes program 1 "Youth Alpha Christmas 2026", untouched. Never delete existing data. A new program can copy the people list or the look from an old one. Named saved versions of a program's look as a safety net.
 - **v27 (program settings, super admin only):** name, logo and wording, theme packs (Christmas, Easter, plain church), font and text size, feature switches.
 - **v28:** drag-and-drop layout editor (reorder and show/hide sections, tabs and menu items, live preview; not a free-form designer).
