@@ -25,3 +25,8 @@ Tap "For adults" at the bottom of the name list → log in.
 Leave `config.js` empty to try it in Preview mode (data stays on that device only).
 
 Music: "Jingle Bells" (1857, public domain melody), synthesized in the browser — no audio files.
+
+## Versions
+The version number lives in `js/version.js` (with the list of changes admins see under **For adults → Version & changes**).
+On every release raise the same number in three places: `VERSION` in `js/version.js`, every `?v=` (index.html and the js imports) and `V` in `sw.js`;
+add an entry to `CHANGELOG`; then tag the commit (`git tag v23`).

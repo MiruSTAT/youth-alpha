@@ -1,20 +1,25 @@
-import { t, getLang, setLang } from './i18n.js?v=22';
-import { api, MODE, ranked, today, bkkToday } from './data.js?v=22';
-import { music } from './music.js?v=22';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=22';
-import { snow } from './snow.js?v=22';
-import { track } from './track.js?v=22';
-import { metro } from './metronome.js?v=22';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=22';
+import { t, getLang, setLang } from './i18n.js?v=23';
+import { api, MODE, ranked, today, bkkToday, cached, net } from './data.js?v=23';
+import { VERSION, CHANGELOG } from './version.js?v=23';
+import { music } from './music.js?v=23';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=23';
+import { snow } from './snow.js?v=23';
+import { track } from './track.js?v=23';
+import { metro } from './metronome.js?v=23';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=23';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const AVATARS = ['⛄', '🎅', '🦌', '🎄', '⭐', '🔔', '🎁', '🧸', '🐧', '🦊', '🐱', '🐶', '🐰', '🐼', '🦁', '🐯', '🐨', '🦄', '🐸', '🐵', '🐳', '🦋', '🎹', '🎤'];
 // point categories come from the database (admins can edit them)
+// kid pages keep the last answer on the phone (works with no internet); admin pages always read fresh
+const kidSide = () => !location.hash.startsWith('#/admin');
+const read = (key, fn) => kidSide() ? cached(key, fn) : fn();
+const bal = (r) => Math.max(0, (r?.total || 0) - (r?.spent || 0));      // points left to spend on prizes
 let catCache = { at: 0, list: [] };
 async function pcats(force = false) {
-  if (force || Date.now() - catCache.at > 30000) catCache = { at: Date.now(), list: await api.pointCats() };
+  if (force || Date.now() - catCache.at > 30000) catCache = { at: Date.now(), list: await read('pcats', () => api.pointCats()) };
   return catCache.list;
 }
 const cName = (c) => (getLang() === 'en' && c?.name_en) ? c.name_en : (c?.name_th || '?');
@@ -48,7 +53,7 @@ async function confirmBox(msg, okText = t('del'), danger = true) {
   return (await modal('⚠️ ' + t('warnTitle'), `<p style="font-size:1.05rem;white-space:pre-line">${esc(msg)}</p>`, { okText, danger })) instanceof FormData;
 }
 async function leaderboard(force = false) {
-  if (force || Date.now() - lbCache.at > 8000) lbCache = { at: Date.now(), rows: ranked(await api.leaderboard()) };
+  if (force || Date.now() - lbCache.at > 8000) lbCache = { at: Date.now(), rows: ranked(await read('lb', () => api.leaderboard())) };
   return lbCache.rows;
 }
 const pageHead = (title, backTo = '#/admin') =>
@@ -63,7 +68,7 @@ function applyTheme(k) {
 document.body.dataset.theme = localStorage.getItem('ya_theme') || 'snow';
 let evCache = null;
 async function eventInfo(force = false) {
-  if (!evCache || force) evCache = await api.eventInfo().catch(() => ({ event_dow: 0, event_start: '10:00', event_end: '12:00' }));
+  if (!evCache || force) evCache = await read('ev', () => api.eventInfo()).catch(() => ({ event_dow: 0, event_start: '10:00', event_end: '12:00' }));
   applyAppOpts();
   return evCache;
 }
@@ -102,7 +107,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=22');
+    const m = await import('./scene3d.js?v=23');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -138,22 +143,24 @@ function wirePics(root, rows) {
 // HOME = ranking, with "my card" on top (no separate "me" page)
 async function kidRank() {
   setNav('rank');
-  const [rows] = await Promise.all([leaderboard(true), pcats(true)]);
+  const [rows, , ev] = await Promise.all([leaderboard(true), pcats(true), eventInfo(true)]);
   const mineId = localStorage.getItem('ya_me'), me = rows.find(r => r.id === mineId);
   if (mineId && !me) localStorage.removeItem('ya_me');
   const max = Math.max(1, ...rows.map(r => r.total));
   scene?.setGlow(me ? me.total / max : 0.6);
   const medal = ['🥇', '🥈', '🥉'];
   view.innerHTML = `<section class="sheet">
+    ${ev?.announce ? `<div class="notice"><span class="ni">📣</span><p>${esc(ev.announce)}</p></div>` : ''}
     ${me ? `<button class="my-card" id="myCard"><span class="av" data-pic="${me.id}">${pic(me.avatar)}</span>
-        <span class="who"><b>${esc(me.nickname)}</b><span>🏆 ${t('rank')} ${me.rank} ${t('of')} ${rows.length}</span></span>
+        <span class="who"><b>${esc(me.nickname)}</b><span>🏆 ${t('rank')} ${me.rank} ${t('of')} ${rows.length}</span>${me.spent ? `<span class="sp">🎁 ${t('canSpend')} ${bal(me)} ⭐</span>` : ''}</span>
         <span class="pts"><b id="tot">0</b><span>${t('points')}</span></span></button>`
       : rows.length ? `<p class="my-hint">👇 ${t('tapYourName')}</p>` : ''}
     <h1 class="sheet-title" style="margin-bottom:12px">🏆 ${t('ranking')}</h1>
     ${rows.length ? `<div class="rank-list">${rows.map(k => `<button class="rank-row ${k.id === mineId ? 'mine' : ''}" data-id="${k.id}">
       <span class="n ${k.rank <= 3 ? 'medal' : ''}">${k.rank <= 3 ? medal[k.rank - 1] : k.rank}</span>
       <span class="av" data-pic="${k.id}">${pic(k.avatar)}</span><span class="nm">${esc(k.nickname)}</span><span class="pt">${k.total} ⭐</span></button>`).join('')}</div>`
-      : `<p class="empty">${t('noKids')}</p>`}</section>`;
+      : `<p class="empty">${t('noKids')}</p>`}
+    ${ev?.verse_text ? verseCard(ev) : ''}</section>`;
   wirePics(view, rows);
   view.querySelectorAll('.rank-row').forEach(b => b.onclick = () => { const k = rows.find(r => r.id === b.dataset.id); track('tap_kid', k?.id === localStorage.getItem('ya_me') ? 'self' : 'other'); kidDetail(k, rows); });
   if (me) {
@@ -165,12 +172,15 @@ async function kidRank() {
   }
 }
 
+const verseCard = (ev) => `<div class="verse"><span class="vl">📖 ${t('verseWeek')}</span><p>${esc(ev.verse_text)}</p>${ev.verse_ref ? `<b>${esc(ev.verse_ref)}</b>` : ''}</div>`;
+
 // a kid's points by category (with details like piano / singing)
 function kidDetail(k, rows) {
   const isMe = localStorage.getItem('ya_me') === k.id;
   const cats = catCache.list.filter(c => c.active || k.skills[c.key]);
   const p = kidSheet(`<div class="panel-head"><h2>${esc(k.nickname)}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
     <div class="kid-detail-head"><button class="av" data-pic="${k.id}" aria-label="${esc(k.nickname)}">${pic(k.avatar)}</button><b>${k.total} ⭐</b><span class="me-rank">🏆 ${t('rank')} ${k.rank} ${t('of')} ${rows.length}</span></div>
+    ${k.spent ? `<div class="cat-pts" style="margin-bottom:14px"><span>🎁 ${t('canSpend')}</span><b>${bal(k)} ⭐</b></div>` : ''}
     <p class="section-label">${t('mySkills')}</p>
     <div class="skill-list">${cats.map(c => {
       const det = k.details?.[c.key];
@@ -203,6 +213,7 @@ function openBible() {
   track('bible_open');
   const link = (href, icon, title, sub) => `<a class="mrow" href="${href}" target="_blank" rel="noopener noreferrer"><span class="mi">${icon}</span><span class="mt"><b>${title}</b><span>${sub}</span></span><span class="mv">↗</span></a>`;
   kidSheet(`<div class="panel-head"><h2>📖 ${t('bible')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
+    ${evCache?.verse_text ? verseCard(evCache) : ''}
     <p class="cat-info" style="font-size:1rem">${t('bibleIntro')}</p>
     <div class="mlist">
       ${link('https://www.bible.com/th', '🌐', t('bibleRead'), 'bible.com (YouVersion)')}
@@ -295,12 +306,14 @@ function kidSheet(html) {
 
 async function kidShop() {
   setNav('shop'); scene?.setGlow(0.7);
-  const { items } = await api.shop();
+  const [{ items }, lb] = await Promise.all([cached('shop', () => api.shop()), leaderboard()]);
+  const me = lb.find(r => r.id === localStorage.getItem('ya_me'));
   const live = items.filter(i => i.active).sort((x, y) => x.price - y.price);
   const rows = []; for (let i = 0; i < live.length; i += 2) rows.push(live.slice(i, i + 2));
   view.innerHTML = `<section class="sheet">
     <h1 class="sheet-title">🎁 ${t('shopTitle')}</h1>
-    ${live.length ? `<p class="sheet-sub">${t('shopSub')}</p><div class="stand">
+    ${live.length ? `<p class="sheet-sub">${t('shopSub')}</p>
+      ${me ? `<div class="cat-pts shop-bal"><span>🎁 ${t('canSpendOf', esc(me.nickname))}</span><b>${bal(me)} ⭐</b></div>` : ''}<div class="stand">
       <div class="stand-sign">⭐ ${t('shop')} ⭐</div>
       <div class="awning"></div>
       <div class="shelves">${rows.map(row => `<div class="shelf-row">${row.map(i => `<button class="slot" data-i="${i.id}">
@@ -453,7 +466,7 @@ function splitSheet(text, songs) {
 const ytId = (u) => { const m = /(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{11})/.exec(u || '') || /^([\w-]{11})$/.exec(String(u || '').trim()); return m ? m[1] : ''; };
 let songCache = { at: 0, list: [] };
 async function songList(force = false) {
-  if (force || Date.now() - songCache.at > 30000) songCache = { at: Date.now(), list: await api.songs() };
+  if (force || Date.now() - songCache.at > 30000) songCache = { at: Date.now(), list: await read('songs', () => api.songs()) };
   return songCache.list;
 }
 
@@ -466,7 +479,16 @@ async function kidSongs() {
     ${list.length ? `<div class="song-list">${list.map((s, i) => `<a class="song-card" href="#/songs/${s.id}">
       <span class="no">${i + 1}</span><span class="st"><b>${esc(s.title)}</b>${s.subtitle ? `<span>${esc(s.subtitle)}</span>` : ''}</span>
       <span class="meta">${s.song_key ? `<span class="kchip">${esc(s.song_key)}</span>` : ''}${ytId(s.youtube) ? '<span class="yt-dot" aria-hidden="true">▶</span>' : ''}</span></a>`).join('')}</div>`
-      : `<p class="empty">${t('noSongs')}</p>`}</section>`;
+      : `<p class="empty">${t('noSongs')}</p>`}
+    <p class="off-note" id="offNote" hidden>✓ ${t('savedOffline')}</p></section>`;
+  keepSongs(list);
+}
+// save every song-sheet picture on the phone (through the service worker), so songs open with no internet
+async function keepSongs(list) {
+  if (!navigator.serviceWorker?.controller || navigator.onLine === false) return;
+  const urls = [...new Set(list.flatMap(s => Array.isArray(s.sheets) ? s.sheets : []))].filter(u => u && !/^data:/.test(u));
+  const ok = await Promise.all(urls.map(u => fetch(u, /^https?:/.test(u) ? { mode: 'cors', credentials: 'omit' } : {}).then(r => r.ok, () => false)));
+  const el = $('#offNote'); if (el && ok.every(Boolean)) el.hidden = false;
 }
 
 function songCredits() {
@@ -500,7 +522,8 @@ async function kidSong(id) {
   document.querySelectorAll('.santa').forEach(x => x.remove());
   await eventInfo(true);
   songOpts = s.opts || {};
-  const parsed = parseSong(s.content), vid = mo('video') ? ytId(s.youtube) : '', sheets = mo('origSheet') && Array.isArray(s.sheets) ? s.sheets : [];
+  const offline = navigator.onLine === false;                       // no internet: words, chords and sheets still work; the video cannot
+  const parsed = parseSong(s.content), vid = mo('video') && !offline ? ytId(s.youtube) : '', sheets = mo('origSheet') && Array.isArray(s.sheets) ? s.sheets : [];
   const showLyrics = mo('lyrics');
   const langs = showLyrics && mo('langSwitch') ? songLangs(parsed) : new Set();
   // timings recorded by an admin for this video (beats) and these words (lines)
@@ -518,6 +541,7 @@ async function kidSong(id) {
     ${vid ? `<div class="yt" id="yt"><button class="yt-poster" id="ytGo" style="background-image:url('https://i.ytimg.com/vi/${vid}/hqdefault.jpg')" aria-label="${t('listen')}">
       <span class="yt-play">▶</span><span class="yt-lbl">${t('listen')}</span></button></div>
       ${beatMap || lineMap ? `<p class="sync-note">🔗 ${t(lineMap ? 'syncedAll' : 'syncedBeat')}</p>` : ''}` : ''}
+    ${offline && mo('video') && ytId(s.youtube) ? `<p class="sync-note" style="margin-top:0">📴 ${t('videoNeedsNet')}</p>` : ''}
     ${langs.size > 1 ? `<div class="lang-sw" role="tablist">${[['all', t('langAll')], ['th', 'ไทย'], ['en', 'English']].map(([k, l]) => `<button data-lg="${k}" class="${st.lang === k ? 'on' : ''}">${l}</button>`).join('')}</div>` : ''}
     <div class="lyrics" id="lyrics" style="--fs:${st.fs}" ${showLyrics ? '' : 'hidden'}></div>
     ${sheets.length ? `<details class="orig" id="orig" open><summary><span class="ot">📄 ${t('origSheet')}</span><span class="orig-key" id="origKey" hidden></span><span class="chev">›</span></summary>
@@ -784,6 +808,7 @@ async function adultGate(page) {
   adult.role = await api.myRole(); adult.myId = await api.myId();
   if (adult.role === 'pending') return pendingView();
   const pages = { attendance: pAttendance, attsum: pAttSummary, points: pPoints, history: pHistory, kids: pKids, shop: pShop, pcats: pPcats, feedback: pFeedback, export: pExport,
+    redeem: pRedeem, notice: pNotice, weekly: pWeekly, about: pAbout,
     songs: pSongs, song: pSongEdit, sync: pSync, ...(adult.role === 'admin' ? { settings: pSettings, musicset: pMusicSet } : {}) };
   if (!pages[page]) return adultHome();
   await pages[page](location.hash.split('/')[3]);
@@ -791,16 +816,16 @@ async function adultGate(page) {
 
 function adultHome() {
   const groups = [
-    ['g_daily', [['attendance', '✅'], ['points', '⭐']]],
-    ['g_kids', [['kids', '👧'], ['feedback', '💬']]],
-    ['g_rewards', [['pcats', '🏷️'], ['shop', '🎁']]],
+    ['g_daily', [['attendance', '✅'], ['points', '⭐'], ['weekly', '📊']]],
+    ['g_kids', [['kids', '👧'], ['feedback', '💬'], ['notice', '📣']]],
+    ['g_rewards', [['pcats', '🏷️'], ['shop', '🎁'], ['redeem', '🎟️']]],
     ['g_songs', [['songs', '🎵'], ...(adult.role === 'admin' ? [['musicset', '🎛️']] : [])]],
-    ['g_system', [['export', '📥'], ...(adult.role === 'admin' ? [['settings', '⚙️']] : [])]],
+    ['g_system', [['export', '📥'], ...(adult.role === 'admin' ? [['settings', '⚙️']] : []), ['about', 'ℹ️']]],
   ];
   view.innerHTML = `
     <div class="page-head"><a class="back" href="#/">‹ ${t('back')}</a><h1 class="page-title">${t('adultMenu')}</h1></div>
     ${groups.map(([g, items]) => `<h2 class="grp">${t(g)}</h2><nav class="menu grouped">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
-      <span class="mt"><b>${t('tab_' + k)}</b><span>${t('m_' + k)}</span></span><span class="chev">›</span></a>`).join('')}</nav>`).join('')}
+      <span class="mt"><b>${t('tab_' + k)}</b><span>${t('m_' + k, VERSION)}</span></span><span class="chev">›</span></a>`).join('')}</nav>`).join('')}
     <button class="btn wide" style="margin-top:24px" id="logout">${t('logout')}</button>
     ${MODE === 'preview' ? `<p class="preview-note">${t('previewNote')}</p>` : ''}`;
   $('#logout').onclick = async () => { await api.signOut(); location.hash = '#/admin'; render(); };
@@ -1163,6 +1188,125 @@ async function itemForm(it) {
   } catch (e) { fail(e); }
 }
 
+// ---------------- Prize redemption: kid -> prize -> confirm.
+// The price comes off the kid's "points to spend"; the ranking points never change.
+const dShort = (iso) => new Date(iso).toLocaleDateString(getLang() === 'th' ? 'th-TH' : 'en-GB', { day: 'numeric', month: 'short' });
+async function pRedeem(kidId) {
+  const [rows, { items }, hist] = await Promise.all([leaderboard(true), api.shop(), api.redemptions(60)]);
+  const kid = kidId ? rows.find(r => r.id === kidId) : null;
+  if (kidId && !kid) { location.hash = '#/admin/redeem'; return; }
+  if (!kid) {
+    const kids = [...rows].sort((a, b) => a.nickname.localeCompare(b.nickname, 'th'));
+    view.innerHTML = `${pageHead(t('tab_redeem'))}
+      <h2 style="margin-bottom:12px">${t('rd1')}</h2>
+      ${kids.length > 8 ? `<input class="input" id="q" placeholder="🔍 ${t('search')}" style="margin-bottom:12px">` : ''}
+      <div class="options">${kids.map(k => `<button class="opt" data-k="${k.id}" data-n="${esc(k.nickname.toLowerCase())}"><span class="i">${pic(k.avatar)}</span>
+        <span class="t">${esc(k.nickname)}<span class="opt-sub">${t('canSpend')} ${bal(k)} ⭐</span></span><span class="chev">›</span></button>`).join('') || `<p class="muted">${t('noKids')}</p>`}</div>
+      <h2 class="grp" style="margin-top:26px">${t('rdHist')}</h2>
+      <div class="card"><div class="list">${hist.map(h => `<div class="li">${art(h.item_icon)}
+        <span class="grow">${esc(h.kids?.nickname || '?')}<span class="sub">${esc(h.item_name)} · ${dShort(h.created_at)}</span></span>
+        <span class="amt neg">−${h.price} ⭐</span><button class="btn small danger" data-undo="${h.id}">${t('rdUndo')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
+    const q = $('#q'); if (q) q.oninput = () => view.querySelectorAll('[data-k]').forEach(b => b.hidden = !b.dataset.n.includes(q.value.trim().toLowerCase()));
+    view.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { location.hash = '#/admin/redeem/' + b.dataset.k; });
+    view.querySelectorAll('[data-undo]').forEach(b => b.onclick = async () => {
+      const h = hist.find(x => x.id === b.dataset.undo);
+      if (!(await confirmBox(t('rdUndoWarn', h?.kids?.nickname || '?', h?.item_name || '', h?.price || 0), t('rdUndo')))) return;
+      try { await api.deleteRedemption(h.id); lbCache.at = 0; toast(t('saved')); pRedeem(); } catch (e) { fail(e); }
+    });
+    return;
+  }
+  const live = items.filter(i => i.active).sort((x, y) => x.price - y.price), b = bal(kid);
+  view.innerHTML = `${pageHead(t('tab_redeem'), '#/admin/redeem')}
+    <div class="card rd-kid"><span class="av">${pic(kid.avatar)}</span><span class="grow"><b>${esc(kid.nickname)}</b><span class="sub">${t('rankPts')} ${kid.total} ⭐</span></span>
+      <span class="rd-bal"><b>${b} ⭐</b><span>${t('canSpend')}</span></span></div>
+    <h2 style="margin-bottom:12px">${t('rd2')}</h2>
+    <div class="options">${live.map(i => { const ok = i.price <= b; return `<button class="opt ${ok ? '' : 'dim'}" data-i="${i.id}" ${ok ? '' : 'disabled'}><span class="i">${art(i.icon)}</span>
+      <span class="t">${esc(i.name)}<span class="opt-sub">${ok ? t('rdLeft', b - i.price) : t('rdShort', i.price - b)}</span></span><span class="amt">${i.price} ⭐</span></button>`; }).join('') || `<p class="muted">${t('need_shopEmpty')}</p>`}</div>`;
+  view.querySelectorAll('[data-i]').forEach(btn => btn.onclick = async () => {
+    const it = live.find(x => x.id === btn.dataset.i);
+    if (!(await confirmBox(t('rdConfirm', it.name, kid.nickname, it.price, b - it.price), t('rdGo'), false))) return;
+    btn.disabled = true;
+    try {
+      await api.redeem({ kid_id: kid.id, item_id: it.id, item_name: it.name, item_icon: it.icon, price: it.price });
+      lbCache.at = 0; toast('✓ ' + t('rdDone', kid.nickname, it.name)); location.hash = '#/admin/redeem';
+    } catch (e) { btn.disabled = false; console.error(e); toast(/not enough/.test(e?.message || '') ? t('rdShort', it.price - b) : t('errGeneric')); }
+  });
+}
+
+// ---------------- Announcement line + verse of the week (shown on the kids' home page)
+async function pNotice() {
+  const s = await eventInfo(true);
+  view.innerHTML = `${pageHead(t('tab_notice'))}
+    <form id="nf">
+      <div class="card"><h3 class="sec">📣 ${t('annTitle')}</h3>
+        <div class="field"><label>${t('annLbl')}</label><textarea class="input" name="announce" maxlength="160" rows="3" style="height:auto;padding:12px">${esc(s.announce || '')}</textarea>
+          <p class="hint">${t('annHint')}</p></div></div>
+      <div class="card"><h3 class="sec">📖 ${t('verseWeek')}</h3>
+        <div class="field"><label>${t('verseLbl')}</label><textarea class="input" name="verse_text" maxlength="400" rows="4" style="height:auto;padding:12px">${esc(s.verse_text || '')}</textarea></div>
+        <div class="field"><label>${t('verseRefLbl')}</label><input class="input" name="verse_ref" maxlength="60" placeholder="${t('verseRefEg')}" value="${esc(s.verse_ref || '')}">
+          <p class="hint">${t('verseHint')}</p></div></div>
+      <div class="bottom-bar"><button class="btn primary" id="saveN">${t('save')}</button></div>
+    </form>`;
+  $('#nf').onsubmit = async (e) => {
+    e.preventDefault();
+    const f = new FormData(e.target), b = $('#saveN'); b.disabled = true;
+    try { await api.saveNotice({ announce: f.get('announce').trim(), verse_text: f.get('verse_text').trim(), verse_ref: f.get('verse_ref').trim() }); evCache = null; toast(t('saved')); } catch (err) { fail(err); }
+    b.disabled = false;
+  };
+}
+
+// ---------------- Weekly summary: the last 7 days at a glance
+async function pWeekly() {
+  const since = new Date(Date.now() - 7 * 864e5).toISOString();
+  const [kids, att, pts, evs, red, fb] = await Promise.all([api.kids(), api.attendanceAll(), api.pointsSince(since), api.kidEventsSince(since).catch(() => []),
+    api.redemptions(300), api.feedback().catch(() => []), pcats()]);
+  const active = kids.filter(k => k.active), kidOf = Object.fromEntries(kids.map(k => [k.id, k]));
+  const days = [...new Set(att.map(a => a.day))].sort(), last2 = days.slice(-2);
+  const stOf = (kid, day) => att.find(a => a.kid_id === kid && a.day === day)?.status || '';
+  const stTxt = (s) => s ? t(s) : t('notChecked');
+  const missed = last2.length === 2 ? active.filter(k => last2.every(d => stOf(k.id, d) !== 'present')) : [];
+  const gain = {}; pts.forEach(p => { gain[p.kid_id] = (gain[p.kid_id] || 0) + p.amount; });
+  const top = Object.entries(gain).filter(([id, n]) => kidOf[id] && n > 0).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const opened = {}; evs.filter(e => e.event === 'song_open' && e.detail).forEach(e => { const x = (opened[e.detail] ??= { n: 0, d: new Set() }); x.n++; x.d.add(e.device_id); });
+  const topSongs = Object.entries(opened).sort((a, b) => b[1].n - a[1].n).slice(0, 5);
+  const redW = red.filter(r => r.created_at >= since), fbW = fb.filter(f => f.created_at >= since).length;
+  const phones = new Set(evs.map(e => e.device_id)).size, given = pts.reduce((a, p) => a + (p.amount > 0 ? p.amount : 0), 0);
+  const lastDay = days[days.length - 1], came = lastDay ? active.filter(k => stOf(k.id, lastDay) === 'present').length : 0;
+  const card = (title, sub, inner) => `<div class="card"><b>${title}</b>${sub ? `<p class="muted" style="margin:2px 0 6px">${sub}</p>` : ''}<div class="list">${inner}</div></div>`;
+  const none = `<p class="muted" style="margin:8px 0 4px">${t('none')}</p>`;
+  view.innerHTML = `${pageHead(t('tab_weekly'))}
+    <p class="muted" style="margin:-6px 2px 12px">${t('wkSub')}</p>
+    <div class="summary"><div><b class="c-here">${given}</b><span>${t('wkPts')}</span></div><div><b>${came}<span class="muted" style="font-size:.9rem"> / ${active.length}</span></b><span>${t('wkCame')}</span></div>
+      <div><b>${phones}</b><span>${t('wkPhones')}</span></div><div><b>${fbW}</b><span>${t('wkFb')}</span></div></div>
+    ${card('🙋 ' + t('wkMissed'), last2.length === 2 ? t('wkMissedSub', dShort(last2[0]), dShort(last2[1])) : t('wkNeed2'),
+      last2.length < 2 ? '' : missed.map(k => `<div class="li"><span class="av">${pic(k.avatar)}</span><span class="grow">${esc(k.nickname)}<span class="sub">${last2.map(d => `${dShort(d)}: ${stTxt(stOf(k.id, d))}`).join(' · ')}</span></span></div>`).join('') || `<p class="c-here" style="margin:8px 0 4px">✓ ${t('wkNoMiss')}</p>`)}
+    ${card('⭐ ' + t('wkTop'), '', top.map(([id, n], i) => `<div class="li"><span class="av">${pic(kidOf[id].avatar)}</span><span class="grow">${esc(kidOf[id].nickname)}</span><span class="amt pos">+${n}</span></div>`).join('') || none)}
+    ${card('🎵 ' + t('wkSongs'), '', topSongs.map(([title, x]) => `<div class="li"><span class="grow">${esc(title)}<span class="sub">${t('wkSongN', x.n, x.d.size)}</span></span><span class="amt">${x.n}</span></div>`).join('') || none)}
+    ${card('🎟️ ' + t('wkPrizes'), '', redW.map(r => `<div class="li">${art(r.item_icon)}<span class="grow">${esc(r.kids?.nickname || '?')}<span class="sub">${esc(r.item_name)} · ${dShort(r.created_at)}</span></span><span class="amt neg">−${r.price} ⭐</span></div>`).join('') || none)}`;
+}
+
+// ---------------- Version and what changed (for admins)
+async function pAbout() {
+  const th = getLang() === 'th';
+  const dLong = (d) => new Date(d + 'T00:00:00').toLocaleDateString(th ? 'th-TH' : 'en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  view.innerHTML = `${pageHead(t('tab_about'))}
+    <div class="card ver-card"><div class="ver-now"><span>${t('verUsing')}</span><b>${esc(VERSION)}</b></div>
+      <p id="verState" class="muted">${t('verChecking')}…</p>
+      <button class="btn primary wide" id="verUpd" hidden>🔄 ${t('verUpdate')}</button></div>
+    <h2 class="grp">${t('clogTitle')}</h2>
+    ${CHANGELOG.map(c => `<div class="card clog ${c.v === VERSION ? 'now' : ''}"><div class="clog-h"><b>${t('verN', c.v)}</b><span class="muted">${dLong(c.date)}</span></div>
+      <ul>${(th ? c.th : c.en).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}`;
+  $('#verUpd').onclick = async () => { try { await (await navigator.serviceWorker?.getRegistration())?.update(); } catch {} location.reload(); };
+  const st = $('#verState');
+  try {
+    const txt = await fetch('js/version.js?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : Promise.reject(new Error('http')));
+    const latest = /VERSION\s*=\s*'(\d+)'/.exec(txt)?.[1];
+    if (!st.isConnected) return;
+    if (latest && Number(latest) > Number(VERSION)) { st.textContent = t('verNew', latest); st.className = 'c-leave'; $('#verUpd').hidden = false; }
+    else { st.textContent = '✓ ' + t('verLatest'); st.className = 'c-here'; }
+  } catch { if (st.isConnected) st.textContent = t('verNoCheck'); }
+}
+
 // ---------------- Songs (admin)
 const KEYS = ['C', 'C#', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'].flatMap(k => [k, k + 'm']);
 async function pSongs() {
@@ -1271,7 +1415,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=22');
+      const { readSheet } = await import('./ocr.js?v=23');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1557,10 +1701,10 @@ function loadXLSX() {
   if (window.XLSX) return Promise.resolve(window.XLSX);
   return new Promise((res, rej) => { const s = document.createElement('script'); s.src = XLSX_URL; s.onload = () => res(window.XLSX); s.onerror = rej; document.head.appendChild(s); });
 }
-const XL_SHEETS = [['xs_summary', 'summary', '📊'], ['xs_points', 'points', '⭐'], ['xs_att', 'attendance', '✅'], ['xs_attsum', 'attendance-totals', '📈'], ['xs_feedback', 'feedback', '💬'], ['xs_shop', 'shop', '🎁'],
+const XL_SHEETS = [['xs_summary', 'summary', '📊'], ['xs_points', 'points', '⭐'], ['xs_att', 'attendance', '✅'], ['xs_attsum', 'attendance-totals', '📈'], ['xs_feedback', 'feedback', '💬'], ['xs_shop', 'shop', '🎁'], ['xs_redeem', 'prizes-given', '🎟️'],
   ['xs_adminlog', 'admin-log', '📜'], ['xs_kidlog', 'kid-activity', '👆'], ['xs_kidsum', 'kid-activity-summary', '📈']];
 const LOG_SHEETS = ['xs_adminlog', 'xs_kidlog', 'xs_kidsum'];
-const TBL = { songs: 'lt_songs', kids: 'lt_kids', points: 'lt_points', attendance: 'lt_att', attendance_rounds: 'lt_round', shop_items: 'lt_shop', point_categories: 'lt_pcats', settings: 'lt_settings', staff: 'lt_staff', kid_events: 'lt_kidlog' };
+const TBL = { songs: 'lt_songs', kids: 'lt_kids', points: 'lt_points', attendance: 'lt_att', attendance_rounds: 'lt_round', shop_items: 'lt_shop', point_categories: 'lt_pcats', settings: 'lt_settings', staff: 'lt_staff', kid_events: 'lt_kidlog', redemptions: 'lt_redeem' };
 const SKIP_FIELDS = new Set(['updated_at', 'created_at', 'updated_by', 'given_by', 'created_by', 'finished_by', 'finished_at']);
 // one admin-log row -> readable text
 function describeLog(e, kidName) {
@@ -1577,6 +1721,7 @@ function describeLog(e, kidName) {
     case 'staff': item = r.role; break;
     case 'kid_events': item = t('logCleared', r.rows_deleted ?? 0); break;
     case 'songs': item = r.title; break;
+    case 'redemptions': item = `${who(r.kid_id)} · ${r.item_name} (−${r.price} ⭐)`; break;
     default: item = '';
   }
   let changes = '';
@@ -1622,12 +1767,13 @@ async function buildExcel(only = null) {
     api.attendanceAll(), api.feedback().catch(() => []), api.shop(),
     want('xs_adminlog') ? api.auditAll() : [], (want('xs_kidlog') || want('xs_kidsum')) ? api.kidEvents() : []]);
   const kidName = Object.fromEntries(kids.map(k => [k.id, k.nickname]));
+  const red = want('xs_redeem') ? await api.redemptions(5000) : [];
   const dt = (s) => s ? new Date(new Date(s).getTime() + 7 * 3600e3).toISOString().slice(0, 16).replace('T', ' ') : ''; // Thai time, 2026-11-14 21:41
   const stTxt = { present: t('present'), leave: t('leave'), absent: t('absent') };
   const by = Object.fromEntries(rows.map(r => [r.id, r]));
   const attC = {}; att.forEach(r => { (attC[r.kid_id] ??= { present: 0, leave: 0, absent: 0 })[r.status]++; });
   const summary = kids.map(k => {
-    const r = by[k.id] || { total: 0, skills: {} }, row = { [t('nickname')]: k.nickname, [t('group').replace(/ \(.*\)/, '')]: k.grp, [t('xc_total')]: r.total };
+    const r = by[k.id] || { total: 0, skills: {} }, row = { [t('nickname')]: k.nickname, [t('group').replace(/ \(.*\)/, '')]: k.grp, [t('xc_total')]: r.total, [t('xc_spent')]: r.spent || 0, [t('canSpend')]: bal(r) };
     cats.forEach(c => { row[cName(c)] = r.skills?.[c.key] || 0; });
     const a = attC[k.id] || { present: 0, leave: 0, absent: 0 };
     Object.assign(row, { [t('present')]: a.present, [t('leave')]: a.leave, [t('absent')]: a.absent });
@@ -1643,6 +1789,7 @@ async function buildExcel(only = null) {
     ['xs_kidlog', kev.map(e => ({ [t('xc_time')]: dt(e.created_at), [t('xc_device')]: e.device_id, [t('nickname')]: kidName[e.kid_id] || '', [t('xc_event')]: evName(e.event), [t('xc_eventcode')]: e.event, [t('xc_detail')]: e.detail, [t('xc_page')]: e.path }))],
     ['xs_kidsum', (() => { const m = {}; kev.forEach(e => { const x = (m[e.event] ??= { n: 0, d: new Set(), k: new Set() }); x.n++; x.d.add(e.device_id); if (e.kid_id) x.k.add(e.kid_id); });
       return Object.entries(m).sort((a, b) => b[1].n - a[1].n).map(([ev, x]) => ({ [t('xc_event')]: evName(ev), [t('xc_eventcode')]: ev, [t('xc_count')]: x.n, [t('xc_devices')]: x.d.size, [t('xc_kids')]: x.k.size })); })()],
+    ['xs_redeem', red.map(r => ({ [t('date')]: dt(r.created_at), [t('nickname')]: r.kids?.nickname || kidName[r.kid_id] || '', [t('itemName')]: r.item_name, [t('xc_points')]: r.price }))],
     ['xs_shop', shop.items.map(i => ({ [t('itemName')]: i.name, [t('xc_points')]: i.price, [t('xc_shown')]: i.active ? '✓' : t('hidden') }))],
   ];
   const wb = XLSX.utils.book_new();
@@ -1683,7 +1830,15 @@ async function render() {
     if (h.startsWith('#/me') || h === '#/rank') { history.replaceState(null, '', '#/'); }
     return await kidRank();
   } catch (e) { fail(e); view.innerHTML = `<p class="empty">${t('errGeneric')}</p>`; }
+  finally { paintOffline(); }
 }
+// a quiet line when the phone has no internet and saved data is being shown (kid pages only)
+function paintOffline() {
+  const bar = $('#offBar'), off = kidSide() && (navigator.onLine === false || net.stale);
+  bar.hidden = !off; if (off) bar.textContent = '📴 ' + t('offlineBar');
+}
+window.addEventListener('offline', paintOffline);
+window.addEventListener('online', () => { const was = !$('#offBar').hidden; net.stale = false; paintOffline(); if (was && kidSide() && !document.body.classList.contains('song-page') && $('#kidSheet').hidden) render(); });
 setTimeout(maybeTour, 1800);
 window.addEventListener('hashchange', () => {
   if (location.hash === '#/admin/points') pw = { step: 1, skill: null, detail: '', amount: null, sel: new Set() };
@@ -1699,4 +1854,4 @@ track('open_app', `${document.body.dataset.theme} · ${getLang()} · ${matchMedi
 let lastTree = 0;
 $('#scene').addEventListener('click', () => { if (Date.now() - lastTree > 3000) { lastTree = Date.now(); track('tree_tap'); } treeTapped(); });
 
-if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});

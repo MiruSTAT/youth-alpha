@@ -133,12 +133,19 @@ function supabaseApi() {
     async auditLog(limit = 100) { return ok(await sb.from('audit_log').select('*').order('created_at', { ascending: false }).limit(limit)); },
     async auditAll() { return pageAll((a, b) => sb.from('audit_log').select('*').order('created_at').range(a, b)); },
     async kidEvents() { return pageAll((a, b) => sb.from('kid_events').select('*').order('created_at').range(a, b)); },
-    async kidEventsSince(iso) { return pageAll((a, b) => sb.from('kid_events').select('event,device_id,kid_id,created_at').gte('created_at', iso).order('created_at').range(a, b)); },
+    async kidEventsSince(iso) { return pageAll((a, b) => sb.from('kid_events').select('event,detail,device_id,kid_id,created_at').gte('created_at', iso).order('created_at').range(a, b)); },
     async reauth(password) {
       const email = (await sb.auth.getUser()).data.user?.email;
       ok(await sb.auth.signInWithPassword({ email, password }));
     },
     async clearKidEvents() { return ok(await sb.rpc('clear_kid_events')); },
+
+    // ---- prizes given, announcement + verse, weekly summary
+    async redemptions(limit = 1000) { return ok(await sb.from('redemptions').select('*, kids(nickname, avatar)').order('created_at', { ascending: false }).limit(limit)); },
+    async redeem(row) { ok(await sb.from('redemptions').insert(row)); },
+    async deleteRedemption(id) { ok(await sb.from('redemptions').delete().eq('id', id)); },
+    async saveNotice(n) { ok(await sb.rpc('save_notice', { p_announce: n.announce || '', p_verse_text: n.verse_text || '', p_verse_ref: n.verse_ref || '' })); },
+    async pointsSince(iso) { return pageAll((a, b) => sb.from('points').select('kid_id,amount,skill,created_at').gte('created_at', iso).order('created_at').range(a, b)); },
   };
   async function pageAll(q) {
     const out = [];
@@ -153,7 +160,7 @@ function previewApi() {
     { kids: [], attendance: [], rounds: [], points: [], money: [], settings: { attendance_points: 10 }, loggedIn: false };
   let db = load();
   db.schedule ??= []; db.items ??= [];
-  db.feedback ??= []; db.audit ??= []; db.events ??= [];
+  db.feedback ??= []; db.audit ??= []; db.events ??= []; db.redemptions ??= [];
   // (db.songs is filled from the seed list the first time songs are read)
   let aid = db.audit.length;
   const audit = (table_name, op, o, n) => db.audit.push({ id: ++aid, created_at: new Date().toISOString(), actor_email: 'preview@local', table_name, op,
@@ -179,7 +186,7 @@ function previewApi() {
     onAuth: (cb) => listeners.push(cb),
     async leaderboard() {
       return db.kids.filter(k => k.active).map(k => {
-        const r = { id: k.id, nickname: k.nickname, avatar: k.avatar, total: 0, skills: {} };
+        const r = { id: k.id, nickname: k.nickname, avatar: k.avatar, total: 0, skills: {}, spent: db.redemptions.filter(x => x.kid_id === k.id).reduce((a, x) => a + x.price, 0) };
         db.points.filter(p => p.kid_id === k.id).forEach(p => {
           r.skills[p.skill] = (r.skills[p.skill] || 0) + p.amount; r.total += p.amount;
           if (p.detail) { const d = ((r.details ??= {})[p.skill] ??= {}); d[p.detail] = (d[p.detail] || 0) + p.amount; }
@@ -207,7 +214,7 @@ function previewApi() {
     async deleteKid(kid) {
       audit('kids', 'DELETE', db.kids.find(k => k.id === kid), null);
       db.kids = db.kids.filter(k => k.id !== kid);
-      ['attendance', 'points', 'money'].forEach(t => db[t] = db[t].filter(r => r.kid_id !== kid)); save();
+      ['attendance', 'points', 'money', 'redemptions'].forEach(t => db[t] = db[t].filter(r => r.kid_id !== kid)); save();
     },
 
     async attendance(day, session = 'main') { return db.attendance.filter(a => a.day === day && a.session === session); },
@@ -268,7 +275,7 @@ function previewApi() {
     },
     async deleteItem(iid) { audit('shop_items', 'DELETE', db.items.find(x => x.id === iid), null); db.items = db.items.filter(x => x.id !== iid); save(); },
 
-    async eventInfo() { const { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open, music = {} } = db.settings; return { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open, music }; },
+    async eventInfo() { const { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open, music = {}, announce = '', verse_text = '', verse_ref = '' } = db.settings; return { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open, music, announce, verse_text, verse_ref }; },
     async allPoints() { return db.points.map(p => ({ ...p, kids: kidOf(p.kid_id) })); },
     async sendFeedback(row) {
       if (!db.settings.fb_open) throw new Error('closed');
@@ -278,7 +285,7 @@ function previewApi() {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=22'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=23'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {
@@ -297,10 +304,34 @@ function previewApi() {
     async kidEventsSince(iso) { return db.events.filter(e => e.created_at >= iso); },
     async reauth(pw) { if (!pw) throw new Error('password'); },
     async clearKidEvents() { const n = db.events.length; db.events = []; audit('kid_events', 'CLEAR', null, { rows_deleted: n }); save(); return n; },
+
+    async redemptions(limit = 1000) { return [...db.redemptions].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit).map(r => ({ ...r, kids: kidOf(r.kid_id) })); },
+    async redeem(row) {
+      const bal = db.points.filter(p => p.kid_id === row.kid_id).reduce((a, p) => a + p.amount, 0) - db.redemptions.filter(r => r.kid_id === row.kid_id).reduce((a, r) => a + r.price, 0);
+      if (row.price > bal) throw new Error('not enough points to spend');
+      const n = { id: id(), created_at: now(), note: '', ...row }; db.redemptions.push(n); audit('redemptions', 'INSERT', null, n); save();
+    },
+    async deleteRedemption(rid) { audit('redemptions', 'DELETE', db.redemptions.find(r => r.id === rid), null); db.redemptions = db.redemptions.filter(r => r.id !== rid); save(); },
+    async saveNotice(n) { const o = { ...db.settings }; Object.assign(db.settings, { announce: (n.announce || '').trim().slice(0, 160), verse_text: (n.verse_text || '').trim().slice(0, 400), verse_ref: (n.verse_ref || '').trim().slice(0, 60) }); audit('settings', 'UPDATE', o, db.settings); save(); },
+    async pointsSince(iso) { return db.points.filter(p => p.created_at >= iso).map(({ kid_id, amount, skill, created_at }) => ({ kid_id, amount, skill, created_at })); },
   };
 }
 
 export const api = MODE === 'supabase' ? supabaseApi() : previewApi();
+
+// Keep the last good answer on this phone and use it when the internet is down or very slow,
+// so kids can still see the ranking and the songs (net.stale = a saved answer is being shown).
+export const net = { stale: false };
+export async function cached(key, fn, ms = 6000) {
+  const K = 'ya_c_' + key;
+  let old = null; try { old = JSON.parse(localStorage.getItem(K) || 'null'); } catch {}
+  const fresh = fn().then(v => { try { localStorage.setItem(K, JSON.stringify(v)); } catch {} net.stale = false; return v; });
+  if (old == null) return fresh;
+  let timer;
+  try { return await Promise.race([fresh, new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('slow')), ms); })]); }
+  catch { fresh.catch(() => {}); net.stale = true; return old; }
+  finally { clearTimeout(timer); }
+}
 
 // Rank with ties (same points = same rank)
 export function ranked(rows) {
