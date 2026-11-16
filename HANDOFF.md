@@ -80,7 +80,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
   - the YouTube IFrame API
   - `vendor/qrcode.js` (local copy) for QR codes
   - Google font **Noto Sans Thai**
-- **Versioning:** every import and asset carries `?v=N`. **The current version is `26`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
+- **Versioning:** every import and asset carries `?v=N`. **The current version is `27`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
 - **Service worker** (`sw.js`) makes the app work offline and open fast on weak Wi-Fi:
   - Files with `?v=` and same-origin pictures are served from the phone first (cache `ya-v<N>`, replaced on each version).
   - The page itself tries the internet first for 3.5 s, then uses the saved copy.
@@ -115,7 +115,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
 | `js/ocr.js` | 394 | `readSheet(src, {onProgress, skipTitles, key})`: reads a song-sheet picture into the `[C]lyrics` format (see 8.6) |
 | `js/songs-seed.js` | 63 | The song list for preview mode only |
 | `css/style.css` | 762 | All styles. Kid side uses variables `--navy --sheet --card --pt --accent`, and so on; `body.adult` switches to a light admin look. Themes are `body[data-theme="snow"|"night"|"red"|"forest"]`; the **default theme is `snow`** (white) |
-| `supabase/*.sql` | — | Database setup: `schema.sql`, then `002`…`017`, all already run on the live database |
+| `supabase/*.sql` | — | Database setup: `schema.sql`, then `002`…`018`, all already run on the live database |
 | `vendor/qrcode.js` | — | QR library |
 | `sheets/*.jpg` | — | Crops of the church sheet: `joy-of-christmas-day`, `jingle-bells`, `joy-to-the-world`, `christmas-is-a-time`, `piam-rak` |
 
@@ -199,7 +199,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
 
 ## 5. Database (Supabase)
 
-To set up a new copy, run these files in the SQL editor in this order: `schema.sql`, `002`, `003` … `017`. After `017`, store the owner's email by hand (see 5b); it is not in the repo. Each one is safe to re-run.
+To set up a new copy, run these files in the SQL editor in this order: `schema.sql`, `002`, `003` … `018`. After `017`, store the owner's email by hand (see 5b); it is not in the repo. Each one is safe to re-run.
 
 ### Tables
 
@@ -248,6 +248,22 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
 - **Staff:** full access to the working tables. Only the admin can update `settings`.
 - **Storage bucket `images`:** public to view; only staff can upload, update or delete. Limit is 3 MB per file; types jpeg/png/webp/gif.
 
+### 5a. Programs (v27, `supabase/018_programs.sql`) — READ THIS BEFORE ANY DATABASE CODE
+
+- **Table `programs`** (`id`, `slug`, `name`, `archived`, `copied_from`, `look` jsonb for v28+, `created_at`). Public can read it. Created/renamed/archived only through `program_create(name, slug, from, people, shop, songs)` and `program_update(id, name, archived)` (super admin only). Programs are never deleted; program 1 cannot be archived.
+- **Every program-owned table has `program_id int not null default 1`:** kids, point_categories, shop_items, songs, feedback, kid_events, attendance, attendance_rounds, points, redemptions. Everything that existed before v27 is program 1 "Youth Alpha Christmas 2026" (slug `youth-alpha-christmas-2026`).
+- **attendance / points / redemptions** get `program_id` from their kid (trigger `program_from_kid`, before insert), so client code does not set it there.
+- **attendance_rounds** primary key is now `(program_id, day, session)`; the client upsert sends `program_id`.
+- **settings:** one row per program, `settings.id = programs.id` (the old `id = 1` check was dropped). `event_info` has `program_id` (= settings.id); the client filters `.eq('program_id', P())`.
+- **point_categories:** keys stay globally unique. `program_create` copies the source program's categories with the suffix `_p<newid>` (`attendance_p2`, `bonus_p2`, …). The base key (strip `/_p\d+$/`, `baseKey()` in app.js) keeps the special meaning: `sync_attendance_points` uses `attendance` for program 1 and `attendance_p<id>` otherwise; the check `bonus_positive` uses the base key.
+- **Per program now:** `feedback_open(p)` (the feedback insert policy checks the row's program), `save_notice(…, p_program)`, `superadmin_set(key, value, p_program)`, `clear_kid_events(p_program)`.
+- **Shared by all programs:** staff (admins/editors), the super admin, the audit log.
+- **Links:** the plain link opens program 1 (old links and the printed QR still work); other programs open with `?p=<slug>` before the `#`: `https://mirustat.github.io/youth-alpha/?p=easter-2027#/`. `linkFor(slug)` in data.js builds it.
+- **Client:** `program` / `P()` in data.js is set once at start by `loadProgram()` in app.js (reads `?p`, finds the program in the cached `programs` list, falls back to program 1 with a toast if the slug is unknown). Every Supabase query in data.js filters or inserts with `P()`. Phone storage that belongs to a program uses `pkey()` (program 1 keeps the old names: `ya_me`, `ya_fb_<date>`, `ya_fb_seen`; others get `_p<id>`); offline caches use `ya_c_<id>_<name>`. Switching program on the admin home loads the other link (full reload).
+- **Backup before v27:** copies of every table as `private.bk_20261116_<table>` (made just before 018 ran). Do not drop them without the owner's OK.
+- **Tested on the live database** inside a rolled-back transaction (simulated super admin): program created as id 2 with settings, `_p2` categories, kids, songs, prizes; attendance gave `attendance_p2` points in program 2 only; rounds and leaderboard stayed separate; a negative `bonus_p2` was refused; feedback refused while closed. (Sequence note: that test used program id 2, so the first real new program will be id 3.)
+- **Preview mode** keeps only the program list (create/rename/archive work); its data is not split by program.
+
 ### 5b. Super admin (v25, `supabase/017_superadmin.sql`)
 
 - **Who:** one super admin, username **Miruku** (the owner). Its Supabase login is the owner's own Gmail and has **no Supabase password**; the only way into that login is a sign-in link emailed by Supabase.
@@ -265,7 +281,7 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
   - `clear_kid_events()` now also accepts a super admin who re-entered their password in the last 2 minutes (via `superadmin_start`).
 - **App flow:** login form → normal sign-in fails → `startFromLogin` → `superadmin_start` → `signInWithOtp(email, shouldCreateUser:false, emailRedirectTo: site URL)` → "check your email" screen. The email (default Supabase template "Your sign-in link"; templates can't be edited without custom SMTP) opens the site with `#access_token=…` (implicit flow). An inline script in `index.html` saves that as `window.YA_LINK` before supabase-js clears it; app.js then waits for the session and opens `#/admin/super`, where `superGate` calls `superadmin_unlock()`.
 - **Limits:** the built-in mailer sends at most 2 emails an hour and only to Supabase team members (the owner's Gmail is one). Site URL is `https://mirustat.github.io/youth-alpha/`; no extra redirect URLs are set. "Allow new users to sign up" is off, so the owner's login was created with Supabase's "Invite user".
-- **Super admin page (`#/admin/super`):** a one-line explanation of the page; username and "signed in until" time; a **"Sign out of super admin"** button (v26; was "Lock", which confused the owner) that asks first, then calls `superadmin_lock()` and signs out, so next time needs password + email link again; the kids' "Install as an app" switch; "Details for AI": fetches `HANDOFF.md`, checks its "current version" line against `VERSION`, shows it folded inside ONE card ("Read the handoff (N sections)", each section folded with its line count; v26), and has "Copy as an AI prompt" (a short instruction header + the whole file) and "Download .md"; and a "Coming next" list.
+- **Super admin page (`#/admin/super`):** a one-line explanation of the page; the **Programs** section (v27: each program with its link, copy link, open its admin, edit name / archive, and "New program" with name, link name filled from the name, start-from program, and copy kids / prizes / songs); username and "signed in until" time; a **"Sign out of super admin"** button (v26; was "Lock", which confused the owner) that asks first, then calls `superadmin_lock()` and signs out, so next time needs password + email link again; the kids' "Install as an app" switch; "Details for AI": fetches `HANDOFF.md`, checks its "current version" line against `VERSION`, shows it folded inside ONE card ("Read the handoff (N sections)", each section folded with its line count; v26), and has "Copy as an AI prompt" (a short instruction header + the whole file) and "Download .md"; and a "Coming next" list.
 
 ### Running SQL from the browser (how it was done)
 
@@ -326,6 +342,7 @@ The SQL editor (Monaco) was used in the built-in browser tab:
   - If the normal sign-in fails and the name is the super admin's, the two-step super admin sign-in starts (section 5b).
   - A new account shows "waiting for approval". The first ever user can claim admin.
 - **Home** has grouped menus with red indicators for things to do:
+  - A **program picker** at the top when there is more than one (non-archived) program (v27).
   - **Super admin** (only when signed in as the unlocked super admin): Super admin page 👑
   - **Daily:** Attendance ✅, Points ⭐, Weekly summary 📊
   - **Kids:** Kids 👧, Feedback 💬, Announcement & verse 📣
@@ -563,13 +580,14 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 23. v23, 2026-11-16: prize redemption, announcement line, verse of the week, weekly summary, offline songs and faster loading, version page with change log. Database update `015_redeem_notice.sql`.
 24. v24, 2026-11-16: special mode lag fixed (steady glow instead of 30 pulsing layers, fewer presents, 3D tree pauses when covered and lowers detail on slow phones, snow at 30 fps, no blur on the top bar, lighter harmony sounds); prize zoom in the shop; install-as-app option (off by default, `016_install_switch.sql`); app icons; detailed grouped change log with Excel export; tests and HANDOFF.md in the repo; Desktop folder on the owner's PC.
 25. v25, 2026-11-16: super admin "Miruku" with two-step sign-in (own password + emailed link, `017_superadmin.sql`), super admin page (install switch, "Details for AI" from HANDOFF.md with copy/download), AGENTS.md / CLAUDE.md rules for AIs, `songtext.js` and `superadmin.js` split out of app.js, login accepts 4-character passwords.
-26. v26 (current), 2026-11-16: owner feedback on v25: super admin page explained, "Lock" became "Sign out of super admin", handoff folded into one card; music switches grouped and foldable; new "All songs: video + original sheet only" switch (`settings.music.simpleSongs`), switched on live; the song editor now loads the music switches (`eventInfo(true)`) so its card knows about that mode.
+26. v26, 2026-11-16: owner feedback on v25: super admin page explained, "Lock" became "Sign out of super admin", handoff folded into one card; music switches grouped and foldable; new "All songs: video + original sheet only" switch (`settings.music.simpleSongs`), switched on live; the song editor now loads the music switches (`eventInfo(true)`) so its card knows about that mode.
+27. v27 (current), 2026-11-16: programs (`018_programs.sql`): many programs in one database, each with its own `?p=` link and its own data; program 1 = all earlier data; super admin Programs section; admin program picker; per-program phone storage. Backup tables `private.bk_20261116_*` made first.
 
 ## 14. Ideas and open items
 
 ### Agreed plan (owner approved on 2026-11-16; build one release at a time, summary first, wait for "go")
 - **v25 (super admin): DONE**, see 5b. Live database updated (017 run, with row level security switched on for the three private tables; the owner's email stored in `private.owner`). The owner's Supabase login was created with "Invite user" on 2026-11-16; **still to do by the owner:** open that invitation email, choose the username and password on the set-up page. Until then the real two-step sign-in is untested on the live site (it was tested in the preview copy). Split of app.js started (songtext.js, superadmin.js); the rest of app.js (~1780 lines: kid pages, admin pages, song player) can be split further when touched.
-- **v27 (programs; was planned as v26):** each customised app is a saved "program" with its own look, settings, people, points, shop and songs, and **its own link**. One live program per link; today's data becomes program 1 "Youth Alpha Christmas 2026", untouched. Never delete existing data. A new program can copy the people list or the look from an old one. Named saved versions of a program's look as a safety net.
+- **v27 (programs): DONE**, see 5a. Original plan: each customised app is a saved "program" with its own look, settings, people, points, shop and songs, and **its own link**. One live program per link; today's data becomes program 1 "Youth Alpha Christmas 2026", untouched. Never delete existing data. A new program can copy the people list or the look from an old one. Named saved versions of a program's look as a safety net.
 - **v28 (program settings, super admin only):** name, logo and wording, theme packs (Christmas, Easter, plain church), font and text size, feature switches.
 - **v29:** drag-and-drop layout editor (reorder and show/hide sections, tabs and menu items, live preview; not a free-form designer).
 - **v30:** Easter pack (3D scene from simple shapes, public-domain hymn, egg-hunt special mode, a mascot in place of Santa).

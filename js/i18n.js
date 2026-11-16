@@ -498,3 +498,27 @@ Object.assign(DICT.en, {
   simpleSongs: 'All songs: video + original sheet only', simpleSongsSub: 'On = every song shows only its YouTube video and the original song sheet. Off = the switches below and each song\'s own switches apply',
   simpleOnNote: 'Every song now shows only the video and the original sheet. This song\'s switches apply when that is turned off in', simpleOnNote2: 'Every song now shows only the video and the original sheet. The switches below apply when the switch above is off.',
 });
+
+// ---- update 27: programs
+Object.assign(DICT.th, {
+  progTitle: 'โปรแกรม', progSub: 'แต่ละโปรแกรม (เช่น คริสต์มาส อีสเตอร์ ค่ายฤดูร้อน) มีลิงก์ของตัวเอง และมีรายชื่อ คะแนน การเช็กชื่อ ร้านค้า เพลง และการตั้งค่าแยกกัน ข้อมูลไม่ปนกันและไม่ถูกลบ',
+  progNew: 'สร้างโปรแกรมใหม่', progHere: 'ที่เปิดอยู่', progArchived: 'เก็บแล้ว', progCopy: 'คัดลอกลิงก์', progOpen: 'เปิดหน้าผู้ดูแล', progEdit: 'แก้ไข',
+  progCopied: 'คัดลอกลิงก์แล้ว', progName: 'ชื่อโปรแกรม', progNameEg: 'เช่น Youth Alpha อีสเตอร์ 2027',
+  progArchive: 'เก็บโปรแกรมนี้ (ซ่อนจากรายการ)', progArchiveHint: 'ข้อมูลไม่ถูกลบ ลิงก์ยังเปิดได้ เปิดคืนได้ทุกเมื่อ',
+  progSlug: 'ชื่อในลิงก์ (ภาษาอังกฤษ)', progSlugHint: 'a–z ตัวเลข และ - เช่น easter-2027 · เปลี่ยนภายหลังไม่ได้',
+  progFrom: 'เริ่มจากโปรแกรม', progFromHint: 'คัดลอกหมวดคะแนนและการตั้งค่าจากโปรแกรมนี้เสมอ (ไม่คัดลอกคะแนน การเช็กชื่อ หรือความคิดเห็น)',
+  progPeople: 'คัดลอกรายชื่อเด็ก (เริ่มคะแนนที่ 0)', progShop: 'คัดลอกของรางวัล', progSongs: 'คัดลอกเพลง', progCreate: 'สร้าง',
+  progSlugBad: 'ชื่อในลิงก์ต้องมีอย่างน้อย 2 ตัว (a–z, 0–9, -)', progSlugUsed: 'ชื่อในลิงก์นี้มีโปรแกรมอื่นใช้แล้ว', progMade: (n) => `สร้าง "${n}" แล้ว`,
+  progNow: 'โปรแกรม', progUnknown: 'ไม่พบโปรแกรมในลิงก์นี้ จึงเปิดโปรแกรมหลักแทน',
+});
+Object.assign(DICT.en, {
+  progTitle: 'Programs', progSub: 'Each program (e.g. Christmas, Easter, a summer camp) has its own link and its own people, points, attendance, shop, songs and settings. Nothing is mixed and nothing is deleted.',
+  progNew: 'New program', progHere: 'open now', progArchived: 'archived', progCopy: 'Copy link', progOpen: 'Open admin', progEdit: 'Edit',
+  progCopied: 'Link copied', progName: 'Program name', progNameEg: 'e.g. Youth Alpha Easter 2027',
+  progArchive: 'Archive this program (hide it from lists)', progArchiveHint: 'No data is deleted, the link still opens, and it can be brought back any time',
+  progSlug: 'Name in the link (English)', progSlugHint: 'a–z, numbers and -, e.g. easter-2027 · cannot be changed later',
+  progFrom: 'Start from program', progFromHint: 'Always copies its point categories and settings (never points, attendance or feedback)',
+  progPeople: 'Copy the kids list (points start at 0)', progShop: 'Copy the prizes', progSongs: 'Copy the songs', progCreate: 'Create',
+  progSlugBad: 'The link name needs at least 2 characters (a–z, 0–9, -)', progSlugUsed: 'Another program already uses this link name', progMade: (n) => `Created "${n}"`,
+  progNow: 'Program', progUnknown: 'No program has this link, so the main program opened instead',
+});

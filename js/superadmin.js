@@ -103,6 +103,10 @@ export async function pSuper(c) {
     <div class="card toggles"><div class="tg-row"><span class="tg-i">📲</span><span class="tg-t"><b>${c.t('installApp')}</b><span>${c.t('saInstallSub')}</span></span>
       <button class="switch ${s.install_on ? 'on' : ''}" id="swInstall" role="switch" aria-checked="${!!s.install_on}" aria-label="${c.t('installApp')}"><span></span></button></div></div>
 
+    <h2 class="grp">📁 ${c.t('progTitle')}</h2>
+    <div class="card"><p class="muted" style="margin:0 0 10px">${c.t('progSub')}</p><div id="progList"></div>
+      <button class="btn primary wide" id="progNew" style="margin-top:12px">➕ ${c.t('progNew')}</button></div>
+
     <h2 class="grp">🤖 ${c.t('saAi')}</h2>
     <div class="card"><p class="muted" style="margin:0 0 10px">${c.t('saAiSub')}</p>
       <p id="hoState" class="sa-ho muted">${c.t('loading')}…</p>
@@ -128,6 +132,9 @@ export async function pSuper(c) {
     } catch (err) { c.fail(err); }
     sw.disabled = false;
   };
+
+  drawPrograms(c);
+  c.$('#progNew').onclick = () => newProgram(c);
 
   // the handoff (HANDOFF.md, published with every release): shown by section, copied as a ready prompt
   let md = '';
@@ -155,4 +162,57 @@ export async function pSuper(c) {
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([prompt], { type: 'text/markdown' }));
     a.download = `youth-alpha-ai-prompt-v${c.VERSION}.md`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   };
+}
+
+// ---------- programs: list with each one's own link, create, rename, archive (never delete)
+async function drawPrograms(c) {
+  const box = c.$('#progList'); if (!box) return;
+  const list = await c.api.programs().catch(() => c.program.list);
+  c.program.list = list;
+  box.innerHTML = list.map(p => `<div class="prog-row ${p.archived ? 'arch' : ''}">
+      <div class="prog-top"><b>${c.esc(p.name)}</b>${p.id === c.program.id ? `<span class="now-tag">${c.t('progHere')}</span>` : ''}${p.archived ? `<span class="arch-tag">${c.t('progArchived')}</span>` : ''}</div>
+      <code class="prog-link">${c.esc(c.linkFor(p.slug))}</code>
+      <div class="prog-btns"><button class="btn small" data-copy="${p.id}">📋 ${c.t('progCopy')}</button>
+        <a class="btn small" href="${c.esc(c.linkFor(p.slug))}#/admin">⚙️ ${c.t('progOpen')}</a>
+        <button class="btn small" data-edit="${p.id}">✏️ ${c.t('progEdit')}</button></div></div>`).join('');
+  box.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
+    const p = list.find(x => x.id === +b.dataset.copy);
+    try { await navigator.clipboard.writeText(c.linkFor(p.slug)); c.toast('✓ ' + c.t('progCopied')); } catch { c.toast(c.linkFor(p.slug)); }
+  });
+  box.querySelectorAll('[data-edit]').forEach(b => b.onclick = async () => {
+    const p = list.find(x => x.id === +b.dataset.edit);
+    const r = await c.modal('✏️ ' + c.esc(p.name), `<div class="field"><label>${c.t('progName')}</label><input class="input" name="name" required maxlength="60" value="${c.esc(p.name)}"></div>
+      ${p.id === 1 ? '' : `<label class="chk"><input type="checkbox" name="arch" ${p.archived ? 'checked' : ''}> ${c.t('progArchive')}</label><p class="hint">${c.t('progArchiveHint')}</p>`}`);
+    if (!(r instanceof FormData)) return;
+    try { await c.api.programUpdate(p.id, String(r.get('name')).trim(), r.get('arch') === 'on'); c.toast(c.t('saved')); drawPrograms(c); } catch (e) { c.fail(e); }
+  });
+}
+
+const slugify = (s) => String(s).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+
+async function newProgram(c) {
+  const list = c.program.list;
+  const pending = c.modal('➕ ' + c.t('progNew'), `
+    <div class="field"><label>${c.t('progName')}</label><input class="input" name="name" required maxlength="60" placeholder="${c.t('progNameEg')}"></div>
+    <div class="field"><label>${c.t('progSlug')}</label><input class="input" name="slug" required pattern="[a-z0-9][a-z0-9\\-]{1,39}" maxlength="40" placeholder="easter-2027" autocapitalize="none" spellcheck="false">
+      <p class="hint">${c.t('progSlugHint')}</p></div>
+    <div class="field"><label>${c.t('progFrom')}</label><select class="input" name="from">${list.map(p => `<option value="${p.id}" ${p.id === c.program.id ? 'selected' : ''}>${c.esc(p.name)}</option>`).join('')}</select>
+      <p class="hint">${c.t('progFromHint')}</p></div>
+    <label class="chk"><input type="checkbox" name="people"> ${c.t('progPeople')}</label>
+    <label class="chk"><input type="checkbox" name="shop" checked> ${c.t('progShop')}</label>
+    <label class="chk"><input type="checkbox" name="songs" checked> ${c.t('progSongs')}</label>`, { okText: c.t('progCreate') });
+  // the link name fills itself from the program name until it is typed by hand
+  const f = document.querySelector('#dlgForm'), nm = f.querySelector('[name=name]'), sl = f.querySelector('[name=slug]');
+  let auto = true; sl.oninput = () => { auto = false; }; nm.oninput = () => { if (auto) sl.value = slugify(nm.value); };
+  const r = await pending;
+  if (!(r instanceof FormData)) return;
+  const name = String(r.get('name')).trim(), slug = slugify(r.get('slug') || name);
+  if (slug.length < 2) { c.toast(c.t('progSlugBad')); return; }
+  if (list.some(p => p.slug === slug)) { c.toast(c.t('progSlugUsed')); return; }
+  try {
+    const res = await c.api.programCreate({ name, slug, from: +r.get('from'), people: r.get('people') === 'on', shop: r.get('shop') === 'on', songs: r.get('songs') === 'on' });
+    if (!res?.ok) throw new Error('create failed');
+    c.toast('✓ ' + c.t('progMade', name));
+    drawPrograms(c);
+  } catch (e) { c.fail(e); }
 }

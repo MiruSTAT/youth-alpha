@@ -1,7 +1,7 @@
 // Kid activity log: what kids view and tap (for later analysis).
 // No names are typed or stored here — only a random device id, the chosen kid (if they tapped "this is me"),
 // the event name and a short detail. Events are batched and sent every 15 s or when the app is hidden.
-import { api } from './data.js?v=26';
+import { api } from './data.js?v=27';
 
 const DEV_KEY = 'ya_dev';
 let dev = '';
@@ -15,7 +15,7 @@ let queue = [];
 
 export function track(event, detail = '') {
   if (document.body.classList.contains('adult')) return;          // only kids' activity
-  let kid = null; try { kid = localStorage.getItem('ya_me'); } catch {}
+  let kid = null; try { const p = new URLSearchParams(location.search).get('p'); kid = localStorage.getItem(p && window.YA_PID > 1 ? 'ya_me_p' + window.YA_PID : 'ya_me'); } catch {}
   queue.push({
     device_id: dev, kid_id: kid && UUID.test(kid) ? kid : null,
     event: String(event).toLowerCase().replace(/[^a-z_]/g, '_').slice(0, 40),

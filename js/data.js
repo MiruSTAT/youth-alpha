@@ -4,6 +4,11 @@ export const MODE = cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY ? 'supabase' : 'pr
 export const SKILLS = ['piano', 'singing', 'english', 'thai', 'attendance', 'bonus'];
 export const SKILL_ICON = { piano: '🎹', singing: '🎤', english: '🔤', thai: '📖', attendance: '⛪', bonus: '🎁' };
 
+// ---- the program this link opens (?p=<slug>; no ?p = program 1). Set once at start by setProgram().
+export const program = { id: 1, slug: '', name: '', look: {}, list: [] };
+export const P = () => program.id;
+export const linkFor = (slug) => location.origin + location.pathname + (slug && slug !== program.list.find(x => x.id === 1)?.slug ? '?p=' + encodeURIComponent(slug) : '');
+
 export function today() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -18,7 +23,7 @@ function supabaseApi() {
   return {
     onAuth: (cb) => sb.auth.onAuthStateChange((event) => cb(event)),
     async leaderboard() {
-      const [lb, st] = await Promise.all([sb.from('leaderboard').select('*'), sb.from('kid_skill_totals').select('*')]);
+      const [lb, st] = await Promise.all([sb.from('leaderboard').select('*').eq('program_id', P()), sb.from('kid_skill_totals').select('*').eq('program_id', P())]);
       const rows = ok(lb).map(r => ({ ...r, skills: {} })), by = Object.fromEntries(rows.map(r => [r.id, r]));
       ok(st).forEach(x => {
         const r = by[x.kid_id]; if (!r) return;
@@ -27,8 +32,8 @@ function supabaseApi() {
       });
       return rows;
     },
-    async pointCats() { return ok(await sb.from('point_categories').select('*').order('sort')); },
-    async savePointCat(row, isNew) { const { key, ...d } = row; ok(isNew ? await sb.from('point_categories').insert(row) : await sb.from('point_categories').update(d).eq('key', key)); },
+    async pointCats() { return ok(await sb.from('point_categories').select('*').eq('program_id', P()).order('sort')); },
+    async savePointCat(row, isNew) { const { key, ...d } = row; ok(isNew ? await sb.from('point_categories').insert({ ...row, program_id: P() }) : await sb.from('point_categories').update(d).eq('key', key)); },
     async deletePointCat(key) { ok(await sb.from('point_categories').delete().eq('key', key)); },
 
     async session() { return (await sb.auth.getSession()).data.session; },
@@ -38,13 +43,13 @@ function supabaseApi() {
     async myRole() { return ok(await sb.rpc('my_role')); },
     async claimAdmin(name) { return ok(await sb.rpc('claim_admin', { p_name: name })); },
 
-    async kids() { return ok(await sb.from('kids').select('*').order('nickname')); },
-    async addKid(k) { return ok(await sb.from('kids').insert(k).select().single()); },
+    async kids() { return ok(await sb.from('kids').select('*').eq('program_id', P()).order('nickname')); },
+    async addKid(k) { return ok(await sb.from('kids').insert({ ...k, program_id: P() }).select().single()); },
     async updateKid(id, patch) { ok(await sb.from('kids').update(patch).eq('id', id)); },
     async deleteKid(id) { ok(await sb.from('kids').delete().eq('id', id)); },
 
     async attendance(day, session = 'main') {
-      return ok(await sb.from('attendance').select('*').eq('day', day).eq('session', session));
+      return ok(await sb.from('attendance').select('*').eq('program_id', P()).eq('day', day).eq('session', session));
     },
     async setAttendance(kid_id, day, status, session = 'main') {
       const updated_by = await uid();
@@ -55,11 +60,11 @@ function supabaseApi() {
       ok(await sb.from('attendance').delete().eq('kid_id', kid_id).eq('day', day).eq('session', session));
     },
     async round(day, session = 'main') {
-      return ok(await sb.from('attendance_rounds').select('*').eq('day', day).eq('session', session).maybeSingle());
+      return ok(await sb.from('attendance_rounds').select('*').eq('program_id', P()).eq('day', day).eq('session', session).maybeSingle());
     },
     async setRound(day, finished, session = 'main') {
       const u = await uid();
-      ok(await sb.from('attendance_rounds').upsert({ day, session, finished, finished_by: u, finished_at: new Date().toISOString() }));
+      ok(await sb.from('attendance_rounds').upsert({ program_id: P(), day, session, finished, finished_by: u, finished_at: new Date().toISOString() }));
     },
 
     async addPoints(rows) {
@@ -67,7 +72,7 @@ function supabaseApi() {
       ok(await sb.from('points').insert(rows.map(r => ({ ...r, given_by }))));
     },
     async recentPoints(limit = 30) {
-      return ok(await sb.from('points').select('*, kids(nickname, avatar)').is('attendance_id', null)
+      return ok(await sb.from('points').select('*, kids(nickname, avatar)').eq('program_id', P()).is('attendance_id', null)
         .order('created_at', { ascending: false }).limit(limit));
     },
     async deletePoint(id) { ok(await sb.from('points').delete().eq('id', id)); },
@@ -76,8 +81,8 @@ function supabaseApi() {
     async addMoney(m) { const created_by = await uid(); ok(await sb.from('money').insert({ ...m, created_by })); },
     async deleteMoney(id) { ok(await sb.from('money').delete().eq('id', id)); },
 
-    async settings() { return ok(await sb.from('settings').select('*').eq('id', 1).single()); },
-    async saveSettings(patch) { ok(await sb.from('settings').update(patch).eq('id', 1)); },
+    async settings() { return ok(await sb.from('settings').select('*').eq('id', P()).single()); },
+    async saveSettings(patch) { ok(await sb.from('settings').update(patch).eq('id', P())); },
 
     async pendingUsers() { return ok(await sb.rpc('pending_users')); },
     async staffList() { return ok(await sb.rpc('staff_list')); },
@@ -85,7 +90,7 @@ function supabaseApi() {
     async removeStaff(user_id) { ok(await sb.from('staff').delete().eq('user_id', user_id)); },
     async myId() { return uid(); },
 
-    async attendanceAll() { return ok(await sb.from('attendance').select('kid_id,status,day')); },
+    async attendanceAll() { return pageAll((a, b) => sb.from('attendance').select('kid_id,status,day').eq('program_id', P()).order('day').range(a, b)); },
 
     async schedule() { return ok(await sb.from('schedule').select('*').order('day').order('time_text')); },
     async saveSchedule(row) { const { id, ...d } = row; ok(id ? await sb.from('schedule').update(d).eq('id', id) : await sb.from('schedule').insert(d)); },
@@ -93,31 +98,31 @@ function supabaseApi() {
 
     async shop() {
       const [c, i] = await Promise.all([sb.from('shop_categories').select('*').order('sort').order('created_at'),
-        sb.from('shop_items').select('*').order('sort').order('price')]);
+        sb.from('shop_items').select('*').eq('program_id', P()).order('sort').order('price')]);
       return { cats: ok(c), items: ok(i) };
     },
     async saveCategory(row) { const { id, ...d } = row; ok(id ? await sb.from('shop_categories').update(d).eq('id', id) : await sb.from('shop_categories').insert(d)); },
     async deleteCategory(id) { ok(await sb.from('shop_categories').delete().eq('id', id)); },
-    async saveItem(row) { const { id, ...d } = row; ok(id ? await sb.from('shop_items').update(d).eq('id', id) : await sb.from('shop_items').insert(d)); },
+    async saveItem(row) { const { id, ...d } = row; ok(id ? await sb.from('shop_items').update(d).eq('id', id) : await sb.from('shop_items').insert({ ...d, program_id: P() })); },
     async deleteItem(id) { ok(await sb.from('shop_items').delete().eq('id', id)); },
 
-    async eventInfo() { return ok(await sb.from('event_info').select('*').single()); },
+    async eventInfo() { return ok(await sb.from('event_info').select('*').eq('program_id', P()).single()); },
     async allPoints() {
       const out = []; // page through in case there are many rows
       for (let from = 0; ; from += 1000) {
-        const rows = ok(await sb.from('points').select('*, kids(nickname, avatar)').order('created_at').range(from, from + 999));
+        const rows = ok(await sb.from('points').select('*, kids(nickname, avatar)').eq('program_id', P()).order('created_at').range(from, from + 999));
         out.push(...rows); if (rows.length < 1000) return out;
       }
     },
-    async sendFeedback(row) { ok(await sb.from('feedback').insert(row)); },
-    async feedback() { return ok(await sb.from('feedback').select('*').order('created_at', { ascending: false }).limit(200)); },
+    async sendFeedback(row) { ok(await sb.from('feedback').insert({ ...row, program_id: P() })); },
+    async feedback() { return ok(await sb.from('feedback').select('*').eq('program_id', P()).order('created_at', { ascending: false }).limit(200)); },
     async deleteFeedback(id) { ok(await sb.from('feedback').delete().eq('id', id)); },
 
     // ---- songs + pictures
-    async songs() { return ok(await sb.from('songs').select('*').order('sort').order('title')); },
+    async songs() { return ok(await sb.from('songs').select('*').eq('program_id', P()).order('sort').order('title')); },
     async saveSong(row) {
       const { id, ...d } = row; d.updated_at = new Date().toISOString();
-      return ok(id ? await sb.from('songs').update(d).eq('id', id).select().single() : await sb.from('songs').insert(d).select().single());
+      return ok(id ? await sb.from('songs').update(d).eq('id', id).select().single() : await sb.from('songs').insert({ ...d, program_id: P() }).select().single());
     },
     async deleteSong(id) { ok(await sb.from('songs').delete().eq('id', id)); },
     // upload a (already shrunk) picture; returns its public address
@@ -129,16 +134,16 @@ function supabaseApi() {
     },
 
     // ---- logs
-    async logEvents(rows) { ok(await sb.from('kid_events').insert(rows)); },
+    async logEvents(rows) { ok(await sb.from('kid_events').insert(rows.map(r => ({ ...r, program_id: P() })))); },
     async auditLog(limit = 100) { return ok(await sb.from('audit_log').select('*').order('created_at', { ascending: false }).limit(limit)); },
     async auditAll() { return pageAll((a, b) => sb.from('audit_log').select('*').order('created_at').range(a, b)); },
-    async kidEvents() { return pageAll((a, b) => sb.from('kid_events').select('*').order('created_at').range(a, b)); },
-    async kidEventsSince(iso) { return pageAll((a, b) => sb.from('kid_events').select('event,detail,device_id,kid_id,created_at').gte('created_at', iso).order('created_at').range(a, b)); },
+    async kidEvents() { return pageAll((a, b) => sb.from('kid_events').select('*').eq('program_id', P()).order('created_at').range(a, b)); },
+    async kidEventsSince(iso) { return pageAll((a, b) => sb.from('kid_events').select('event,detail,device_id,kid_id,created_at').eq('program_id', P()).gte('created_at', iso).order('created_at').range(a, b)); },
     async reauth(password) {
       const email = (await sb.auth.getUser()).data.user?.email;
       ok(await sb.auth.signInWithPassword({ email, password }));
     },
-    async clearKidEvents() { return ok(await sb.rpc('clear_kid_events')); },
+    async clearKidEvents() { return ok(await sb.rpc('clear_kid_events', { p_program: P() })); },
 
     // ---- super admin (two steps: username + password, then the emailed sign-in link). See supabase/017_superadmin.sql
     async superStart(username, password) { return ok(await sb.rpc('superadmin_start', { p_username: username, p_password: password })); },
@@ -150,14 +155,19 @@ function supabaseApi() {
     async superClaim(username, password) { return ok(await sb.rpc('superadmin_claim', { p_username: username, p_password: password })); },
     async superLock() { ok(await sb.rpc('superadmin_lock')); },
     async superInfo() { return ok(await sb.rpc('superadmin_info')); },
-    async superSet(key, value) { ok(await sb.rpc('superadmin_set', { p_key: key, p_value: value })); },
+    async superSet(key, value) { ok(await sb.rpc('superadmin_set', { p_key: key, p_value: value, p_program: P() })); },
+
+    // ---- programs (see supabase/018_programs.sql)
+    async programs() { return ok(await sb.from('programs').select('*').order('id')); },
+    async programCreate(o) { return ok(await sb.rpc('program_create', { p_name: o.name, p_slug: o.slug, p_from: o.from, p_people: !!o.people, p_shop: !!o.shop, p_songs: !!o.songs })); },
+    async programUpdate(id, name, archived) { ok(await sb.rpc('program_update', { p_id: id, p_name: name, p_archived: !!archived })); },
 
     // ---- prizes given, announcement + verse, weekly summary
-    async redemptions(limit = 1000) { return ok(await sb.from('redemptions').select('*, kids(nickname, avatar)').order('created_at', { ascending: false }).limit(limit)); },
+    async redemptions(limit = 1000) { return ok(await sb.from('redemptions').select('*, kids(nickname, avatar)').eq('program_id', P()).order('created_at', { ascending: false }).limit(limit)); },
     async redeem(row) { ok(await sb.from('redemptions').insert(row)); },
     async deleteRedemption(id) { ok(await sb.from('redemptions').delete().eq('id', id)); },
-    async saveNotice(n) { ok(await sb.rpc('save_notice', { p_announce: n.announce || '', p_verse_text: n.verse_text || '', p_verse_ref: n.verse_ref || '' })); },
-    async pointsSince(iso) { return pageAll((a, b) => sb.from('points').select('kid_id,amount,skill,created_at').gte('created_at', iso).order('created_at').range(a, b)); },
+    async saveNotice(n) { ok(await sb.rpc('save_notice', { p_announce: n.announce || '', p_verse_text: n.verse_text || '', p_verse_ref: n.verse_ref || '', p_program: P() })); },
+    async pointsSince(iso) { return pageAll((a, b) => sb.from('points').select('kid_id,amount,skill,created_at').eq('program_id', P()).gte('created_at', iso).order('created_at').range(a, b)); },
   };
   async function pageAll(q) {
     const out = [];
@@ -306,7 +316,7 @@ function previewApi() {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=26'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=27'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {
@@ -348,6 +358,15 @@ function previewApi() {
     async superLock() { if (db.sa) db.sa.unlocked = false; save(); },
     async superInfo() { return db.sa?.unlocked ? { username: db.sa.user?.username, until: db.sa.until } : null; },
     async superSet(key, value) { if (key !== 'install_on') throw new Error('unknown setting'); db.settings.install_on = !!value; save(); },
+    // programs, preview copy: only the list is kept (the preview data itself is not split by program)
+    async programs() { return (db.programs ??= [{ id: 1, slug: 'youth-alpha-christmas-2026', name: 'Youth Alpha Christmas 2026', archived: false, look: {} }]); },
+    async programCreate(o) {
+      const list = await this.programs();
+      if (list.some(p => p.slug === o.slug)) throw new Error('duplicate key value violates unique constraint "programs_slug_key"');
+      const id = Math.max(...list.map(p => p.id)) + 1; list.push({ id, slug: o.slug, name: o.name, archived: false, copied_from: o.from, look: {} }); save();
+      return { ok: true, id };
+    },
+    async programUpdate(id, name, archived) { const p = (await this.programs()).find(x => x.id === id); if (p) Object.assign(p, { name, archived: id === 1 ? false : !!archived }); save(); },
     async clearKidEvents() { const n = db.events.length; db.events = []; audit('kid_events', 'CLEAR', null, { rows_deleted: n }); save(); return n; },
 
     async redemptions(limit = 1000) { return [...db.redemptions].sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, limit).map(r => ({ ...r, kids: kidOf(r.kid_id) })); },

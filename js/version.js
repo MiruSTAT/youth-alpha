@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '26';
+export const VERSION = '27';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,16 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'super', th: 'อัปเดตผู้ดูแลสูงสุดและโปรแกรม', en: 'Super admin & programs update',
     versions: [
-      { v: '26', date: '2026-11-16', commit: '',
+      { v: '27', date: '2026-11-16', commit: '',
+        items: [
+          { a: 'data', th: 'โปรแกรม: แอปเดียวรองรับหลายโปรแกรม (เช่น คริสต์มาส อีสเตอร์) แต่ละโปรแกรมมีลิงก์ของตัวเอง (?p=ชื่อ) และมีรายชื่อเด็ก คะแนน การเช็กชื่อ ร้านค้า เพลง หมวดคะแนน ความคิดเห็น บันทึกการใช้งาน และการตั้งค่าแยกกัน', en: 'Programs: one app holds many programs (e.g. Christmas, Easter), each with its own link (?p=name) and its own kids, points, attendance, shop, songs, point categories, feedback, activity log and settings' },
+          { a: 'safety', th: 'ข้อมูลเดิมทั้งหมดเป็นโปรแกรมที่ 1 "Youth Alpha Christmas 2026" ไม่มีอะไรถูกลบหรือเปลี่ยน ลิงก์เดิมและ QR ที่พิมพ์ไว้ยังเปิดโปรแกรมนี้เหมือนเดิม และสำรองข้อมูลไว้ในฐานข้อมูลก่อนเปลี่ยน', en: 'All existing data became program 1, "Youth Alpha Christmas 2026"; nothing was deleted or changed, the old link and printed QR still open it, and a backup was saved in the database first' },
+          { a: 'admin', th: 'หน้าผู้ดูแลสูงสุดมีส่วน "โปรแกรม": ดูทุกโปรแกรมพร้อมลิงก์ คัดลอกลิงก์ เปิดหน้าผู้ดูแลของโปรแกรมนั้น เปลี่ยนชื่อ หรือเก็บ (ซ่อน) โดยไม่ลบข้อมูล', en: 'The super admin page has a "Programs" section: every program with its link, copy link, open that program\'s admin, rename, or archive (hide) without deleting data' },
+          { a: 'admin', th: 'สร้างโปรแกรมใหม่: ตั้งชื่อ ชื่อในลิงก์ เลือกโปรแกรมต้นแบบ (คัดลอกหมวดคะแนนและการตั้งค่าเสมอ) และเลือกคัดลอกรายชื่อเด็ก (คะแนนเริ่ม 0) ของรางวัล และเพลง', en: 'New program: a name, a link name, a program to start from (its point categories and settings are always copied), and optionally its kids (points start at 0), prizes and songs' },
+          { a: 'admin', th: 'หน้าเมนูผู้ดูแลมีตัวเลือกโปรแกรมด้านบน (เมื่อมีมากกว่า 1 โปรแกรม) เลือกแล้วเปิดลิงก์ของโปรแกรมนั้น', en: 'The adult menu has a program picker at the top (when there is more than one program); choosing one opens that program\'s link' },
+          { a: 'kids', th: 'สิ่งที่เก็บในเครื่องของเด็ก ("นี่คือฉัน" ส่งความคิดเห็นวันนี้แล้ว ข้อมูลออฟไลน์) แยกตามโปรแกรม โปรแกรมเดิมใช้ชื่อเดิมจึงไม่มีอะไรหาย', en: 'What is kept on a kid\'s phone ("this is me", feedback sent today, offline data) is separate per program; program 1 keeps the old names, so nothing is lost' },
+        ] },
+      { v: '26', date: '2026-11-16', commit: 'f7e6f4c',
         items: [
           { a: 'songs', th: 'สวิตช์ใหม่ "ทุกเพลง: วิดีโอ + แผ่นเพลงต้นฉบับเท่านั้น" บนสุดของหน้าตั้งค่าเพลง เปิดแล้วทุกเพลงแสดงแค่วิดีโอ YouTube และแผ่นเพลงต้นฉบับ (ไม่มีเนื้อเพลงในแอป ไม่มีปุ่มด้านล่าง) เปิดไว้เป็นค่าเริ่มต้นตามที่เจ้าของขอ', en: 'New switch "All songs: video + original sheet only" at the top of Music settings: every song shows only its YouTube video and the original song sheet (no in-app lyrics, no buttons at the bottom). Switched on by default, as the owner asked' },
           { a: 'admin', th: 'สวิตช์เพลงจัดเป็นกลุ่ม: ทั้งแอป / สิ่งที่เด็กเห็น / เนื้อเพลงและคอร์ด / ปุ่มช่วยซ้อม / ตามวิดีโอ แต่ละกลุ่มพับได้และบอกว่าเปิดอยู่กี่อัน', en: 'Music switches are grouped: whole app / what kids see / lyrics and chords / practice buttons / follow the video; each group folds and shows how many are on' },

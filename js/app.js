@@ -1,14 +1,14 @@
-import { t, getLang, setLang } from './i18n.js?v=26';
-import { api, MODE, ranked, today, bkkToday, cached, net } from './data.js?v=26';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=26';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=26';
+import { t, getLang, setLang } from './i18n.js?v=27';
+import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor } from './data.js?v=27';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=27';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=27';
 
-import { music } from './music.js?v=26';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=26';
-import { snow } from './snow.js?v=26';
-import { track } from './track.js?v=26';
-import { metro } from './metronome.js?v=26';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=26';
+import { music } from './music.js?v=27';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=27';
+import { snow } from './snow.js?v=27';
+import { track } from './track.js?v=27';
+import { metro } from './metronome.js?v=27';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=27';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -17,7 +17,12 @@ const AVATARS = ['⛄', '🎅', '🦌', '🎄', '⭐', '🔔', '🎁', '🧸', '
 // point categories come from the database (admins can edit them)
 // kid pages keep the last answer on the phone (works with no internet); admin pages always read fresh
 const kidSide = () => !location.hash.startsWith('#/admin');
-const read = (key, fn) => kidSide() ? cached(key, fn) : fn();
+const read = (key, fn) => kidSide() ? cached(P() + '_' + key, fn) : fn();
+// keys kept on the phone that belong to one program (program 1 keeps its old names, so nothing is lost)
+const pkey = (k) => P() === 1 ? k : `${k}_p${P()}`;
+const ME = () => pkey('ya' + '_me');
+// the category key without the program suffix (attendance_p2 -> attendance): the special categories keep their meaning
+const baseKey = (k) => String(k || '').replace(/_p\d+$/, '');
 const bal = (r) => Math.max(0, (r?.total || 0) - (r?.spent || 0));      // points left to spend on prizes
 let catCache = { at: 0, list: [] };
 async function pcats(force = false) {
@@ -117,7 +122,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=26');
+    const m = await import('./scene3d.js?v=27');
     if (m.initScene($('#scene'))) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -154,8 +159,8 @@ function wirePics(root, rows) {
 async function kidRank() {
   setNav('rank');
   const [rows, , ev] = await Promise.all([leaderboard(true), pcats(true), eventInfo(true)]);
-  const mineId = localStorage.getItem('ya_me'), me = rows.find(r => r.id === mineId);
-  if (mineId && !me) localStorage.removeItem('ya_me');
+  const mineId = localStorage.getItem(ME()), me = rows.find(r => r.id === mineId);
+  if (mineId && !me) localStorage.removeItem(ME());
   const max = Math.max(1, ...rows.map(r => r.total));
   scene?.setGlow(me ? me.total / max : 0.6);
   const medal = ['🥇', '🥈', '🥉'];
@@ -172,7 +177,7 @@ async function kidRank() {
       : `<p class="empty">${t('noKids')}</p>`}
     ${ev?.verse_text ? verseCard(ev) : ''}</section>`;
   wirePics(view, rows);
-  view.querySelectorAll('.rank-row').forEach(b => b.onclick = () => { const k = rows.find(r => r.id === b.dataset.id); track('tap_kid', k?.id === localStorage.getItem('ya_me') ? 'self' : 'other'); kidDetail(k, rows); });
+  view.querySelectorAll('.rank-row').forEach(b => b.onclick = () => { const k = rows.find(r => r.id === b.dataset.id); track('tap_kid', k?.id === localStorage.getItem(ME()) ? 'self' : 'other'); kidDetail(k, rows); });
   if (me) {
     $('#myCard').onclick = () => { track('tap_my_card'); kidDetail(me, rows); };
     // the total counts up from what this phone saw last time (no pop-up messages)
@@ -186,7 +191,7 @@ const verseCard = (ev) => `<div class="verse"><span class="vl">📖 ${t('verseWe
 
 // a kid's points by category (with details like piano / singing)
 function kidDetail(k, rows) {
-  const isMe = localStorage.getItem('ya_me') === k.id;
+  const isMe = localStorage.getItem(ME()) === k.id;
   const cats = catCache.list.filter(c => c.active || k.skills[c.key]);
   const p = kidSheet(`<div class="panel-head"><h2>${esc(k.nickname)}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
     <div class="kid-detail-head"><button class="av" data-pic="${k.id}" aria-label="${esc(k.nickname)}">${pic(k.avatar)}</button><b>${k.total} ⭐</b><span class="me-rank">🏆 ${t('rank')} ${k.rank} ${t('of')} ${rows.length}</span></div>
@@ -202,8 +207,8 @@ function kidDetail(k, rows) {
   wirePics(p, rows);
   p.querySelectorAll('.skill-row.has-info').forEach(b => b.onclick = () => { track('cat_info', b.dataset.c); catInfo(cOf(b.dataset.c), k.skills[b.dataset.c] || 0); });
   const close = () => { $('#kidSheet').hidden = true; kidRank(); };
-  p.querySelector('#thisMe')?.addEventListener('click', () => { localStorage.setItem('ya_me', k.id); track('set_me'); localStorage.setItem(`ya_seen_${k.id}`, k.total); close(); });
-  p.querySelector('#notMe')?.addEventListener('click', () => { track('not_me'); localStorage.removeItem('ya_me'); close(); });
+  p.querySelector('#thisMe')?.addEventListener('click', () => { localStorage.setItem(ME(), k.id); track('set_me'); localStorage.setItem(`ya_seen_${k.id}`, k.total); close(); });
+  p.querySelector('#notMe')?.addEventListener('click', () => { track('not_me'); localStorage.removeItem(ME()); close(); });
 }
 
 function catInfo(c, pts) {
@@ -297,10 +302,10 @@ async function feedbackForm(pageEl) {
   const head = pageEl ? `<h1 class="sheet-title" style="margin-bottom:14px">💬 ${t('fbTitle')}</h1>`
     : `<div class="panel-head"><h2>💬 ${t('fbTitle')}</h2><button class="x" aria-label="${t('close')}">✕</button></div>`;
   const show = (html) => { if (pageEl) { pageEl.innerHTML = html; return pageEl; } return kidSheet(html); };
-  const sentKey = 'ya_fb_' + bkkToday();
+  const sentKey = pkey('ya_fb_' + bkkToday());
   if (!ev.fb_open) { show(`${head}<p class="fb-done">🔒 ${t('fbClosed')}</p>${pageEl ? homeBtn : ''}`); return; }
   if (localStorage.getItem(sentKey)) { show(`${head}<p class="fb-done">${t('fbSentAlready')}</p>${pageEl ? homeBtn : ''}`); return; }
-  const me = (await leaderboard()).find(r => r.id === localStorage.getItem('ya_me'));
+  const me = (await leaderboard()).find(r => r.id === localStorage.getItem(ME()));
   let mood = 0;
   const p = show(`${head}<p style="margin:0">${t('fbMood')}</p>
     <div class="moods">${['😄', '🙂', '😐', '😢'].map((m, i) => `<button class="mood" data-m="${4 - i}" aria-label="${m}">${m}</button>`).join('')}</div>
@@ -336,8 +341,8 @@ function kidSheet(html) {
 
 async function kidShop() {
   setNav('shop'); scene?.setGlow(0.7);
-  const [{ items }, lb] = await Promise.all([cached('shop', () => api.shop()), leaderboard()]);
-  const me = lb.find(r => r.id === localStorage.getItem('ya_me'));
+  const [{ items }, lb] = await Promise.all([cached(P() + '_shop', () => api.shop()), leaderboard()]);
+  const me = lb.find(r => r.id === localStorage.getItem(ME()));
   const live = items.filter(i => i.active).sort((x, y) => x.price - y.price);
   const rows = []; for (let i = 0; i < live.length; i += 2) rows.push(live.slice(i, i + 2));
   view.innerHTML = `<section class="sheet">
@@ -715,8 +720,8 @@ document.addEventListener('click', (e) => {
 let adult = { role: null, myId: null };
 const isAdm = () => adult.role === 'admin' || adult.role === 'superadmin';
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
-const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, evReset: () => { evCache = null; } });
-const saMod = () => import('./superadmin.js?v=26');
+const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; } });
+const saMod = () => import('./superadmin.js?v=27');
 
 async function adultGate(page) {
   const session = await api.session();
@@ -733,6 +738,9 @@ async function adultGate(page) {
 }
 
 function adultHome() {
+  const live = program.list.filter(x => !x.archived || x.id === program.id);
+  const progBar = live.length > 1 ? `<div class="card prog-bar"><span>📁 ${t('progNow')}</span><b>${esc(program.name)}</b>
+      <select class="input" id="progSel" aria-label="${t('progNow')}">${live.map(x => `<option value="${esc(x.slug)}" ${x.id === program.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : '';
   const groups = [
     ...(adult.role === 'superadmin' ? [['g_super', [['super', '👑']]]] : []),
     ['g_daily', [['attendance', '✅'], ['points', '⭐'], ['weekly', '📊']]],
@@ -743,11 +751,14 @@ function adultHome() {
   ];
   view.innerHTML = `
     <div class="page-head"><a class="back" href="#/">‹ ${t('back')}</a><h1 class="page-title">${t('adultMenu')}</h1></div>
+    ${progBar}
     ${groups.map(([g, items]) => `<h2 class="grp">${t(g)}</h2><nav class="menu grouped">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
       <span class="mt"><b>${t('tab_' + k)}</b><span>${t('m_' + k, VERSION)}</span></span><span class="chev">›</span></a>`).join('')}</nav>`).join('')}
     <button class="btn wide" style="margin-top:24px" id="logout">${t('logout')}</button>
     ${MODE === 'preview' ? `<p class="preview-note">${t('previewNote')}</p>` : ''}`;
   $('#logout').onclick = async () => { await api.signOut(); location.hash = '#/admin'; render(); };
+  // switching program = opening that program's own link (a full reload, so no data from the old program stays on screen)
+  const ps = $('#progSel'); if (ps) ps.onchange = () => { location.href = linkFor(ps.value) + '#/admin'; };
   // red indicators: things that still need filling in
   const seq = renderSeq;
   computeNeeds().then(n => {
@@ -772,10 +783,10 @@ async function computeNeeds() {
     if (rowsToday.length && !round?.finished) n.attendance = t('need_att');
   }
   const ev = await eventInfo(true);
-  if (!fb.some(f => f.created_at > (localStorage.getItem('ya_fb_seen') || ''))) {
+  if (!fb.some(f => f.created_at > (localStorage.getItem(pkey('ya_fb_seen')) || ''))) {
     const s = view.querySelector('.menu [data-k="feedback"] .mt span'); if (s) s.textContent = ev.fb_open ? t('fbStatusOn') : t('fbStatusOff');
   }
-  const seen = localStorage.getItem('ya_fb_seen') || '';
+  const seen = localStorage.getItem(pkey('ya_fb_seen')) || '';
   const nNew = fb.filter(f => f.created_at > seen).length;
   if (nNew) n.feedback = t('newCount', nNew);
   return n;
@@ -894,7 +905,7 @@ async function pPoints() {
   const cats = await pcats();
   if (pw.step === 1) {
     view.innerHTML = `${head}<h2 style="margin-bottom:12px">${t('s1')}</h2>
-      <div class="options">${cats.filter(c => c.active && c.key !== 'attendance').map(c => `<button class="opt" data-s="${c.key}"><span class="i">${pic(c.icon)}</span>
+      <div class="options">${cats.filter(c => c.active && baseKey(c.key) !== 'attendance').map(c => `<button class="opt" data-s="${c.key}"><span class="i">${pic(c.icon)}</span>
         <span class="t">${esc(cName(c))}${c.info ? `<span class="opt-sub">${esc(c.info)}</span>` : ''}</span><span class="chev">›</span></button>`).join('')}</div>
       <a class="btn wide" style="margin-top:20px" href="#/admin/history">${t('seeHistory')}</a>`;
     view.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { pw.skill = b.dataset.s; pw.detail = ''; pw.step = 2; pPoints(); });
@@ -903,11 +914,11 @@ async function pPoints() {
     view.innerHTML = `${head}
       ${dets.length ? `<p class="muted" style="margin:0 0 8px">${t('pickDetail')}</p><div class="dchips">${['', ...dets].map(d => `<button class="dchip ${pw.detail === d ? 'on' : ''}" data-d="${esc(d)}">${d ? esc(d) : t('noDetail')}</button>`).join('')}</div>` : ''}
       <h2 style="margin-bottom:12px">${pic(cOf(pw.skill).icon)} ${t('s2')}</h2>
-      <div class="amounts">${(pw.skill === 'bonus' ? [5, 10, 20, 50] : [5, 10, 20, 50, -5, -10]).map(a => `<button class="opt ${a < 0 ? 'minus' : ''}" data-a="${a}">${signed(a)}</button>`).join('')}</div>
+      <div class="amounts">${(baseKey(pw.skill) === 'bonus' ? [5, 10, 20, 50] : [5, 10, 20, 50, -5, -10]).map(a => `<button class="opt ${a < 0 ? 'minus' : ''}" data-a="${a}">${signed(a)}</button>`).join('')}</div>
       <div class="field" style="margin-top:16px"><label>${t('customAmt')}</label>
         <div style="display:flex;gap:10px"><input class="input" id="custom" type="number" inputmode="numeric" min="-1000" max="1000"><button class="btn primary" id="customGo">${t('next')}</button></div></div>`;
     view.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { pw.detail = b.dataset.d; view.querySelectorAll('[data-d]').forEach(x => x.classList.toggle('on', x === b)); });
-    const go = (a) => { if (!a || Math.abs(a) > 1000) return; if (pw.skill === 'bonus' && a < 0) { toast(t('bonusPositive')); return; } pw.amount = a; pw.step = 3; pPoints(); };
+    const go = (a) => { if (!a || Math.abs(a) > 1000) return; if (baseKey(pw.skill) === 'bonus' && a < 0) { toast(t('bonusPositive')); return; } pw.amount = a; pw.step = 3; pPoints(); };
     view.querySelectorAll('[data-a]').forEach(b => b.onclick = () => go(Number(b.dataset.a)));
     $('#customGo').onclick = () => go(Math.trunc(Number($('#custom').value)));
   } else {
@@ -1022,7 +1033,7 @@ async function pcForm(c) {
     <div class="field"><label>${t('avatar')}</label>${pickRow('icon', PC_ICONS, c?.icon || '⭐')}</div>
     <div class="field"><label>${t('infoLbl')}</label><textarea class="input" name="info" maxlength="500" rows="4" style="height:auto;padding:12px">${esc(c?.info || '')}</textarea></div>
     <div class="field"><label>${t('details')}</label><textarea class="input" name="details" maxlength="300" rows="3" style="height:auto;padding:12px" placeholder="เปียโน&#10;ร้องเพลง">${esc(c?.details || '')}</textarea></div>`,
-    { extra: c && c.key !== 'attendance' ? `<button class="btn small" value="toggle" formnovalidate>${c.active ? t('hidden') : t('show')}</button><button class="btn small danger" value="delete" formnovalidate>${t('del')}</button>` : '' });
+    { extra: c && baseKey(c.key) !== 'attendance' ? `<button class="btn small" value="toggle" formnovalidate>${c.active ? t('hidden') : t('show')}</button><button class="btn small danger" value="delete" formnovalidate>${t('del')}</button>` : '' });
   wirePickers($('#dlgForm'));
   const r = await p;
   try {
@@ -1355,7 +1366,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=26');
+      const { readSheet } = await import('./ocr.js?v=27');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1554,8 +1565,8 @@ async function pFeedback() {
     <div class="card"><div class="list">${list.map(f => `<div class="li fb-item"><span class="mood-i">${moods[f.mood] || '💬'}</span>
       <span class="grow"><b>${f.kid_name ? esc(f.kid_name) : t('anon')}</b><span class="sub">${new Date(f.created_at).toLocaleString(getLang() === 'th' ? 'th-TH' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</span>
       <span style="display:block;margin-top:4px">${esc(f.message)}</span></span></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
-  const hadNew = list.some(f => f.created_at > (localStorage.getItem('ya_fb_seen') || ''));
-  if (list[0]) localStorage.setItem('ya_fb_seen', list[0].created_at);
+  const hadNew = list.some(f => f.created_at > (localStorage.getItem(pkey('ya_fb_seen')) || ''));
+  if (list[0]) localStorage.setItem(pkey('ya_fb_seen'), list[0].created_at);
   if (hadNew) setTimeout(() => hearts(view.querySelector('.fb-item') || view.querySelector('.card')), 300);
   $('#fbSwitch').onclick = async (e) => {
     const sw = e.currentTarget, turningOn = !sw.classList.contains('on');
@@ -1806,6 +1817,18 @@ window.addEventListener('hashchange', () => {
 });
 // re-draw admin pages only when someone signs in / out (not on token refresh)
 api.onAuth?.((event) => { if (location.hash.startsWith('#/admin') && (!event || event === 'SIGNED_IN' || event === 'SIGNED_OUT')) render(); });
+// which program this link opens (?p=<slug>); everything below reads and writes only that program
+async function loadProgram() {
+  const want = (new URLSearchParams(location.search).get('p') || '').trim().toLowerCase();
+  let list = [];
+  try { list = await cached('programs', () => api.programs()); } catch (e) { console.error(e); }
+  program.list = list;
+  const pr = want ? list.find(x => x.slug === want) : list.find(x => x.id === 1);
+  if (pr) Object.assign(program, { id: pr.id, slug: pr.slug, name: pr.name, look: pr.look || {} });
+  else if (want) setTimeout(() => toast(t('progUnknown')), 600);
+  window.YA_PID = program.id;
+}
+await loadProgram();
 render();
 // opened from the super admin's emailed sign-in link: wait for the sign-in, then go to the super admin page
 if (window.YA_LINK) (async () => {
