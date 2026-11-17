@@ -2,7 +2,7 @@
 --   await QF('<commit>', 'supabase/022_home_counters.sql', 'tests/sql_022_rollback_test.sql')
 -- It ends with raise exception, so nothing is kept.
 do $t$
-declare out text := ''; ev text; v0 bigint; v1 bigint; f bigint; r record; n int; pts uuid;
+declare out text := ''; ev text; v0 bigint; v1 bigint; f bigint; r record; n int; pts uuid; su uuid; sid uuid := gen_random_uuid();
 begin
   select visits into v0 from public.home_counters where program_id = 1;
   out := out || 'start=' || coalesce(v0::text, 'none');
@@ -28,8 +28,14 @@ begin
     perform set_config('role', 'postgres', true);
   else out := out || ' pointsOnlySwitch=(no such staff)'; end if;
 
-  -- switches on
-  update public.settings set show_visits = true, show_fb_count = true where id = 1;
+  -- switches on, as the super admin (like the app does)
+  select user_id into su from private.super_admins limit 1;
+  insert into private.super_sessions (session_id, user_id, until) values (sid, su, now() + interval '1 hour');
+  perform set_config('request.jwt.claims', json_build_object('sub', su, 'role', 'authenticated', 'session_id', sid)::text, true);
+  perform set_config('role', 'authenticated', true);
+  update public.settings set show_visits = true, show_fb_count = true where id = 1; get diagnostics n = row_count; out := out || ' | superSwitch=' || n || 'rows';
+  perform set_config('role', 'postgres', true);
+  perform set_config('request.jwt.claims', '', true);
   select count(*) into f from public.feedback where program_id = 1;
   perform set_config('role', 'anon', true);
   select * into r from public.home_counts(1); out := out || ' | on: v=' || r.visits || ' f=' || r.feedback || ' (feedback rows ' || f || ')';
