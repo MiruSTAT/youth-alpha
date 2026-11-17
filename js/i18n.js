@@ -747,3 +747,15 @@ Object.assign(DICT.en, {
   clogDetailSub: 'On = this program\'s admins see the full detailed change log on the "Version & changes" page (the Excel export stays super admin only). Off = only the short "What\'s new".',
   sheetGrab: 'Pull down to see the tree / tap to switch',
 });
+
+// v36 (roadmap step 6): visits and feedback counters on the kids' home page
+Object.assign(DICT.th, {
+  hcVisits: 'ครั้งที่เปิดแอป', hcFeedback: 'ความคิดเห็น', secHomeCount: 'ตัวเลขบนหน้าแรกของเด็ก',
+  swVisits: 'แสดงจำนวนครั้งที่เปิดแอป', swVisitsSub: 'ทุกคนเห็นบนหน้าแรก นับทุกครั้งที่มีคนเปิดแอป ไม่ถูกลบเมื่อล้างบันทึกกิจกรรมเด็ก',
+  swFbCount: 'แสดงจำนวนความคิดเห็น', swFbCountSub: 'ทุกคนเห็นบนหน้าแรก เป็นแค่ตัวเลข ไม่แสดงชื่อหรือข้อความ',
+});
+Object.assign(DICT.en, {
+  hcVisits: 'visits', hcFeedback: 'feedback', secHomeCount: 'Numbers on the kids\' home page',
+  swVisits: 'Show visits', swVisitsSub: 'Everyone sees it on the home page. Counts every time someone opens the app; clearing the kids\' activity log does not reset it',
+  swFbCount: 'Show feedback count', swFbCountSub: 'Everyone sees it on the home page. Only the number, never names or messages',
+});

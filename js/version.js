@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '35';
+export const VERSION = '36';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,18 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '35', date: '2026-11-17', commit: '',
+      { v: '36', date: '2026-11-17', commit: '',
+        short: { th: 'ตัวเลขจำนวนครั้งที่เปิดแอปและจำนวนความคิดเห็นบนหน้าแรกของเด็ก ๆ เปิด/ปิดได้ในหน้าตั้งค่า',
+                 en: "Visits and feedback counters on the kids' home page, each with an on/off switch in Settings" },
+        items: [
+          { a: 'kids', th: 'หน้าแรก (อันดับ) มีบรรทัดเล็ก ๆ ใต้หัวข้อ เช่น "👀 1,234 ครั้งที่เปิดแอป · 💬 56 ความคิดเห็น" ทุกคนเห็นได้ เป็นแค่ตัวเลข ไม่มีชื่อหรือข้อความ แต่ละตัวเลขแสดงเฉพาะเมื่อเปิดสวิตช์ไว้ โหมดปกติใช้ไอคอนเส้นแทนอีโมจิ',
+            en: 'The home (ranking) page has a small line under the title, e.g. "👀 1,234 visits · 💬 56 feedback". Everyone sees it; only numbers, never names or messages. Each number shows only when its switch is on. Normal mode uses line icons instead of emojis.' },
+          { a: 'admin', th: 'หน้าตั้งค่า: การ์ดใหม่ "ตัวเลขบนหน้าแรกของเด็ก" มีสวิตช์ "แสดงจำนวนครั้งที่เปิดแอป" และ "แสดงจำนวนความคิดเห็น" (ปิดไว้ตอนแรก) กดแล้วบันทึกทันทีและลงบันทึกการเปลี่ยนแปลง ต้องมีสิทธิ์ "ตั้งค่า"',
+            en: 'Settings page: a new card "Numbers on the kids\' home page" with the switches "Show visits" and "Show feedback count" (off at first). They save at once and are written to the change log. Needs the "settings" permission.' },
+          { a: 'data', th: 'จำนวนครั้งที่เปิดแอปเก็บแยกต่อโปรแกรม เริ่มจากการเปิดแอปที่มีอยู่ในบันทึกกิจกรรมแล้ว และไม่กลับเป็น 0 เมื่อล้างบันทึกกิจกรรมเด็ก ไม่มีข้อมูลเดิมถูกลบ',
+            en: 'The visit count is kept per program, starts from the app opens already in the activity log, and does not go back to 0 when the kids\' activity log is cleared. No existing data was deleted.' },
+        ] },
+      { v: '35', date: '2026-11-17', commit: '424f847',
         short: { th: 'ดูแอปของเด็ก ๆ จริง ๆ ในกรอบมือถือด้วยข้อมูลตัวอย่าง และบนมือถือหน้าต่าง ๆ ของเด็ก (ยกเว้นหน้าแรก) เปิดเต็มจอทันที',
                  en: "See the real kids' app in a phone frame with sample data, and on phones the kids' pages (except home) now open full straight away" },
         items: [

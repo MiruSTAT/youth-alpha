@@ -29,6 +29,7 @@ const P = {
   phone: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/>',
   help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14M12 17.5v.5"/>',
   lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+  eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
   home: '<path d="M3 11l9-8 9 8M5 9v12h14V9"/>',
 };
 const BY_EMOJI = {
@@ -36,7 +37,7 @@ const BY_EMOJI = {
   '📁': 'folder', '🎨': 'palette', '🟢': 'activity', '🤖': 'cpu', '✅': 'check', '⭐': 'star', '🎟️': 'ticket', '🎟': 'ticket',
   '📊': 'chart', '🔑': 'key', '📣': 'megaphone', '🏷️': 'tag', '🏷': 'tag', '💬': 'message', '🎛️': 'sliders', '🎛': 'sliders',
   '⚙️': 'gear', '⚙': 'gear', '📥': 'download', 'ℹ️': 'info', 'ℹ': 'info', '📖': 'book', '🌐': 'globe', '📲': 'phone', '📱': 'phone',
-  '❓': 'help', '🔒': 'lock', '🏠': 'home',
+  '❓': 'help', '🔒': 'lock', '🏠': 'home', '👀': 'eye',
 };
 export const svgIcon = (name) => P[name] ? `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[name]}</svg>` : '';
 export const calmIcon = (emoji) => svgIcon(BY_EMOJI[String(emoji).trim()]);

@@ -4,9 +4,9 @@ This file lets another AI (or developer) understand, rebuild, run and change the
 
 ## 0. Quick start (read this first — usually the only part you need to read in full)
 
-**Now:** live app **v35** (2026-11-17). Roadmap step 5 is done: **Real mobile preview** (section 7 "v35 Real mobile preview"): `index.html?demo=1` is the kids' app with sample data that is never saved (`js/demo.js`; storage swapped for in-memory in index.html), shown in a phone frame (`phoneFrame()` in app.js) on the new admin page `#/admin/phone` and beside the super admin's Look page (unsaved changes show live). Also from the owner in this step: the super admin switch "Admins see the detailed change log" per program (`look.clogDetail`; Excel export stays super admin only), and on phones every kids' page except home opens full over the tree (pull down or tap the bar to see the tree; section 6 "v35"). No database change in v35.
-**Next:** roadmap **step 6: Visits and feedback counters on the kids' home page** (section 14, "Roadmap v31+"), seen by everyone, each with an on/off switch for admins. Give the owner a short summary first and wait for "go". Sub-steps of an approved step need no extra "go": just report when finished.
-**Still open:** a real sign-in with an admin account made by "Create an admin account" was not tried yet (the owner will make the first one); the unused branch `wip-v32` on GitHub can be deleted; Normal mode is not switched on for any live program yet (the owner decides); kid-facing words like "หนู" in the tap-your-name hint are still the kids' wording in Normal mode; a picture logo was tested only in the preview copy (data: address) — the first live upload goes to the `images` bucket folder `logos/` (check it shows); the v35 pull-down gesture was tested with simulated touches in Chromium only, not yet on a real iPhone (Safari) — ask the owner to try it; `tests/t_v28_look.py`, `t_v29_layout.py`, `t_v30_easter.py` and `t_v27_programs.py` still need the lost `/tmp/t35.py` seed (their v34 parts are covered by `t_v34_settings.py`).
+**Now:** live app **v36** (2026-11-17). Roadmap step 6 is done: **Visits and feedback counters on the kids' home page** (section 6 "v36", section 7 "v36", section 5f). A line "👀 1,234 visits · 💬 56 feedback" under the ranking title (`homeCount()` in app.js, element `#homeCount`), each number shown only when its switch is on: `settings.show_visits` / `settings.show_fb_count` (per program, default off), set on the admin Settings page (`pSettings`, permission `settings`). The visit number comes from the new table `home_counters` (+1 per `open_app` row in `kid_events`, by trigger; not reset by "Clear kids' activity log") through the function `home_counts(p)`; the feedback number is the count of the program's `feedback` rows. SQL `supabase/022_home_counters.sql` (run live after a rolled-back test). Both switches are still **off** on the live program (the owner decides).
+**Next:** roadmap **step 7: Maintenance mode per program** (section 14, "Roadmap v31+"). Give the owner a short summary first and wait for "go". Sub-steps of an approved step need no extra "go": just report when finished.
+**Still open:** a real sign-in with an admin account made by "Create an admin account" was not tried yet (the owner will make the first one); the unused branch `wip-v32` on GitHub can be deleted; Normal mode is not switched on for any live program yet (the owner decides); kid-facing words like "หนู" in the tap-your-name hint are still the kids' wording in Normal mode; a picture logo was tested only in the preview copy (data: address) — the first live upload goes to the `images` bucket folder `logos/` (check it shows); the v36 counters were not switched on live yet (the owner decides; the Phone preview's sample data has them off, it does not follow the real switches); the v35 pull-down gesture was tested with simulated touches in Chromium only, not yet on a real iPhone (Safari) — ask the owner to try it; `tests/t_v28_look.py`, `t_v29_layout.py`, `t_v30_easter.py` and `t_v27_programs.py` still need the lost `/tmp/t35.py` seed (their v34 parts are covered by `t_v34_settings.py`).
 
 **How to read this file cheaply:** read section 0 only. For anything else, list the headings (`grep -n "^## \|^### " HANDOFF.md`) and read only the range you need. Never read the whole file "just in case".
 
@@ -16,7 +16,7 @@ This file lets another AI (or developer) understand, rebuild, run and change the
 
 **Code map (find code with grep, do not read big ranges):**
 - `js/app.js` (~2200 lines): kid pages, admin pages, router. `grep -n "^async function \|^function \|^const PAGES" js/app.js` lists every page; admin pages are `p<Name>` and are listed in `PAGES` with the permission they need.
-- `js/superadmin.js`: super admin pages (admins, programs, look, online, AI) · `js/data.js`: every database call (Supabase + a preview copy with the same names) · `js/i18n.js`: all text, Thai + English (new text goes in an `Object.assign(DICT.th/en, …)` block at the end) · `js/version.js`: VERSION + change log · `js/icons.js` (v33): line icons for Normal mode · `css/style.css` · `supabase/0NN_*.sql`: database changes, newest = `021_admin_access.sql`.
+- `js/superadmin.js`: super admin pages (admins, programs, look, online, AI) · `js/data.js`: every database call (Supabase + a preview copy with the same names) · `js/i18n.js`: all text, Thai + English (new text goes in an `Object.assign(DICT.th/en, …)` block at the end) · `js/version.js`: VERSION + change log · `js/icons.js` (v33): line icons for Normal mode · `css/style.css` · `supabase/0NN_*.sql`: database changes, newest = `022_home_counters.sql`.
 
 **Tools (use them, do not rebuild them):**
 
@@ -96,7 +96,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
   - the YouTube IFrame API
   - `vendor/qrcode.js` (local copy) for QR codes
   - Google font **Noto Sans Thai**
-- **Versioning:** every import and asset carries `?v=N`. **The current version is `35`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
+- **Versioning:** every import and asset carries `?v=N`. **The current version is `36`.** The same number is `VERSION` in `js/version.js` and `V` in `sw.js`. Bump all of them together on every release (see section 10).
 - **Service worker** (`sw.js`) makes the app work offline and open fast on weak Wi-Fi:
   - Files with `?v=` and same-origin pictures are served from the phone first (cache `ya-v<N>`, replaced on each version).
   - The page itself tries the internet first for 3.5 s, then uses the saved copy.
@@ -224,7 +224,7 @@ Git commits so far use author `MiruSTAT <MiruSTAT@users.noreply.github.com>`.
 | `ya_preview_db` | Preview-mode database |
 | (v35 `?demo=1`) | The phone preview never touches this list: index.html replaces `window.localStorage`/`sessionStorage` with in-memory objects before any app code runs (sample db key `ya_demo_db`, `ya_tour` pre-set so no tour), and `cached()` skips its `ya_c_*` copies when `DEMO` |
 | `ya_member`, `ya_member_me` | v31: the member's sign-in token and the last `member_me` answer (per program via `pkey()`: program 1 keeps these names, others get `_p<id>`). Removed on sign-out or when the server says the sign-in is no longer good |
-| `ya_c_lb`, `ya_c_pcats`, `ya_c_songs`, `ya_c_ev`, `ya_c_shop` | Last good answers for kid pages, used when offline or when the network takes over 6 s |
+| `ya_c_lb`, `ya_c_pcats`, `ya_c_songs`, `ya_c_ev`, `ya_c_shop`, `ya_c_hc` (v36 home counters) | Last good answers for kid pages, used when offline or when the network takes over 6 s |
 
 ## 5. Database (Supabase)
 
@@ -250,12 +250,13 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
 | `songs` | `title`, `subtitle`, `song_key`, `bpm` (30–240), `beats` (2–12), `youtube`, `yt_start`, `credits`, `content` (≤20000), `sheets` (jsonb list of image URLs or `sheets/…jpg`), `sort`, `active`, `sync` (jsonb), `opts` (jsonb) | `sync` = `{video, beats:[sec…], offset, lines:[[sec, lineNo]…], linesHash}`. `opts` = per-song switches (same keys as the player switches, plus `sheetOnly`) |
 | `audit_log` | `created_at`, `actor`, `actor_email`, `table_name`, `op`, `row_key`, `old_data`, `new_data`, `program_id` (v32; null for rows before v32 and for adult-account rows) | Permanent: triggers `audit_log_no_change` and `audit_log_no_truncate` block changes. Since v32 only the super admin can read it |
 | `kid_events` | `device_id`, `kid_id`, `event` (`^[a-z_]{1,40}$`), `detail` (≤120), `path` | Anyone can insert; since v32 only the super admin can read the rows (admins get counts through `kid_week_stats`) |
+| `home_counters` (v36) | `program_id` (pk → programs), `visits` bigint, `updated_at` | One row per program. +1 for every `open_app` row inserted into `kid_events` (trigger `home_count_visit`). Not reset when the activity log is cleared. RLS on with **no policies** (nobody reads it directly); read only through `home_counts(p)`. Not audited (it would add a log row per app open) |
 
 ### Views (public)
 
 - **`leaderboard`:** `id`, `nickname`, `avatar`, `total`, `spent` (active kids only). `total` is the ranking score and never drops when a prize is given. Points to spend = `total − spent`.
 - **`kid_skill_totals`:** `kid_id`, `skill`, `detail`, `total`.
-- **`event_info`:** `event_dow`, `event_start`, `event_end`, `fb_dow`, `fb_start`, `fb_end`, `tip_days`, `fb_open`, `music`, `announce`, `verse_text`, `verse_ref`, `install_on`. Kids read the switches, the announcement, the verse and the install switch from here.
+- **`event_info`:** `event_dow`, `event_start`, `event_end`, `fb_dow`, `fb_start`, `fb_end`, `tip_days`, `fb_open`, `music`, `announce`, `verse_text`, `verse_ref`, `install_on`, `program_id`, (v36) `show_visits`, `show_fb_count`. Kids read the switches, the announcement, the verse and the install switch from here.
 
 ### Functions
 
@@ -272,6 +273,7 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
 | `audit_trigger()` | On `kids`, `points`, `attendance`, `attendance_rounds`, `shop_items`, `point_categories`, `settings`, `staff`, `songs`, `redemptions`; it records old and new rows. A no-change update is skipped |
 | `audit_log_protect()` | Raises an error on any update, delete or truncate of the log |
 | `clear_kid_events()` | Admin only. The login token must be less than 120 s old (the app re-signs in with the password first). The clear is logged in `audit_log` |
+| `home_counts(p)` (v36) | Anyone. Returns one row `(visits, feedback)` for program `p`: `visits` from `home_counters` only if `settings.show_visits`, `feedback` = count of the program's feedback rows only if `settings.show_fb_count`; null for a switch that is off. Security definer |
 
 ### Security (row-level security)
 
@@ -366,6 +368,15 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
 - **App side (v32):** `adult = {role, myId, access}`; `isSuper()`, `myPerms(pid)`, `can(perm)`; `PAGES` (in app.js) maps every admin page to the permission it needs (`null` = anyone in the program, `'super'` = super admin) and `pageOk(k)`; `adultGate` loads `my_access`, shows `pendingView` / `noAccessView` / `otherProgramView` (this link's program is not theirs: links to their programs), then the page or the home. Hiding in the app is only for comfort; the database is what enforces.
 - **Not done on purpose / still open:** the app cannot delete admin accounts (switch off instead); there is no self sign-up button (Supabase "allow new users to sign up" is off) — the super admin creates accounts in the app; "waiting for approval" still works for any account made another way (e.g. Supabase "Invite user"). **Still untested on the live site:** a real sign-in with an account made by `admin_create` (the auth rows copy the fields of the working `admin` login, and the function itself ran in the rolled-back test, but GoTrue sign-in can only be tried with a committed account). The owner will make the first real admin account; if that sign-in fails, compare its `auth.users` / `auth.identities` rows with the `admin` login's. An AI may not create a test account by impersonating the super admin's session (that was refused on 2026-11-17).
 
+### 5f. Home page counters (v36, `supabase/022_home_counters.sql`)
+
+- **What it adds:** table `home_counters`, trigger `home_count_visit` (after insert on `kid_events`, security definer, only for `event = 'open_app'`), columns `settings.show_visits` and `settings.show_fb_count` (boolean, not null, default false), the two columns at the end of the `event_info` view, function `home_counts(p int)`.
+- **Starting number:** the file fills `home_counters` from `count(*)` of `open_app` rows already in `kid_events` per program, with `on conflict do nothing`, so a re-run never counts twice. (The activity log was wiped on 2026-11-16, so live program 1 starts from the opens since then.)
+- **Who may flip the switches:** the settings guard trigger from 021 (`settings_super_guard`) sends unknown columns to the `settings` permission, so no change was needed there; the audit trigger on `settings` logs each change.
+- **Why a separate table:** `clear_kid_events(p)` deletes the program's `kid_events` rows, so a count of those would drop to 0; and a counter in `settings` would write one audit row per app open.
+- **What counts as a visit:** every app open (the owner chose this over "each phone once"). `open_app` is sent by `track()` once per page load, kids' side only (adults are not counted); events are batched and sent within 15 s or when the app is hidden.
+- **Tested** with `tests/sql_022_rollback_test.sql` (rolled back) before the real run.
+
 ### 5b. Super admin (v25, `supabase/017_superadmin.sql`)
 
 - **Who:** one super admin, username **Miruku** (the owner). Its Supabase login is the owner's own Gmail and has **no Supabase password**; the only way into that login is a sign-in link emailed by Supabase.
@@ -459,6 +470,12 @@ The SQL editor (Monaco) was used in the built-in browser tab:
 ### v34 decorations and logo (kids' side)
 What the kids see now follows the program's own choices (section 5c "v34"): falling snow or pink petals, Christmas tree or cross on the hill, Santa / lamb / dove peeking in, gift-box burst or egg hunt in the special mode, Jingle Bells or Easter Hymn — mixable regardless of the pack. A picture logo shows in the top bar and big in the middle when the 3D scene is off.
 
+### v36 visits and feedback counters (kids' home page)
+- Under the ranking title (`part.rank` in `kidRank()`), a placeholder `<div class="home-count" id="homeCount" hidden>` is drawn only when `ev.show_visits || ev.show_fb_count`. After the page is drawn, `homeCount()` loads `api.homeCounts()` through `read('hc', …)` (offline: last numbers this phone saw, cache `ya_c_<id>_hc`) and fills "👀 <b>1,234</b> ครั้งที่เปิดแอป  💬 (two items, no separator; they wrap onto two centred lines on a phone) <b>56</b> ความคิดเห็น" (`hcVisits`, `hcFeedback`; numbers with `toLocaleString`). A number that is null (switch off) is left out; if both are null the row stays hidden.
+- Only numbers: never names or feedback text. CSS `.home-count` (1.02rem, numbers 1.1rem in `--pt`), centred, one line that wraps on small phones. No pop-ups.
+- Normal mode: `calmNode()` now also turns `.hc-i` emojis into line icons (`👀` → new icon `eye` in icons.js, `💬` → `message`).
+- The row is part of the "rank" block, so the layout editor needs no new block.
+
 ## 7. Adult / admin side
 
 - **Login:**
@@ -543,6 +560,10 @@ What the kids see now follows the program's own choices (section 5c "v34"): fall
 - **Who sees it:** page `#/admin/phone` "Phone preview" (`pPhone()`, Settings group, permission `settings`, icon 📱 = line icon `phone`), and the super admin's Look page (`pLook` in superadmin.js): the page is now `.look-split` (cards left, `<details class="look-pv">` right, sticky, open at ≥ 1100 px; on narrower screens folded, the frame loads only when opened). `drawLook` has `collect(check)` (used by Save too) and pushes the unsaved form 350 ms after any input (`c.pvPush('form', …)`); `drawLayout`'s `paint()` pushes the layout (`c.pvPush('layout', …)`). The preview shows saved look + unsaved form + unsaved layout.
 - **Sample data, never saved:** see `js/demo.js` (section 4). index.html replaces localStorage/sessionStorage with in-memory objects for `?demo=1` (if that ever fails, `window.YA_DEMO_UNSAFE = 1`; the sample db still uses its own key and `cached()` still skips), `data.js` `MODE = 'demo'` → `previewApi(demoDb())` (never Supabase), the service worker is not registered in the frame, and `render()` sends `#/admin…` back to `#/`. Kid activity in the frame goes into the in-memory sample db only.
 - **Change log switch:** Look page, new group "Admins", switch "Admins see the detailed change log" (`#swClog`) saves `programs.look.clogDetail` (true/false) through `program_set_look` (super admin only; no SQL). `pAbout()` shows the grouped detailed log when `isSuper() || program.look.clogDetail`; the Excel export button (`#clogXl`) is shown only to the super admin (owner's rule from v32 kept).
+
+### v36 Settings page: home page counter switches
+- `pSettings()` has a new card "ตัวเลขบนหน้าแรกของเด็ก / Numbers on the kids' home page" (`secHomeCount`) with two switches (`[data-sw=show_visits]`, `[data-sw=show_fb_count]`; texts `swVisits(Sub)`, `swFbCount(Sub)`). Each saves at once with `api.saveSettings({ [k]: on })`, clears `evCache` and shows a short toast; the Save button below is only for the number fields. Permission `settings` (the super admin always has it).
+- Preview copy: `homeCounts()` in data.js counts `db.events` `open_app` rows and `db.feedback` (no reset protection there).
 
 ## 8. Songs system in detail
 
@@ -754,7 +775,8 @@ The owner wants, after every change: the handoff file and the app's GitHub files
 33. Docs/tools only, 2026-11-17 (no app change, still v32): HANDOFF.md section 0 "Quick start" (read first; the rest is reference), efficiency rules in AGENTS.md, `tools/` (`bump.sh`, `preview.sh`, `sql.js`, `desktop-copy.sh`) at the owner's request to use less usage per session.
 34. v33, 2026-11-17: roadmap step 3 — Kids mode / Normal mode per program (`look.mode`, "App style" on the Look page; Normal mode = calm palette, line icons from new `js/icons.js`, leading emojis removed by a MutationObserver "calm pass", playful parts unticked) and a PC layout for the admin area (side menu `#adminSide` from `adminGroups()`, wide content, 2–3 column admin home at ≥1024px). No database change. Test `t_v33_modes.py`.
 35. v34, 2026-11-17: roadmap step 4 — Program settings polish: logo emoji or picture with size slider (`look.logo`), a choice for each playful part (`look.parts`, old off-switches read as choices), layout drag only. No SQL. Tests: t_v34_settings + t_v33/t_v32/t_v31 (t_v27–t_v30 still need the lost /tmp/t35.py seed).
-36. v35 (current), 2026-11-17: roadmap step 5 — Real mobile preview: `index.html?demo=1` = the kids' app with sample data (`js/demo.js`), storage swapped for in-memory, never saved; `phoneFrame()` on the new `#/admin/phone` page (permission settings) and beside the super admin's Look page with live unsaved changes. Plus the owner's extras: per-program switch `look.clogDetail` (admins see the detailed change log; Excel stays super admin only) and kids' pages other than home open full on phones (pull down / tap the bar to see the tree). No SQL. Tests: t_v35_preview (new), t_v34_settings, t_v33_modes all pass.
+36. v35, 2026-11-17: roadmap step 5 — Real mobile preview: `index.html?demo=1` = the kids' app with sample data (`js/demo.js`), storage swapped for in-memory, never saved; `phoneFrame()` on the new `#/admin/phone` page (permission settings) and beside the super admin's Look page with live unsaved changes. Plus the owner's extras: per-program switch `look.clogDetail` (admins see the detailed change log; Excel stays super admin only) and kids' pages other than home open full on phones (pull down / tap the bar to see the tree). No SQL. Tests: t_v35_preview (new), t_v34_settings, t_v33_modes all pass.
+37. v36 (current), 2026-11-17: roadmap step 6 — visits and feedback counters on the kids' home page (`homeCount()`, `#homeCount`), switches `settings.show_visits` / `show_fb_count` on the Settings page (default off), table `home_counters` + trigger + `home_counts(p)` in `supabase/022_home_counters.sql` (rolled-back test, then run live). Tests: t_v36_counters (new), t_v35_preview, t_v34_settings.
 
 ## 14. Ideas and open items
 
@@ -782,8 +804,8 @@ Owner's answers to the open questions: **maintenance mode is per program**; the 
    - "Copy user link" button at the top-right of the admin panel. Reorganise: Songs settings, Shop, Point categories, Feedback move under **Settings**; less crowded.
 3. **DONE in v33 (sections 5c, 6, 7).** **Kids mode / Normal mode + real PC layout** (owner's note 2 and group 6): Kids mode = today's look (big, emoji, playful). Normal mode = modern, professional, few emojis (simple line icons), calm colours, for adult programs. Per program, chosen by the super admin. On PC the admin and super admin areas get a proper desktop layout (side menu, wider content, use the screen space); phones keep the current layout.
 4. **DONE in v34 (section 5c).** **Program settings polish** (group 5): program logo = an emoji **or an uploaded image with a size slider**; layout ordering by **drag only** (remove ▲▼ and similar double controls everywhere); each "part" gets its own choice instead of on/off (e.g. falling: snow / petals / off; 3D scene: tree / cross-on-hill / off; peeking friend: Santa / lamb / off; special mode: gifts / egg hunt / off; music: Jingle Bells / Easter Hymn / off).
-5. **DONE in v35 (section 7 "v35 Real mobile preview").** **NEXT: step 6.** **Real mobile preview** (group 6): the actual kids' app in a phone frame (e.g. an iframe of the app in a preview flag) filled with **sample test kids, points, songs and prizes that are never saved**.
-6. **Visits and feedback counters on the kids' home page** (group 2), seen by everyone, each with an on/off switch for admins.
+5. **DONE in v35 (section 7 "v35 Real mobile preview").** **Real mobile preview** (group 6): the actual kids' app in a phone frame (e.g. an iframe of the app in a preview flag) filled with **sample test kids, points, songs and prizes that are never saved**.
+6. **DONE in v36 (sections 5f, 6 and 7 "v36").** **NEXT: step 7.** **Visits and feedback counters on the kids' home page** (group 2), seen by everyone, each with an on/off switch for admins.
 7. **Maintenance mode per program** (group 7): super admin switch. When on, kids and normal admins only see a full-screen themed scene (Christmas tree; Easter bunny looking after eggs; more themes later, chosen by the super admin), background sound, a theme (colour) switch and the text "Under maintenance". No panels at all; also block writes in the database for everyone except the super admin while it is on. The super admin keeps full access.
 8. **SQL export and data science tools for the super admin** (was labelled "v32" before the numbers moved on; it will get the next free version number).
 

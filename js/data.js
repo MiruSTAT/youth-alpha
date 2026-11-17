@@ -1,6 +1,6 @@
 // Data layer: Supabase when configured, otherwise a local PREVIEW store.
 // v35: ?demo=1 (phone preview on the admin panel) always uses the local store, filled with sample data and never saved.
-import { DEMO, demoDb } from './demo.js?v=35';
+import { DEMO, demoDb } from './demo.js?v=36';
 const cfg = window.YA_CONFIG || {};
 export const MODE = DEMO ? 'demo' : cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY ? 'supabase' : 'preview';
 export { DEMO };
@@ -113,6 +113,8 @@ function supabaseApi() {
     async deleteItem(id) { ok(await sb.from('shop_items').delete().eq('id', id)); },
 
     async eventInfo() { return ok(await sb.from('event_info').select('*').eq('program_id', P()).single()); },
+    // v36: visits / feedback numbers for the kids' home page (null when that switch is off)
+    async homeCounts() { const r = ok(await sb.rpc('home_counts', { p: P() })); return (Array.isArray(r) ? r[0] : r) || {}; },
     async allPoints() {
       const out = []; // page through in case there are many rows
       for (let from = 0; ; from += 1000) {
@@ -402,7 +404,8 @@ function previewApi(seed = null) {
     },
     async deleteItem(iid) { audit('shop_items', 'DELETE', db.items.find(x => x.id === iid), null); db.items = db.items.filter(x => x.id !== iid); save(); },
 
-    async eventInfo() { const { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open, music = {}, announce = '', verse_text = '', verse_ref = '', install_on = false } = db.settings; return { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open, music, announce, verse_text, verse_ref, install_on }; },
+    async eventInfo() { const { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open, music = {}, announce = '', verse_text = '', verse_ref = '', install_on = false, show_visits = false, show_fb_count = false } = db.settings; return { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open, music, announce, verse_text, verse_ref, install_on, show_visits, show_fb_count }; },
+    async homeCounts() { const s = db.settings; return { visits: s.show_visits ? db.events.filter(e => e.event === 'open_app').length : null, feedback: s.show_fb_count ? db.feedback.length : null }; },
     async allPoints() { return db.points.map(p => ({ ...p, kids: kidOf(p.kid_id) })); },
     async sendFeedback(row) {
       if (!db.settings.fb_open) throw new Error('closed');
@@ -412,7 +415,7 @@ function previewApi(seed = null) {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=35'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=36'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].filter(() => memberOk()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {

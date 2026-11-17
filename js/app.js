@@ -1,15 +1,15 @@
-import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=35';
-import { api, MODE, DEMO, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=35';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=35';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=35';
+import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=36';
+import { api, MODE, DEMO, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=36';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=36';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=36';
 
-import { music } from './music.js?v=35';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=35';
-import { snow } from './snow.js?v=35';
-import { track } from './track.js?v=35';
-import { calmIcon } from './icons.js?v=35';
-import { metro } from './metronome.js?v=35';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=35';
+import { music } from './music.js?v=36';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=36';
+import { snow } from './snow.js?v=36';
+import { track } from './track.js?v=36';
+import { calmIcon } from './icons.js?v=36';
+import { metro } from './metronome.js?v=36';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=36';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -129,7 +129,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=35');
+    const m = await import('./scene3d.js?v=36');
     if (m.initScene($('#scene'), { pack: part('scene') === 'cross' ? 'easter' : 'christmas' })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -178,7 +178,7 @@ async function kidRank() {
         <span class="pts"><b id="tot">0</b><span>${t('points')}</span></span></button>`
       : loginOn() ? (member.me ? '' : `<a class="my-hint mem-hint" href="#/login">🔑 ${t('mLoginHint')}</a>`)
       : rows.length ? `<p class="my-hint">👇 ${t('tapYourName')}</p>` : '',
-    rank: () => `<h1 class="sheet-title" style="margin-bottom:12px">🏆 ${t('ranking')}</h1>
+    rank: () => `<h1 class="sheet-title" style="margin-bottom:12px">🏆 ${t('ranking')}</h1>${ev?.show_visits || ev?.show_fb_count ? '<div class="home-count" id="homeCount" hidden></div>' : ''}
     ${rows.length ? `<div class="rank-list">${rows.map(k => `<button class="rank-row ${k.id === mineId ? 'mine' : ''}" data-id="${k.id}">
       <span class="n ${k.rank <= 3 ? 'medal' : ''}">${k.rank <= 3 ? medal[k.rank - 1] : k.rank}</span>
       <span class="av" data-pic="${k.id}">${pic(k.avatar)}</span><span class="nm">${esc(k.nickname)}</span><span class="pt">${k.total} ⭐</span></button>`).join('')}</div>`
@@ -187,6 +187,7 @@ async function kidRank() {
   };
   view.innerHTML = `<section class="sheet">${layKeys('home').map(k => part[k]()).join('\n')}</section>`;   // v29: order set in the layout editor
   wirePics(view, rows);
+  homeCount();
   view.querySelectorAll('.rank-row').forEach(b => b.onclick = () => { const k = rows.find(r => r.id === b.dataset.id); track('tap_kid', k?.id === localStorage.getItem(ME()) ? 'self' : 'other'); kidDetail(k, rows); });
   if (me) {
     $('#myCard').onclick = () => { track('tap_my_card'); kidDetail(me, rows); };
@@ -195,6 +196,20 @@ async function kidRank() {
     countUp($('#tot'), Math.min(seen, me.total), me.total);
     localStorage.setItem(seenKey, me.total);
   }
+}
+
+// v36 (roadmap step 6): "👀 1,234 visits · 💬 56 feedback" under the ranking title. Each number shows only when its
+// switch is on (settings.show_visits / show_fb_count, admin Settings page); the server returns null for a switch that is off.
+// Loaded after the page is drawn, so it never slows the ranking down; offline it uses the last numbers this phone saw.
+async function homeCount() {
+  const box = $('#homeCount'); if (!box) return;
+  const c = await read('hc', () => api.homeCounts()).catch(() => null);
+  if (!c || !box.isConnected) return;
+  const fmt = (n) => Number(n).toLocaleString(getLang() === 'th' ? 'th-TH' : 'en-US');
+  const items = [c.visits != null && `<span class="hc"><span class="hc-i">👀</span><b>${fmt(c.visits)}</b> ${t('hcVisits')}</span>`,
+    c.feedback != null && `<span class="hc"><span class="hc-i">💬</span><b>${fmt(c.feedback)}</b> ${t('hcFeedback')}</span>`].filter(Boolean);
+  if (!items.length) return;
+  box.innerHTML = items.join(''); box.hidden = false; calmSoon();
 }
 
 const verseCard = (ev) => `<div class="verse"><span class="vl">📖 ${t('verseWeek')}</span><p>${esc(ev.verse_text)}</p>${ev.verse_ref ? `<b>${esc(ev.verse_ref)}</b>` : ''}</div>`;
@@ -880,7 +895,7 @@ const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? is
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
   PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame });
-const saMod = () => import('./superadmin.js?v=35');
+const saMod = () => import('./superadmin.js?v=36');
 
 // "who is online" for the super admin: a ping when an admin page opens and about every 45 s while one stays open
 let pingAt = 0, pingPage = '';
@@ -941,7 +956,7 @@ function setSide(page) {                    // page = the admin page that is ope
 const EMO = /^(\s*)((?:[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}][️‍\u{1F3FB}-\u{1F3FF}\p{Extended_Pictographic}]*\s*)+)(?=\S)/u;
 const calmOn = () => document.body.dataset.mode === 'normal';
 function calmNode(root) {
-  root.querySelectorAll('.mi, .kid-nav a > span').forEach(el => {
+  root.querySelectorAll('.mi, .kid-nav a > span, .hc-i').forEach(el => {
     const f = el.firstChild; if (f?.nodeType !== 3) return;
     const svg = calmIcon(f.textContent); if (!svg) return;
     el.dataset.emo = f.textContent; f.replaceWith(document.createRange().createContextualFragment(svg));
@@ -1664,7 +1679,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=35');
+      const { readSheet } = await import('./ocr.js?v=36');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1954,11 +1969,25 @@ async function pSettings() {
       <div class="field"><label>${t('tipDays')}</label><input class="input" id="tips" type="number" min="0" max="60" value="${s.tip_days ?? 3}"></div></div>
     <div class="card"><h3 class="sec">⭐ ${t('secPoints')}</h3>
       <div class="field"><label>${t('attPoints')}</label><input class="input" id="ap" type="number" min="0" max="1000" value="${s.attendance_points}"></div></div>
+    <div class="card toggles" style="padding-top:14px"><h3 class="sec">🏠 ${t('secHomeCount')}</h3>
+      <div class="tg-row"><span class="tg-i">👀</span><span class="tg-t"><b>${t('swVisits')}</b><span>${t('swVisitsSub')}</span></span>
+        <button class="switch ${s.show_visits ? 'on' : ''}" data-sw="show_visits" role="switch" aria-checked="${!!s.show_visits}" aria-label="${t('swVisits')}"><span></span></button></div>
+      <div class="tg-row"><span class="tg-i">💬</span><span class="tg-t"><b>${t('swFbCount')}</b><span>${t('swFbCountSub')}</span></span>
+        <button class="switch ${s.show_fb_count ? 'on' : ''}" data-sw="show_fb_count" role="switch" aria-checked="${!!s.show_fb_count}" aria-label="${t('swFbCount')}"><span></span></button></div>
+    </div>
     <div class="bottom-bar"><button class="btn primary" id="saveSet">${t('save')}</button></div>`;
   $('#saveSet').onclick = async () => {
     const d = { tip_days: Math.max(0, Math.min(60, Math.trunc(Number($('#tips').value) || 0))), attendance_points: Math.max(0, Math.min(1000, Math.trunc(Number($('#ap').value) || 0))) };
     try { await api.saveSettings(d); evCache = null; toast(t('saved')); } catch (e) { fail(e); }
   };
+  // v36: the two home-page counter switches save at once (each change goes to the admin log through the settings trigger)
+  view.querySelectorAll('[data-sw]').forEach(btn => btn.onclick = async () => {
+    const k = btn.dataset.sw, on = !btn.classList.contains('on');
+    btn.disabled = true;
+    try { await api.saveSettings({ [k]: on }); evCache = null; btn.classList.toggle('on', on); btn.setAttribute('aria-checked', on);
+      toast(`${t(k === 'show_visits' ? 'swVisits' : 'swFbCount')} · ${t(on ? 'moOn' : 'moOff')}`); } catch (e) { fail(e); }
+    btn.disabled = false;
+  });
 }
 
 // ---------------- Export everything to Excel (.xlsx), built in the browser
