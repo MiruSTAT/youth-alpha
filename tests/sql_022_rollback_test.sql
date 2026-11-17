@@ -12,8 +12,8 @@ begin
   perform set_config('role', 'anon', true);
   select * into r from public.home_counts(1); out := out || ' | off: v=' || coalesce(r.visits::text, 'null') || ' f=' || coalesce(r.feedback::text, 'null');
   -- a kid opens the app (anon insert, as the app does)
-  insert into public.kid_events (device_id, event, detail, path, program_id) values ('t022', 'open_app', 'test', '#/', 1);
-  insert into public.kid_events (device_id, event, detail, path, program_id) values ('t022', 'view', 'test', '#/', 1);
+  insert into public.kid_events (device_id, event, detail, path, program_id) values ('t022testdevice000000', 'open_app', 'test', '#/', 1);
+  insert into public.kid_events (device_id, event, detail, path, program_id) values ('t022testdevice000000', 'view', 'test', '#/', 1);
   begin select count(*) into n from public.home_counters; out := out || ' anonRead=ALLOWED'; exception when others then out := out || ' anonRead=refused'; end;
   begin update public.settings set show_visits = true where id = 1; get diagnostics n = row_count; out := out || ' anonSwitch=' || n || 'rows'; exception when others then out := out || ' anonSwitch=refused'; end;
   perform set_config('role', 'postgres', true);
