@@ -375,7 +375,7 @@ To set up a new copy, run these files in the SQL editor in this order: `schema.s
 - **Who may flip the switches:** the settings guard trigger from 021 (`settings_super_guard`) sends unknown columns to the `settings` permission, so no change was needed there; the audit trigger on `settings` logs each change.
 - **Why a separate table:** `clear_kid_events(p)` deletes the program's `kid_events` rows, so a count of those would drop to 0; and a counter in `settings` would write one audit row per app open.
 - **What counts as a visit:** every app open (the owner chose this over "each phone once"). `open_app` is sent by `track()` once per page load, kids' side only (adults are not counted); events are batched and sent within 15 s or when the app is hidden.
-- **Tested** with `tests/sql_022_rollback_test.sql` (rolled back) before the real run.
+- **Run live on 2026-11-17** after the rolled-back test `tests/sql_022_rollback_test.sql` passed: start=52 (= open_app rows), anon cannot read `home_counters` or flip a switch, an anon `open_app` insert → 53, a `view` insert does not count, switches off → `home_counts` nulls, super admin switched on → numbers + `event_info` true/true, delete of the program's `kid_events` → still 53, one `settings` audit row. (The points-only admin check was skipped: no such staff row exists live.) Live after the real run: program 1 visits 52, program 3 visits 1, both switches **off** for every program.
 
 ### 5b. Super admin (v25, `supabase/017_superadmin.sql`)
 
