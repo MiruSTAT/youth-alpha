@@ -57,7 +57,7 @@ with sync_playwright() as p:
     go(pg, '#/admin', 1800); pg.screenshot(path=S + 'v33_01_pc_home_kids.png')
     check(side_on(pg), 'PC: side menu is shown in the admin area')
     side = pg.eval_on_selector_all('#adminSide [data-k]', 'els => els.map(e => e.dataset.k)')
-    check(all(k in side for k in ['home', 'admins', 'programs', 'look', 'online', 'ai', 'attendance', 'points', 'kids', 'songs', 'settings', 'export']), 'PC: side menu lists the super admin and admin pages')
+    check(all(k in side for k in ['home', 'admins', 'programs', 'look', 'attendance', 'points', 'kids', 'songs', 'settings', 'export']), 'PC: side menu lists the super admin and admin pages')
     check(pg.locator('#adminSide .side-link.on[data-k="home"]').count() == 1, 'PC: "admin home" lit in the side menu')
     left = pg.evaluate("document.querySelector('main').getBoundingClientRect().left")
     width = pg.evaluate("document.querySelector('main').getBoundingClientRect().width")

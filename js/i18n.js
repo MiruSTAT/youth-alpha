@@ -759,3 +759,33 @@ Object.assign(DICT.en, {
   swVisits: 'Show visits', swVisitsSub: 'Everyone sees it on the home page. Counts every time someone opens the app; clearing the kids\' activity log does not reset it',
   swFbCount: 'Show feedback count', swFbCountSub: 'Everyone sees it on the home page. Only the number, never names or messages',
 });
+
+// v37 (roadmap step 7): simpler admin panel (tabs inside one menu item) and maintenance mode per program
+Object.assign(DICT.th, {
+  sub_admins: 'ผู้ดูแล', sub_online: 'ออนไลน์ตอนนี้', sub_about: 'เวอร์ชันและสิ่งที่เปลี่ยน', sub_ai: 'รายละเอียดสำหรับ AI',
+  sub_settings: 'ทั่วไป', sub_pcats: 'หมวดคะแนน', sub_musicset: 'เพลงและเสียง',
+  m_settings: 'คำแนะนำ คะแนนการมาร่วม หมวดคะแนน เพลง', saUntilShort: (t) => `ถึง ${t}`,
+  mtTitle: 'ปิดปรับปรุงชั่วคราว', mtSub: 'เดี๋ยวกลับมานะ ขอบคุณที่รอ', mtColour: 'เปลี่ยนสี', mtSoundOn: 'ปิดเสียง', mtSoundOff: 'เปิดเสียง',
+  mtBar: 'โปรแกรมนี้ปิดปรับปรุงอยู่ เด็กและผู้ดูแลคนอื่นเห็นแค่หน้าปิดปรับปรุง (แตะเพื่อปิด)',
+  mtLabel: 'ปิดปรับปรุง', mtIsOn: (s) => `เปิดอยู่ · ${s}`, mtIsOff: 'ไม่ได้ปิดปรับปรุง', mtTurnOn: 'เริ่มปิดปรับปรุง', mtTurnOff: 'เลิกปิดปรับปรุง',
+  mtScene: 'ฉากที่ทุกคนจะเห็น', mt_tree: '🎄 ต้นคริสต์มาส', mt_bunny: '🐰 กระต่ายเฝ้าไข่',
+  mtWhat: 'ระหว่างปิดปรับปรุง เด็กและผู้ดูแลคนอื่นจะเห็นแค่ฉากนี้กับคำว่า "ปิดปรับปรุงชั่วคราว" และแก้ไขข้อมูลอะไรไม่ได้เลย ผู้ดูแลสูงสุดยังใช้ได้ทุกอย่าง',
+  mtWarnOn: (n) => `เริ่มปิดปรับปรุง "${n}"?\nเด็กและผู้ดูแลคนอื่นจะใช้โปรแกรมนี้ไม่ได้จนกว่าจะเลิกปิดปรับปรุง`,
+  mtWarnOff: (n) => `เลิกปิดปรับปรุง "${n}"?\nทุกคนจะกลับมาใช้ได้ตามปกติ`,
+  mtDoneOn: (n) => `"${n}" ปิดปรับปรุงแล้ว`, mtDoneOff: (n) => `"${n}" กลับมาใช้ได้แล้ว`,
+  mtBlocked: 'โปรแกรมนี้ปิดปรับปรุงอยู่ จึงยังบันทึกไม่ได้',
+});
+Object.assign(DICT.en, {
+  sub_admins: 'Admins', sub_online: 'Online now', sub_about: 'Version & changes', sub_ai: 'Details for AI',
+  sub_settings: 'General', sub_pcats: 'Point categories', sub_musicset: 'Music',
+  m_settings: 'Tips, attendance points, point categories, music', saUntilShort: (t) => `until ${t}`,
+  mtTitle: 'Under maintenance', mtSub: "We'll be back soon. Thanks for waiting!", mtColour: 'Colour', mtSoundOn: 'Sound off', mtSoundOff: 'Sound on',
+  mtBar: 'This program is under maintenance. Kids and other admins see only the maintenance page (tap to switch it off)',
+  mtLabel: 'Maintenance', mtIsOn: (s) => `on · ${s}`, mtIsOff: 'off', mtTurnOn: 'Start maintenance', mtTurnOff: 'End maintenance',
+  mtScene: 'Scene everyone will see', mt_tree: '🎄 Christmas tree', mt_bunny: '🐰 Bunny looking after eggs',
+  mtWhat: 'During maintenance, kids and other admins see only this scene and the words "Under maintenance", and cannot change anything. The super admin can still do everything.',
+  mtWarnOn: (n) => `Start maintenance for "${n}"?\nKids and other admins cannot use this program until you end it`,
+  mtWarnOff: (n) => `End maintenance for "${n}"?\nEveryone can use it again as normal`,
+  mtDoneOn: (n) => `"${n}" is under maintenance`, mtDoneOff: (n) => `"${n}" is open again`,
+  mtBlocked: 'This program is under maintenance, so nothing can be saved right now',
+});

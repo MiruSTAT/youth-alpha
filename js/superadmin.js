@@ -91,20 +91,26 @@ function claimView(c) {
 
 // ---------- v32: no separate super admin page any more. The admin panel shows this badge and a "Super admin"
 // group with the pages below (programs, look & layout, admins, online now, details for AI).
-export async function superBadge(c, box) {
-  if (!box) return;
+// v37: the big super admin card is gone. One slim line says who is signed in and until when;
+// the one sign-out button of the admin home also ends the super admin powers on this device.
+export async function superUntil(c, el) {
+  if (!el) return;
   const info = await c.api.superInfo().catch(() => null);
   const until = info?.until ? new Date(info.until).toLocaleTimeString(c.getLang() === 'th' ? 'th-TH' : 'en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-  box.innerHTML = `<div class="sa-who-top"><span class="sa-crown">👑</span><span class="grow"><b>${c.t('saBadge')} · ${c.esc(info?.username || '')}</b><span class="sub">${c.t('saUntil', until)}</span></span></div>
-    <p class="hint" style="margin:0 0 10px">${c.t('saBadgeSub')}</p>
-    <button class="btn wide" id="saLock">🚪 ${c.t('saOutBtn')}</button>`;
-  // sign out: end the super admin powers on this device AND sign out (next time: password + email link again)
-  box.querySelector('#saLock').onclick = async () => {
-    if (!(await c.confirmBox(c.t('saOutWarn'), c.t('saOutBtn'), false))) return;
-    try { await c.api.superLock(); } catch (e) { console.error(e); }
-    try { await c.api.signOut(); } catch (e) { console.error(e); }
-    location.hash = '#/admin'; c.render();
-  };
+  el.textContent = [info?.username ? '@' + info.username : '', until ? c.t('saUntilShort', until) : ''].filter(Boolean).join(' · ');
+}
+export async function superSignOut(c) {
+  if (!(await c.confirmBox(c.t('saOutWarn'), c.t('logout'), false))) return;
+  try { await c.api.superLock(); } catch (e) { console.error(e); }
+  try { await c.api.signOut(); } catch (e) { console.error(e); }
+  location.hash = '#/admin'; c.render();
+}
+// v37: "Who is online" lives inside "Admins & permissions"; the admin home shows how many are online on that item
+export async function onlineCount(c, item) {
+  if (!item) return;
+  const rows = await c.api.adminOnline().catch(() => []);
+  const n = rows.filter(r => Date.now() - new Date(r.seen_at) < 2 * 6e4).length;
+  if (n) item.querySelector('.mt b')?.insertAdjacentHTML('beforeend', ` <span class="on-cnt">🟢 ${n}</span>`);
 }
 
 // ---------- programs (was a section of the super admin page)
@@ -171,7 +177,7 @@ function keepLook(c, look) {
 
 // ---------- details for AI: the handoff (HANDOFF.md, published with every release), shown by section, copied as a ready prompt
 export async function pAi(c) {
-  c.view.innerHTML = `${c.pageHead('🤖 ' + c.t('tab_ai'))}
+  c.view.innerHTML = `${c.pageHead('ℹ️ ' + c.t('tab_about'))}
     <div class="card"><p class="muted" style="margin:0 0 10px">${c.t('saAiSub')}</p>
       <p id="hoState" class="sa-ho muted">${c.t('loading')}…</p>
       <div class="sa-btns"><button class="btn primary" id="hoCopy" disabled>📋 ${c.t('saCopy')}</button><button class="btn" id="hoDl" disabled>📥 ${c.t('saDownload')}</button></div></div>
@@ -304,7 +310,7 @@ export async function pAdminEdit(c, uid) {
 
 // ---------- v32 who is online now (admin pages ping about every 45 s; shown for 10 minutes)
 export async function pOnline(c) {
-  c.view.innerHTML = `${c.pageHead('🟢 ' + c.t('tab_online'))}<p class="muted sa-intro">${c.t('onlineIntro')}</p><div class="card"><div class="list" id="onList"><p class="muted">${c.t('loading')}…</p></div></div>
+  c.view.innerHTML = `${c.pageHead('👥 ' + c.t('tab_admins'))}<p class="muted sa-intro">${c.t('onlineIntro')}</p><div class="card"><div class="list" id="onList"><p class="muted">${c.t('loading')}…</p></div></div>
     <p class="hint" style="margin:8px 4px" id="onAt"></p>`;
   const seq = c.renderSeq();
   const ago = (iso) => { const s = Math.max(0, Math.round((Date.now() - new Date(iso)) / 1000)); return s < 60 ? c.t('agoS', s) : c.t('agoM', Math.round(s / 60)); };
@@ -335,10 +341,31 @@ async function drawPrograms(c) {
       <code class="prog-link">${c.esc(c.linkFor(p.slug))}</code>
       <div class="prog-btns"><button class="btn small" data-copy="${p.id}">📋 ${c.t('progCopy')}</button>
         <a class="btn small" href="${c.esc(c.linkFor(p.slug))}#/admin">⚙️ ${c.t('progOpen')}</a>
-        <button class="btn small" data-edit="${p.id}">✏️ ${c.t('progEdit')}</button></div></div>`).join('');
+        <button class="btn small" data-edit="${p.id}">✏️ ${c.t('progEdit')}</button></div>
+      <div class="prog-maint ${p.maintenance?.on ? 'on' : ''}"><span>🛠️ ${c.t('mtLabel')}: <b>${p.maintenance?.on ? c.t('mtIsOn', c.t('mt_' + (p.maintenance.scene === 'bunny' ? 'bunny' : 'tree'))) : c.t('mtIsOff')}</b></span>
+        <button class="btn small" data-maint="${p.id}">${p.maintenance?.on ? c.t('mtTurnOff') : c.t('mtTurnOn')}</button></div></div>`).join('');
   box.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
     const p = list.find(x => x.id === +b.dataset.copy);
     try { await navigator.clipboard.writeText(c.linkFor(p.slug)); c.toast('✓ ' + c.t('progCopied')); } catch { c.toast(c.linkFor(p.slug)); }
+  });
+  // v37 maintenance mode: switch it on (pick a scene) or off, with a warning that names the program
+  box.querySelectorAll('[data-maint]').forEach(b => b.onclick = async () => {
+    const p = list.find(x => x.id === +b.dataset.maint), on = !p.maintenance?.on;
+    let scene = p.maintenance?.scene === 'bunny' ? 'bunny' : 'tree';
+    if (on) {
+      const r = await c.modal('🛠️ ' + c.esc(p.name), `<p>${c.t('mtWhat')}</p>
+        <div class="field"><label>${c.t('mtScene')}</label><div class="seg">${['tree', 'bunny'].map(k => `<label><input type="radio" name="scene" value="${k}" ${k === scene ? 'checked' : ''}>${c.t('mt_' + k)}</label>`).join('')}</div></div>`,
+        { okText: c.t('mtTurnOn') });
+      if (!(r instanceof FormData)) return;
+      scene = String(r.get('scene') || 'tree');
+      if (!(await c.confirmBox(c.t('mtWarnOn', p.name), c.t('mtTurnOn'), false))) return;
+    } else if (!(await c.confirmBox(c.t('mtWarnOff', p.name), c.t('mtTurnOff'), false))) return;
+    try {
+      await c.api.programSetMaint(p.id, on, scene);
+      if (p.id === c.program.id) c.program.maintenance = { on, scene };
+      c.toast('✓ ' + c.t(on ? 'mtDoneOn' : 'mtDoneOff', p.name));
+      drawPrograms(c); c.paintMaintBar?.();
+    } catch (e) { c.fail(e); }
   });
   box.querySelectorAll('[data-edit]').forEach(b => b.onclick = async () => {
     const p = list.find(x => x.id === +b.dataset.edit);

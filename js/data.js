@@ -1,6 +1,6 @@
 // Data layer: Supabase when configured, otherwise a local PREVIEW store.
 // v35: ?demo=1 (phone preview on the admin panel) always uses the local store, filled with sample data and never saved.
-import { DEMO, demoDb } from './demo.js?v=36';
+import { DEMO, demoDb } from './demo.js?v=37';
 const cfg = window.YA_CONFIG || {};
 export const MODE = DEMO ? 'demo' : cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY ? 'supabase' : 'preview';
 export { DEMO };
@@ -171,6 +171,7 @@ function supabaseApi() {
     async programCreate(o) { return ok(await sb.rpc('program_create', { p_name: o.name, p_slug: o.slug, p_from: o.from, p_people: !!o.people, p_shop: !!o.shop, p_songs: !!o.songs })); },
     async programUpdate(id, name, archived) { ok(await sb.rpc('program_update', { p_id: id, p_name: name, p_archived: !!archived })); },
     async programSetLook(id, look) { ok(await sb.rpc('program_set_look', { p_id: id, p_look: look })); },   // v28, see 019_program_look.sql
+    async programSetMaint(id, on, scene) { ok(await sb.rpc('program_set_maintenance', { p_id: id, p_on: !!on, p_scene: scene })); },   // v37, see 023_maintenance.sql
 
     // ---- v31 member login (020_members.sql). The token goes on EVERY request as the header x-member-token.
     memberUse(tok) {
@@ -415,7 +416,7 @@ function previewApi(seed = null) {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=36'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=37'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].filter(() => memberOk()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {
@@ -467,6 +468,7 @@ function previewApi(seed = null) {
     },
     async programUpdate(id, name, archived) { const p = (await this.programs()).find(x => x.id === id); if (p) Object.assign(p, { name, archived: id === 1 ? false : !!archived }); save(); },
     async programSetLook(id, look) { const p = (await this.programs()).find(x => x.id === id); if (p) p.look = JSON.parse(JSON.stringify(look)); save(); },
+    async programSetMaint(id, on, scene) { const p = (await this.programs()).find(x => x.id === id); if (p) p.maintenance = { on: !!on, scene, at: now() }; save(); },
     async programSetLogin(id, mode) {
       if (!['off', 'personal', 'all'].includes(mode)) throw new Error('bad mode');
       const p = (await this.programs()).find(x => x.id === id); if (p) p.login_mode = mode; save();

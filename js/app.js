@@ -1,15 +1,15 @@
-import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=36';
-import { api, MODE, DEMO, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=36';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=36';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=36';
+import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=37';
+import { api, MODE, DEMO, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=37';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=37';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=37';
 
-import { music } from './music.js?v=36';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=36';
-import { snow } from './snow.js?v=36';
-import { track } from './track.js?v=36';
-import { calmIcon } from './icons.js?v=36';
-import { metro } from './metronome.js?v=36';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=36';
+import { music } from './music.js?v=37';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=37';
+import { snow } from './snow.js?v=37';
+import { track } from './track.js?v=37';
+import { calmIcon } from './icons.js?v=37';
+import { metro } from './metronome.js?v=37';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=37';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -49,7 +49,7 @@ function toast(msg) {
   const el = $('#toast'); el.textContent = msg; el.classList.add('show');
   clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('show'), 2200);
 }
-function fail(e) { console.error(e); toast(t('errGeneric')); }
+function fail(e) { console.error(e); toast(/maintenance/i.test(String(e?.message || e)) ? t('mtBlocked') : t('errGeneric')); }
 
 function modal(title, inner, { okText = t('save'), extra = '', danger = false } = {}) {
   const dlg = $('#dlg'), form = $('#dlgForm');
@@ -71,7 +71,15 @@ async function leaderboard(force = false) {
   return lbCache.rows;
 }
 const pageHead = (title, backTo = '#/admin') =>
-  `<div class="page-head"><a class="back" href="${backTo}">‹ ${t('back')}</a><h1 class="page-title">${title}</h1></div>`;
+  `<div class="page-head"><a class="back" href="${backTo}">‹ ${t('back')}</a><h1 class="page-title">${title}</h1></div>${subTabs()}`;
+// v37: pages that share one menu item show small tabs under the title (e.g. Settings | Point categories | Music)
+const TABSETS = [['admins', 'online'], ['about', 'ai'], ['settings', 'pcats', 'musicset']];
+function subTabs() {
+  const [, , k, extra] = (location.hash || '').split('/');
+  const set = !extra && TABSETS.find(x => x.includes(k)); if (!set) return '';
+  const ok = set.filter(x => typeof pageOk === 'function' && pageOk(x)); if (ok.length < 2) return '';
+  return `<nav class="subtabs">${ok.map(x => `<a href="#/admin/${x}" class="${x === k ? 'on' : ''}" data-k="${x}">${t('sub_' + x)}</a>`).join('')}</nav>`;
+}
 
 // ------------------------------------------------------------- theme + event timing
 const THEMES = [['snow', 'linear-gradient(#eef4fd,#d5e4f7)'], ['night', 'linear-gradient(#2c4591,#1c2d66)'], ['red', 'linear-gradient(#8a1c2c,#5a0f1c)'], ['forest', 'linear-gradient(#23664a,#123a29)']];
@@ -129,7 +137,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=36');
+    const m = await import('./scene3d.js?v=37');
     if (m.initScene($('#scene'), { pack: part('scene') === 'cross' ? 'easter' : 'christmas' })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -778,7 +786,7 @@ function showTour(steps) {
 }
 // full tour on the first visit; afterwards one tip every few days
 async function maybeTour() {
-  if (document.body.classList.contains('adult') || document.body.classList.contains('song-page') || location.hash === '#/feedback' || !$('#tour').hidden || !$('#kidSheet').hidden) return;
+  if (document.body.classList.contains('adult') || document.body.classList.contains('maint') || document.body.classList.contains('song-page') || location.hash === '#/feedback' || !$('#tour').hidden || !$('#kidSheet').hidden) return;
   const every = Number((await eventInfo()).tip_days ?? 3);
   let st; try { st = JSON.parse(localStorage.getItem('ya_tour') || 'null'); } catch { st = null; }
   const now = Date.now(), GAP = every * 864e5;
@@ -894,8 +902,8 @@ const PAGES = {
 const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? isSuper() : can(need); };
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
-  PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame });
-const saMod = () => import('./superadmin.js?v=36');
+  PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame, paintMaintBar });
+const saMod = () => import('./superadmin.js?v=37');
 
 // "who is online" for the super admin: a ping when an admin page opens and about every 45 s while one stays open
 let pingAt = 0, pingPage = '';
@@ -911,6 +919,7 @@ async function adultGate(page) {
   if (!session) { adult.access = null; setSide(null); return loginView(); }
   adult.role = await api.myRole(); adult.myId = await api.myId();
   adult.access = null;
+  if (maintOn() && !['superadmin', 'superlocked', 'superclaim'].includes(adult.role)) return maintView();   // v37
   if (['pending', 'noaccess', 'superlocked', 'superclaim'].includes(adult.role)) setSide(null);
   if (adult.role === 'pending') return pendingView();
   if (adult.role === 'noaccess') return noAccessView();
@@ -928,25 +937,26 @@ async function adultGate(page) {
 // v33: the admin menu groups (admin home on phones, side menu on PC); only pages this admin may open
 function adminGroups() {
   return [
-    ...(isSuper() ? [['g_super', [['admins', '👥', 'super'], ['programs', '📁', 'super'], ['look', '🎨', 'super'], ['online', '🟢', 'super'], ['ai', '🤖', 'super']]]] : []),
+    ...(isSuper() ? [['g_super', [['admins', '👥', 'super'], ['programs', '📁', 'super'], ['look', '🎨', 'super']]]] : []),
     ['g_daily', [['attendance', '✅'], ['points', '⭐'], ['redeem', '🎟️'], ['weekly', '📊']]],
     ['g_kids', [['kids', '👧'], ['members', '🔑'], ['notice', '📣']]],
     ['g_songs', [['songs', '🎵']]],
-    ['g_settings', [['shop', '🎁'], ['pcats', '🏷️'], ['feedback', '💬'], ['musicset', '🎛️'], ['settings', '⚙️'], ['phone', '📱']]],
+    ['g_settings', [['shop', '🎁'], ['feedback', '💬'], ['settings', '⚙️'], ['phone', '📱']]],
     ['g_system', [['export', '📥'], ['about', 'ℹ️']]],
   ].map(([g, items]) => [g, items.filter(([k]) => pageOk(k))]).filter(([, items]) => items.length);
 }
 // ---------- v33: PC side menu for the admin area (shown by CSS only on screens 1024 px and wider; phones keep the home menu)
-const SIDE_OF = { attsum: 'attendance', history: 'points', song: 'songs', sync: 'songs' };   // sub-pages light up their parent
+const SIDE_OF = { attsum: 'attendance', history: 'points', song: 'songs', sync: 'songs', online: 'admins', ai: 'about', pcats: 'settings', musicset: 'settings' };   // sub-pages light up their parent
 function setSide(page) {                    // page = the admin page that is open ('home' = admin home), null = no side menu
   const box = $('#adminSide'), on = page !== null;
   document.body.classList.toggle('has-side', on); box.hidden = !on;
   if (!on) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="side-prog">${isSuper() ? `<span class="side-super">👑 ${t('saBadge')}</span>` : ''}<b>${esc(program.name)}</b></div>
+  box.innerHTML = `<div class="side-prog">${progPicker('sideProg')}</div>
     <a class="side-link ${page === 'home' ? 'on' : ''}" data-k="home" href="#/admin"><span class="mi">🏠</span><span>${t('adultMenu')}</span></a>
     ${adminGroups().map(([g, items]) => `<h3 class="side-grp">${t(g)}</h3>${items.map(([k, i]) =>
       `<a class="side-link ${k === page ? 'on' : ''}" data-k="${k}" href="#/admin/${k}"><span class="mi">${i}</span><span>${t('tab_' + k)}</span></a>`).join('')}`).join('')}
     <a class="side-link quiet" href="#/"><span class="mi">‹</span><span>${t('sideKids')}</span></a>`;
+  bindPicker(box);
   calmAll();
 }
 
@@ -978,26 +988,38 @@ const calmSoon = () => queueMicrotask(calmAll);
 { const mo = new MutationObserver(() => { if (calmOn()) calmAll(); });
   CALM_ROOTS.forEach(s => { const el = $(s); if (el) mo.observe(el, { childList: true, subtree: true }); }); }
 
-function adultHome() {
+// v37: one place for "which program + who am I": the top of the PC side menu, and one slim line on the phone's admin home.
+// The program picker is the super admin's: normal admins only ever see the program of their own link.
+function progPicker(id) {
   const live = program.list.filter(x => !x.archived || x.id === program.id);
-  // the program picker is the super admin's: normal admins only ever see the program of their own link
-  const progBar = isSuper() && live.length > 1 ? `<div class="card prog-bar"><span>📁 ${t('progNow')}</span><b>${esc(program.name)}</b>
-      <select class="input" id="progSel" aria-label="${t('progNow')}">${live.map(x => `<option value="${esc(x.slug)}" ${x.id === program.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : '';
+  const who = isSuper() ? `<span class="side-super">👑 ${t('saBadge')}</span>` : '';
+  const pick = isSuper() && live.length > 1
+    ? `<select class="input prog-pick" id="${id}" aria-label="${t('progNow')}">${live.map(x => `<option value="${esc(x.slug)}" ${x.id === program.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select>`
+    : `<b class="prog-name">📁 ${esc(program.name)}</b>`;
+  return `${who}${pick}`;
+}
+function bindPicker(root) {
+  // switching program = opening that program's own link (a full reload, so no data from the old program stays on screen)
+  root.querySelectorAll('.prog-pick').forEach(ps => { ps.onchange = () => { location.href = linkFor(ps.value) + '#/admin'; }; });
+}
+function adultHome() {
   const groups = adminGroups();
   view.innerHTML = `
     <div class="page-head"><a class="back" href="#/">‹ ${t('back')}</a><h1 class="page-title">${t('adultMenu')}</h1>
       <button class="btn small head-btn" id="copyLink" title="${t('copyUserLinkSub')}">🔗 ${t('copyUserLink')}</button></div>
-    ${isSuper() ? '<div class="card sa-badge" id="saBadge"></div>' : ''}
-    ${progBar}
+    <div class="adm-top" id="admTop">${progPicker('progSel')}${isSuper() ? '<span class="sa-until" id="saUntil"></span>' : ''}</div>
     ${groups.map(([g, items]) => `<h2 class="grp ${g === 'g_super' ? 'grp-super' : ''}">${g === 'g_super' ? '👑 ' : ''}${t(g)}</h2><nav class="menu grouped ${g === 'g_super' ? 'super-menu' : ''}">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
       <span class="mt"><b>${t('tab_' + k)}</b><span>${t('m_' + k, VERSION)}</span></span><span class="chev">›</span></a>`).join('')}</nav>`).join('')}
     <button class="btn wide" style="margin-top:24px" id="logout">${t('logout')}</button>
     ${MODE === 'preview' ? `<p class="preview-note">${t('previewNote')}</p>` : ''}`;
-  $('#logout').onclick = async () => { await api.signOut(); location.hash = '#/admin'; render(); };
+  // v37: one sign-out button; for the super admin it also ends the super admin powers on this device (with a warning)
+  $('#logout').onclick = async () => {
+    if (isSuper()) return (await saMod()).superSignOut(saCtx());
+    await api.signOut(); location.hash = '#/admin'; render();
+  };
   $('#copyLink').onclick = () => copyText(linkFor(program.slug), t('userLinkCopied'));
-  if (isSuper()) saMod().then(m => m.superBadge(saCtx(), $('#saBadge'))).catch(console.error);
-  // switching program = opening that program's own link (a full reload, so no data from the old program stays on screen)
-  const ps = $('#progSel'); if (ps) ps.onchange = () => { location.href = linkFor(ps.value) + '#/admin'; };
+  bindPicker($('#admTop'));
+  if (isSuper()) saMod().then(m => { m.superUntil(saCtx(), $('#saUntil')); m.onlineCount(saCtx(), view.querySelector('.menu [data-k="admins"]')); }).catch(console.error);
   // red indicators: things that still need filling in
   const seq = renderSeq;
   computeNeeds().then(n => {
@@ -1323,7 +1345,7 @@ async function pAttSummary() {
 const PC_ICONS = ['🎹', '🎤', '🎼', '🎸', '🥁', '🔤', '📖', '🙋', '🧽', '🍽️', '🧹', '⛪', '🎁', '⭐', '💡', '🙏', '📝', '🤝'];
 async function pPcats() {
   const cats = await pcats(true);
-  view.innerHTML = `${pageHead(t('tab_pcats'))}
+  view.innerHTML = `${pageHead(t('tab_settings'))}
     <button class="btn primary wide" id="addPc" style="margin-bottom:12px">+ ${t('addPcat')}</button>
     <div class="card"><div class="list">${cats.map(c => `<div class="li click" data-k="${c.key}"><span class="av">${pic(c.icon)}</span>
       <span class="grow">${esc(cName(c))}<span class="sub">${c.details ? esc(c.details.split('\n').join(' · ')) + (c.info ? ' — ' : '') : ''}${c.info ? esc(c.info) : (c.details ? '' : '—')}${c.active ? '' : ' · ' + t('hidden')}</span></span><span class="muted">${t('edit')} ›</span></div>`).join('')}</div></div>`;
@@ -1679,7 +1701,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=36');
+      const { readSheet } = await import('./ocr.js?v=37');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -1934,7 +1956,7 @@ async function pMusicSet() {
       <button class="switch ${cur[k] !== false ? 'on' : ''}" data-mo="${k}" role="switch" aria-checked="${cur[k] !== false}" aria-label="${t('mo_' + k)}"><span></span></button></div>`;
   const draw = () => {
     const simple = cur.simpleSongs === true;
-    view.innerHTML = `${pageHead(t('tab_musicset'))}
+    view.innerHTML = `${pageHead(t('tab_settings'))}
       <div class="card toggles simple-card"><div class="tg-row"><span class="tg-i">📄</span><span class="tg-t"><b>${t('simpleSongs')}</b><span>${t('simpleSongsSub')}</span></span>
         <button class="switch ${simple ? 'on' : ''}" id="swSimple" role="switch" aria-checked="${simple}" aria-label="${t('simpleSongs')}"><span></span></button></div></div>
       <h2 class="grp">${t('mg_app')}</h2><div class="card toggles">${MUSIC_GROUPS[0][1].map(row).join('')}</div>
@@ -2122,8 +2144,11 @@ async function render() {
   stopPlayer();                                                   // leaving a song: stop scrolling / metronome / video
   syncCleanup?.(); syncCleanup = null;
   isAdult || !feat('snow') ? snow.stop() : snow.start();
+  document.body.classList.remove('maint');
   paintChrome();
   try {
+    // v37 maintenance mode: kids (and adults who are not the super admin) see only the maintenance scene
+    if (!isAdult && maintOn() && !(await maintSuper())) return maintView();
     if (isAdult) { scene?.stop(); return await adultGate(h.split('/')[2]); }
     await Promise.all([feat('tree') ? ensureScene() : null, eventInfo()]);             // eventInfo: the admin's music switches
     if (seq !== renderSeq) return;
@@ -2147,7 +2172,7 @@ async function render() {
     if (h.startsWith('#/me') || h === '#/rank') { history.replaceState(null, '', '#/'); }
     return await kidRank();
   } catch (e) { fail(e); view.innerHTML = `<p class="empty">${t('errGeneric')}</p>`; }
-  finally { paintOffline(); addGrab(); }
+  finally { paintOffline(); addGrab(); paintMaintBar(); }
 }
 // a quiet line when the phone has no internet and saved data is being shown (kid pages only)
 function paintOffline() {
@@ -2162,7 +2187,83 @@ window.addEventListener('hashchange', () => {
   window.scrollTo(0, 0); render();
 });
 // re-draw admin pages only when someone signs in / out (not on token refresh)
-api.onAuth?.((event) => { if (location.hash.startsWith('#/admin') && (!event || event === 'SIGNED_IN' || event === 'SIGNED_OUT')) render(); });
+api.onAuth?.((event) => { maintSup = null; if (location.hash.startsWith('#/admin') && (!event || event === 'SIGNED_IN' || event === 'SIGNED_OUT')) render(); });
+// ---------- v37 (roadmap step 7): maintenance mode per program (programs.maintenance, supabase/023_maintenance.sql)
+// Switched by the super admin on the Programs page. While it is on, kids and every adult who is not the super admin see
+// only a full-screen scene (no tabs, no menus, no pop-ups): "Under maintenance", a colour switch and a sound switch.
+// The database refuses every write in that program from anyone but the super admin. The super admin sees a thin bar.
+const maintOn = () => program.maintenance?.on === true;
+let maintSup = null;                                             // is this device's adult the super admin? (null = not asked yet)
+async function maintSuper() {
+  if (maintSup !== null) return maintSup;
+  try { maintSup = !!(await api.session()) && (await api.myRole()) === 'superadmin'; } catch { maintSup = false; }
+  return maintSup;
+}
+const MAINT_ART = {
+  tree: `<svg class="mt-art" viewBox="0 0 300 260" aria-hidden="true">
+    <ellipse cx="150" cy="242" rx="125" ry="13" fill="#fff" opacity=".5"/>
+    <rect x="138" y="204" width="24" height="34" rx="4" fill="#7a4a24"/>
+    <polygon points="150,42 82,128 218,128" fill="#2f9a55"/><polygon points="150,78 64,176 236,176" fill="#278a4b"/><polygon points="150,116 46,214 254,214" fill="#1f7741"/>
+    <path d="M102 112 Q150 136 196 108 M86 160 Q150 188 214 156 M70 200 Q150 228 232 196" stroke="#f3d27a" stroke-width="3" fill="none" stroke-linecap="round" opacity=".9"/>
+    <g class="mt-lights">${[[118,118,'#ff5d6c'],[176,114,'#5ec8ff'],[150,128,'#ffd54a'],[100,166,'#ffd54a'],[134,176,'#ff8ad8'],[170,174,'#7dff9b'],[204,164,'#ff5d6c'],[84,206,'#5ec8ff'],[118,216,'#ff5d6c'],[156,218,'#ffd54a'],[194,214,'#ff8ad8'],[226,202,'#7dff9b']]
+      .map(([x, y, c], i) => `<circle cx="${x}" cy="${y}" r="6" fill="${c}" style="animation-delay:${(i % 4) * .4}s"/>`).join('')}</g>
+    <polygon class="mt-star" points="150,14 155,29 171,29 158,38 163,53 150,44 137,53 142,38 129,29 145,29" fill="#ffd54a"/>
+    <rect x="58" y="214" width="34" height="26" rx="3" fill="#e2463d"/><rect x="72" y="214" width="6" height="26" fill="#ffd54a"/>
+    <rect x="206" y="218" width="40" height="22" rx="3" fill="#3f7be0"/><rect x="223" y="218" width="6" height="22" fill="#fff"/></svg>`,
+  bunny: `<svg class="mt-art" viewBox="0 0 300 260" aria-hidden="true">
+    <path d="M0 226 Q80 196 150 212 T300 206 V260 H0 Z" fill="#7cc576"/>
+    ${[[30,226,'#ffd54a'],[52,234,'#ff8ad8'],[262,222,'#fff'],[282,236,'#ffd54a']].map(([x, y, c]) => `<circle cx="${x}" cy="${y}" r="5" fill="${c}"/>`).join('')}
+    <ellipse cx="96" cy="222" rx="58" ry="16" fill="#9a6a3a"/>
+    <g class="mt-eggs">
+      <g style="animation-delay:0s"><ellipse cx="72" cy="206" rx="15" ry="20" fill="#ff9ec7"/><path d="M58 204 l7 -5 7 5 7 -5 7 5" stroke="#fff" stroke-width="3" fill="none"/></g>
+      <g style="animation-delay:.5s"><ellipse cx="98" cy="200" rx="16" ry="21" fill="#8fd3ff"/><circle cx="92" cy="194" r="3" fill="#fff"/><circle cx="104" cy="204" r="3" fill="#fff"/><circle cx="96" cy="210" r="3" fill="#fff"/></g>
+      <g style="animation-delay:1s"><ellipse cx="124" cy="206" rx="15" ry="20" fill="#ffe27a"/><path d="M110 206 h28" stroke="#ff8a5c" stroke-width="4"/></g>
+    </g>
+    <ellipse cx="96" cy="226" rx="60" ry="10" fill="#7d5229"/>
+    <g class="mt-bunny">
+      <ellipse cx="208" cy="190" rx="42" ry="40" fill="#f6f2ee"/><circle cx="250" cy="200" r="10" fill="#fff"/>
+      <g class="mt-ears"><ellipse cx="186" cy="92" rx="10" ry="32" fill="#f6f2ee" transform="rotate(-12 186 92)"/><ellipse cx="186" cy="94" rx="5" ry="22" fill="#ffc1d6" transform="rotate(-12 186 94)"/>
+        <ellipse cx="214" cy="90" rx="10" ry="32" fill="#f6f2ee" transform="rotate(12 214 90)"/><ellipse cx="214" cy="92" rx="5" ry="22" fill="#ffc1d6" transform="rotate(12 214 92)"/></g>
+      <circle cx="198" cy="138" r="30" fill="#f6f2ee"/>
+      <circle cx="188" cy="134" r="4" fill="#2b2b3a"/><circle cx="208" cy="134" r="4" fill="#2b2b3a"/>
+      <ellipse cx="198" cy="145" rx="4" ry="3" fill="#ff8fb1"/><circle cx="180" cy="146" r="5" fill="#ffd0de"/><circle cx="216" cy="146" r="5" fill="#ffd0de"/>
+      <ellipse cx="186" cy="228" rx="14" ry="7" fill="#fff"/><ellipse cx="226" cy="228" rx="14" ry="7" fill="#fff"/></g></svg>`,
+};
+function maintView() {
+  const sc = program.maintenance?.scene === 'bunny' ? 'bunny' : 'tree';
+  const b = document.body;
+  b.classList.add('maint'); b.classList.remove('adult', 'sheet-full', 'song-page'); setSide(null);
+  scene?.stop?.(); $('#kidSheet').hidden = true;
+  sc === 'tree' ? snow.start() : snow.stop();
+  music.setPack(sc === 'bunny' ? 'easter' : 'christmas'); music.setTrack('jingle'); music.setAllowed(true);
+  const sound = () => `${music.playing ? '🔊' : '🔇'} ${t(music.playing ? 'mtSoundOn' : 'mtSoundOff')}`;
+  view.innerHTML = `<section class="maint-scene ${sc}">${MAINT_ART[sc]}
+    <h1 class="mt-title">🛠️ ${t('mtTitle')}</h1><p class="mt-sub">${t('mtSub')}</p>
+    <div class="mt-btns"><button class="kbtn" id="mtColour">🎨 ${t('mtColour')}</button><button class="kbtn" id="mtSound">${sound()}</button></div></section>`;
+  $('#mtColour').onclick = () => {                                // next colour theme, straight away (no pop-up)
+    const ks = THEMES.map(x => x[0]), i = ks.indexOf(b.dataset.theme || 'snow');
+    applyTheme(ks[(i + 1) % ks.length]);
+  };
+  $('#mtSound').onclick = (e) => { e.stopPropagation(); music.toggle(); $('#mtSound').textContent = sound(); paintChrome(); };
+}
+// the super admin's reminder: a thin bar on every page while the program is in maintenance
+function paintMaintBar() {
+  let bar = $('#maintBar');
+  const show = maintOn() && !document.body.classList.contains('maint') && (isSuper() || maintSup === true);
+  if (!show) { if (bar) bar.hidden = true; return; }
+  if (!bar) { bar = document.createElement('a'); bar.id = 'maintBar'; bar.className = 'maint-bar'; $('#offBar').before(bar); }
+  bar.href = '#/admin/programs'; bar.hidden = false; bar.textContent = '🛠️ ' + t('mtBar');
+}
+// an app left open notices the switch within about two minutes
+setInterval(async () => {
+  if (document.visibilityState !== 'visible' || DEMO || navigator.onLine === false) return;
+  let list; try { list = await api.programs(); } catch { return; }
+  const pr = list.find(x => x.id === program.id); if (!pr) return;
+  const was = maintOn(); program.maintenance = pr.maintenance || {};
+  if (was === maintOn()) return;
+  if (isSuper() || maintSup === true) paintMaintBar(); else location.reload();
+}, 120000);
+
 // which program this link opens (?p=<slug>); everything below reads and writes only that program
 async function loadProgram() {
   const want = (new URLSearchParams(location.search).get('p') || '').trim().toLowerCase();
@@ -2170,7 +2271,7 @@ async function loadProgram() {
   try { list = await cached('programs', () => api.programs()); } catch (e) { console.error(e); }
   program.list = list;
   const pr = want ? list.find(x => x.slug === want) : list.find(x => x.id === 1);
-  if (pr) Object.assign(program, { id: pr.id, slug: pr.slug, name: pr.name, look: pr.look || {} });
+  if (pr) Object.assign(program, { id: pr.id, slug: pr.slug, name: pr.name, look: pr.look || {}, maintenance: pr.maintenance || {} });
   else if (want) setTimeout(() => toast(t('progUnknown')), 600);
   window.YA_PID = program.id;
   applyLook();

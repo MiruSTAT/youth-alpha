@@ -49,9 +49,9 @@ with sync_playwright() as p:
     cx, pg = ctx(b, seed_db())
     go(pg, '#/admin', 1800); pg.screenshot(path=S + 'v32_01_super_home.png', full_page=True)
     keys = menu_keys(pg)
-    check('ผู้ดูแลสูงสุด' in pg.inner_text('#saBadge') and 'Miruku' in pg.inner_text('#saBadge'), 'super admin badge with the username')
-    check(all(k in keys for k in ['admins', 'programs', 'look', 'online', 'ai']), 'super admin group: admins, programs, look, online, AI')
-    check(all(k in keys for k in ['attendance', 'points', 'kids', 'members', 'songs', 'shop', 'pcats', 'feedback', 'musicset', 'settings', 'export', 'about']), 'super admin also has every admin page')
+    pg.wait_for_timeout(600); check('ผู้ดูแลสูงสุด' in pg.inner_text('#admTop') and 'Miruku' in pg.inner_text('#admTop'), 'super admin line with the username (v37: #admTop)')
+    check(all(k in keys for k in ['admins', 'programs', 'look']), 'super admin group: admins, programs, look (v37: online and AI are tabs)')
+    check(all(k in keys for k in ['attendance', 'points', 'kids', 'members', 'songs', 'shop', 'feedback', 'settings', 'export', 'about']), 'super admin also has every admin page')
     check(pg.locator('#progSel').count() == 1, 'program picker shown for the super admin')
     settings_grp = pg.eval_on_selector_all('h2.grp', 'els => els.map(e => e.textContent)')
     check('ตั้งค่า' in settings_grp, 'a "Settings" group (shop, categories, feedback, music, settings)')
@@ -151,7 +151,7 @@ with sync_playwright() as p:
     db['loggedIn'] = True; db['sa']['asSuper'] = True; db['sa']['unlocked'] = True
     cx, pg = ctx(b, db, 1280, 900)
     go(pg, '#/admin', 1500); pg.screenshot(path=S + 'v32_20_wide.png')
-    check(pg.locator('#saBadge').count() == 1, 'wide screen: admin home loads')
+    check(pg.locator('#adminSide #sideProg').count() == 1, 'wide screen: admin home loads (program picker in the side menu)')
     cx.close()
     b.close()
 

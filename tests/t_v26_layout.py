@@ -30,7 +30,7 @@ with sync_playwright() as p:
     go('#/admin/musicset'); pg.click('#swSimple'); pg.wait_for_timeout(700)
     go('#/songs'); pg.locator('.song-card').nth(1).click(); pg.wait_for_timeout(1200)
     print('simple off -> lyrics visible', pg.is_visible('#lyrics'), '| dock', pg.locator('#songDock').count())
-    go('#/admin', 1500); pg.click('#saLock'); pg.wait_for_timeout(400); print('sign-out warning:', pg.inner_text('#dlgForm p').replace('\n',' / '))
+    go('#/admin', 1500); pg.click('#logout'); pg.wait_for_timeout(400); print('sign-out warning:', pg.inner_text('#dlgForm p').replace('\n',' / '))
     pg.click('#dlgForm button[value=ok]'); pg.wait_for_timeout(1500); print('after sign-out:', pg.inner_text('.page-title'), '| login form', pg.locator('#lf').count())
     b.close()
 print('\n'.join(errs) or 'no errors')

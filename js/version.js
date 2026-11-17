@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '36';
+export const VERSION = '37';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,22 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '36', date: '2026-11-17', commit: '',
+      { v: '37', date: '2026-11-17', commit: '',
+        short: { th: 'หน้าผู้ดูแลเรียบง่ายขึ้น (เมนูเป็นช่อง รวมหน้าที่ซ้ำกันเป็นแท็บ เลือกโปรแกรมที่มุมซ้ายบน) และผู้ดูแลสูงสุดปิดปรับปรุงทีละโปรแกรมได้',
+                 en: 'Simpler admin panel (menu tiles, repeated pages folded into tabs, program picker at the top left) and the super admin can put one program under maintenance' },
+        items: [
+          { a: 'admin', th: 'เมนูผู้ดูแลเป็นช่องสี่เหลี่ยม มีแค่ไอคอนกับชื่อ (ข้อความสีแดงเมื่อมีอะไรต้องทำยังแสดงอยู่) บนมือถือ 2 ช่องต่อแถว บนคอมพิวเตอร์ 3–4 ช่อง',
+            en: 'The admin menu is now tiles with just an icon and a name (the red "needs doing" note still shows): 2 per row on phones, 3–4 on a computer' },
+          { a: 'admin', th: 'รวมหน้าที่ซ้ำกันเป็นแท็บ: "ใครออนไลน์อยู่" อยู่ในหน้า "ผู้ดูแลและสิทธิ์" (แท็บ ออนไลน์ตอนนี้ และเมนูแสดงจำนวนคนออนไลน์ 🟢) "รายละเอียดสำหรับ AI" อยู่ในหน้า "เวอร์ชันและสิ่งที่เปลี่ยน" "หมวดคะแนน" และ "ตั้งค่าเพลง" อยู่ในหน้า "ตั้งค่า" ลิงก์เดิมยังเปิดได้',
+            en: 'Repeated pages are tabs now: "Who is online" is inside "Admins & permissions" (tab Online now, and the menu shows how many are online 🟢), "Details for AI" is inside "Version & changes", "Point categories" and "Music settings" are inside "Settings". Old links still open them' },
+          { a: 'admin', th: 'ผู้ดูแลสูงสุด: เลือกโปรแกรมได้ที่มุมซ้ายบนของเมนูด้านข้าง (คอมพิวเตอร์) หรือบรรทัดเดียวด้านบนของหน้าผู้ดูแล (มือถือ) แทนการ์ดโปรแกรมเดิม และป้ายผู้ดูแลสูงสุดเหลืออันเดียว ปุ่มออกจากระบบเหลือปุ่มเดียว (สำหรับผู้ดูแลสูงสุดจะเตือนก่อนเหมือนเดิม)',
+            en: 'Super admin: pick the program at the top left of the side menu (computer) or in one line at the top of the admin page (phone) instead of the old program card. Only one super admin badge and one sign-out button (for the super admin it still warns first)' },
+          { a: 'safety', th: 'ใหม่: ปิดปรับปรุงทีละโปรแกรม ผู้ดูแลสูงสุดกด "เริ่มปิดปรับปรุง" ในหน้าโปรแกรม เลือกฉาก (ต้นคริสต์มาส หรือ กระต่ายเฝ้าไข่) ระหว่างนั้นเด็กและผู้ดูแลคนอื่นเห็นแค่ฉากเต็มจอกับคำว่า "ปิดปรับปรุงชั่วคราว" ปุ่มเปลี่ยนสี และปุ่มเปิด/ปิดเสียง ไม่มีเมนูหรือหน้าต่างเด้ง และฐานข้อมูลไม่ยอมให้ใครแก้ไขข้อมูลของโปรแกรมนั้นนอกจากผู้ดูแลสูงสุด ผู้ดูแลสูงสุดยังใช้ได้ทุกอย่าง และเห็นแถบสีส้มเตือนว่ากำลังปิดปรับปรุง',
+            en: 'New: maintenance mode per program. The super admin presses "Start maintenance" on the Programs page and picks a scene (Christmas tree or bunny looking after eggs). Meanwhile kids and other admins see only a full-screen scene with "Under maintenance", a colour button and a sound button, no menus or pop-ups, and the database refuses every change to that program from anyone but the super admin. The super admin can still do everything and sees an orange reminder bar' },
+          { a: 'data', th: 'ฐานข้อมูล: ช่องใหม่ programs.maintenance และตัวกันการเขียนข้อมูลระหว่างปิดปรับปรุง (supabase/023_maintenance.sql) ไม่มีข้อมูลเดิมถูกลบ',
+            en: 'Database: new programs.maintenance and a write guard during maintenance (supabase/023_maintenance.sql). No existing data was deleted' },
+        ] },
+      { v: '36', date: '2026-11-17', commit: 'd1d5c75',
         short: { th: 'ตัวเลขจำนวนครั้งที่เปิดแอปและจำนวนความคิดเห็นบนหน้าแรกของเด็ก ๆ เปิด/ปิดได้ในหน้าตั้งค่า',
                  en: "Visits and feedback counters on the kids' home page, each with an on/off switch in Settings" },
         items: [
