@@ -789,3 +789,43 @@ Object.assign(DICT.en, {
   mtDoneOn: (n) => `"${n}" is under maintenance`, mtDoneOff: (n) => `"${n}" is open again`,
   mtBlocked: 'This program is under maintenance, so nothing can be saved right now',
 });
+
+// v38 (roadmap step 8): folding menu groups, settings search, cleaner export page, data tools for the super admin
+Object.assign(DICT.th, {
+  g_people: 'คน', g_content: 'เนื้อหา', g_program: 'โปรแกรม', g_data: 'ข้อมูล',
+  sub_programs: 'โปรแกรม', sub_look: 'หน้าตา', sub_phone: 'ตัวอย่างบนมือถือ',
+  findPh: 'ค้นหาการตั้งค่า', findNone: 'ไม่พบ ลองคำอื่น', dangerZone: 'ระวัง',
+  xd_summary: 'คะแนนและการมาของแต่ละคน', xd_points: 'ทุกครั้งที่ให้คะแนน', xd_att: 'การเช็กชื่อทุกวัน', xd_feedback: 'ความคิดเห็นของเด็ก',
+  xd_shop: 'ของรางวัลในร้าน', xd_redeem: 'ใครแลกอะไรไปบ้าง', xd_adminlog: 'ผู้ดูแลเปลี่ยนอะไรบ้าง', xd_kidlog: 'เด็กเปิดหน้าไหน พร้อมสรุป',
+  tab_data: 'เครื่องมือข้อมูล', m_data: 'ไฟล์ SQL ช่องพิมพ์ SQL และกราฟสรุป',
+  dtIntro: (n) => `ข้อมูลของ "${n}" ทุกอย่างในหน้านี้ใช้สำเนาในเครื่องนี้ จึงไม่เปลี่ยนหรือลบข้อมูลจริง`,
+  dtFiles: 'ดาวน์โหลดข้อมูล', dtSqlFile: 'ไฟล์ SQL (ทุกตาราง)', dtJsonAll: 'JSON (ทุกตาราง)',
+  dtSqlSub: 'ไฟล์ .sql เปิดได้ทั้ง PostgreSQL และ SQLite (โหลดลงฐานข้อมูลว่าง)', dtCsv: 'CSV ทีละตาราง', dtRows: (n) => `${n} แถว`,
+  dtBox: 'ช่องพิมพ์ SQL', dtBoxSub: 'ใช้ SQLite กับสำเนาข้อมูลในเครื่องนี้ ลองได้เต็มที่ ข้อมูลจริงไม่เปลี่ยน (กด Ctrl+Enter เพื่อรัน)',
+  dtExamples: 'ตัวอย่างคำสั่ง', dtRun: 'รัน', dtResCsv: 'ส่งออกผลลัพธ์ CSV', dtNoRows: 'รันแล้ว ไม่มีแถวให้แสดง', dtFirst: (n) => `แสดง ${n} แถวแรก`,
+  dtSchema: 'ตารางและคอลัมน์', dtInsights: 'สรุปภาพรวม', dtSeeNums: 'ดูตัวเลข',
+  dtEx_top: 'เด็ก 10 อันดับแรก', dtEx_day: 'จำนวนคนมาแต่ละวัน', dtEx_cat: 'คะแนนตามหมวด', dtEx_rate: 'อัตราการมาของแต่ละคน (JOIN)',
+  dtEx_run: 'คะแนนสะสมรายวัน (window function)', dtEx_prize: 'ของรางวัลที่แลกบ่อย',
+  dtT_kids: 'เด็ก', dtT_days: 'วันที่เช็กชื่อ', dtT_rate: 'อัตราการมาเฉลี่ย', dtT_rateSub: 'วันที่มา ÷ วันที่เช็กชื่อ', dtT_points: 'คะแนนที่ให้ทั้งหมด',
+  dtT_median: 'คะแนนกลาง (มัธยฐาน)', dtT_meanSd: (m, s) => `เฉลี่ย ${m} · SD ${s}`,
+  dtC_day: 'คนมาแต่ละวัน', dtC_cat: 'คะแนนตามหมวด', dtC_came: 'เด็กมากี่วัน', dtC_cameSub: 'แกนนอน = จำนวนวันที่มา, ความสูง = จำนวนเด็ก', dtDaysCame: 'จำนวนวันที่มา', dtC_top: 'เด็ก 10 อันดับแรก',
+});
+Object.assign(DICT.en, {
+  g_people: 'People', g_content: 'Content', g_program: 'Program', g_data: 'Data',
+  sub_programs: 'Programs', sub_look: 'Look', sub_phone: 'Phone preview',
+  findPh: 'Search settings', findNone: 'Nothing found. Try another word', dangerZone: 'Careful',
+  xd_summary: "Each kid's points and attendance", xd_points: 'Every time points were given', xd_att: 'Every attendance day', xd_feedback: "Kids' comments",
+  xd_shop: 'Prizes in the shop', xd_redeem: 'Who got which prize', xd_adminlog: 'What admins changed', xd_kidlog: 'Pages kids opened, with a summary',
+  tab_data: 'Data tools', m_data: 'SQL file, SQL box and charts',
+  dtIntro: (n) => `Data of "${n}". Everything on this page uses a copy on this device, so the live data never changes`,
+  dtFiles: 'Download the data', dtSqlFile: 'SQL file (all tables)', dtJsonAll: 'JSON (all tables)',
+  dtSqlSub: 'The .sql file works in PostgreSQL and SQLite (load it into an empty database)', dtCsv: 'CSV, one table at a time', dtRows: (n) => `${n} rows`,
+  dtBox: 'SQL box', dtBoxSub: 'SQLite on a copy of the data on this device. Try anything: the live data never changes (Ctrl+Enter runs)',
+  dtExamples: 'Example queries', dtRun: 'Run', dtResCsv: 'Export result as CSV', dtNoRows: 'Done. No rows to show', dtFirst: (n) => `showing the first ${n}`,
+  dtSchema: 'Tables and columns', dtInsights: 'Quick insights', dtSeeNums: 'See the numbers',
+  dtEx_top: 'Top 10 kids', dtEx_day: 'Kids present per day', dtEx_cat: 'Points per category', dtEx_rate: 'Attendance rate per kid (JOIN)',
+  dtEx_run: 'Running total of points (window function)', dtEx_prize: 'Most popular prizes',
+  dtT_kids: 'Kids', dtT_days: 'Attendance days', dtT_rate: 'Average attendance', dtT_rateSub: 'days present ÷ attendance days', dtT_points: 'Points given',
+  dtT_median: 'Median points', dtT_meanSd: (m, s) => `mean ${m} · SD ${s}`,
+  dtC_day: 'Kids present per day', dtC_cat: 'Points per category', dtC_came: 'How many days kids came', dtC_cameSub: 'across = days present, height = number of kids', dtDaysCame: 'Days present', dtC_top: 'Top 10 kids',
+});

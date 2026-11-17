@@ -1,15 +1,15 @@
-import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=37';
-import { api, MODE, DEMO, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=37';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=37';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=37';
+import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=38';
+import { api, MODE, DEMO, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=38';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=38';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=38';
 
-import { music } from './music.js?v=37';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=37';
-import { snow } from './snow.js?v=37';
-import { track } from './track.js?v=37';
-import { calmIcon } from './icons.js?v=37';
-import { metro } from './metronome.js?v=37';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=37';
+import { music } from './music.js?v=38';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=38';
+import { snow } from './snow.js?v=38';
+import { track } from './track.js?v=38';
+import { calmIcon } from './icons.js?v=38';
+import { metro } from './metronome.js?v=38';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=38';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -73,7 +73,7 @@ async function leaderboard(force = false) {
 const pageHead = (title, backTo = '#/admin') =>
   `<div class="page-head"><a class="back" href="${backTo}">‹ ${t('back')}</a><h1 class="page-title">${title}</h1></div>${subTabs()}`;
 // v37: pages that share one menu item show small tabs under the title (e.g. Settings | Point categories | Music)
-const TABSETS = [['admins', 'online'], ['about', 'ai'], ['settings', 'pcats', 'musicset']];
+const TABSETS = [['admins', 'online'], ['about', 'ai'], ['settings', 'pcats', 'musicset', 'phone'], ['programs', 'look']];   // v38: + phone, look
 function subTabs() {
   const [, , k, extra] = (location.hash || '').split('/');
   const set = !extra && TABSETS.find(x => x.includes(k)); if (!set) return '';
@@ -137,7 +137,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=37');
+    const m = await import('./scene3d.js?v=38');
     if (m.initScene($('#scene'), { pack: part('scene') === 'cross' ? 'easter' : 'christmas' })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -898,12 +898,15 @@ const PAGES = {
   admins: ['super', async (x) => x ? (await saMod()).pAdminEdit(saCtx(), x) : (await saMod()).pAdmins(saCtx())],
   programs: ['super', async () => (await saMod()).pPrograms(saCtx())], look: ['super', async () => (await saMod()).pLook(saCtx())],
   online: ['super', async () => (await saMod()).pOnline(saCtx())], ai: ['super', async () => (await saMod()).pAi(saCtx())],
+  data: ['super', async () => (await import('./datatools.js?v=38')).pData(dtCtx())],   // v38 roadmap step 8
 };
 const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? isSuper() : can(need); };
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
   PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame, paintMaintBar });
-const saMod = () => import('./superadmin.js?v=37');
+const saMod = () => import('./superadmin.js?v=38');
+// v38: helpers for the data tools page (js/datatools.js)
+const dtCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, program, leaderboard, pcats, cName, bkkToday, loadXLSX, isSuper });
 
 // "who is online" for the super admin: a ping when an admin page opens and about every 45 s while one stays open
 let pingAt = 0, pingPage = '';
@@ -932,30 +935,96 @@ async function adultGate(page) {
   setSide(ok ? (SIDE_OF[page] || page) : 'home');
   if (!ok) return adultHome();
   await PAGES[page][1](location.hash.split('/')[3]);
+  if (findNext) setTimeout(flashFind, 350);                       // v38: came here from the settings search
 }
 
 // v33: the admin menu groups (admin home on phones, side menu on PC); only pages this admin may open
+// v38: five simple groups that fold open and shut; pages that share one menu item are tabs (TABSETS)
 function adminGroups() {
   return [
-    ...(isSuper() ? [['g_super', [['admins', '👥', 'super'], ['programs', '📁', 'super'], ['look', '🎨', 'super']]]] : []),
     ['g_daily', [['attendance', '✅'], ['points', '⭐'], ['redeem', '🎟️'], ['weekly', '📊']]],
-    ['g_kids', [['kids', '👧'], ['members', '🔑'], ['notice', '📣']]],
-    ['g_songs', [['songs', '🎵']]],
-    ['g_settings', [['shop', '🎁'], ['feedback', '💬'], ['settings', '⚙️'], ['phone', '📱']]],
-    ['g_system', [['export', '📥'], ['about', 'ℹ️']]],
+    ['g_people', [['kids', '👧'], ['members', '🔑'], ['admins', '👥']]],
+    ['g_content', [['songs', '🎵'], ['notice', '📣'], ['shop', '🎁'], ['feedback', '💬']]],
+    ['g_program', [['programs', '📁'], ['settings', '⚙️']]],
+    ['g_data', [['export', '📥'], ['data', '🧮'], ['about', 'ℹ️']]],
   ].map(([g, items]) => [g, items.filter(([k]) => pageOk(k))]).filter(([, items]) => items.length);
 }
+// which groups are open (remembered on this device); the group of the page that is open is always open
+const GRP_KEY = 'ya_menu_open';
+function grpOpen() { try { const v = JSON.parse(localStorage.getItem(GRP_KEY)); return Array.isArray(v) ? v : ['g_daily']; } catch { return ['g_daily']; } }
+function grpRemember(root) {
+  root.querySelectorAll('details[data-g]').forEach(d => d.addEventListener('toggle', () => {
+    const open = new Set(grpOpen()); d.open ? open.add(d.dataset.g) : open.delete(d.dataset.g);
+    try { localStorage.setItem(GRP_KEY, JSON.stringify([...open])); } catch {}
+  }));
+}
+// ---------- v38: settings search (top of the side menu on PC, top of the admin home on phones)
+// Each entry = [page, text key]; the words are searched in Thai AND English, so either language finds it.
+const FIND_ITEMS = [
+  ['settings', 'secPoints'], ['settings', 'attPoints'], ['settings', 'secTips'], ['settings', 'tipDays'], ['settings', 'secHomeCount'], ['settings', 'swVisits'], ['settings', 'swFbCount'],
+  ['musicset', 'simpleSongs'], ['musicset', 'ms_player'], ['musicset', 'mg_app'], ['pcats', 'tab_pcats'], ['phone', 'tab_phone'],
+  ['look', 'installApp'], ['look', 'clogDetailT'], ['look', 'lookTitle'], ['look', 'layTitle'], ['look', 'lookName'], ['look', 'lookEmoji'], ['look', 'lookLogo'],
+  ['look', 'lookFont'], ['look', 'lookSize'], ['look', 'lookMode'], ['look', 'lookPack'], ['look', 'lookParts'],
+  ['programs', 'progNew'], ['programs', 'mtLabel'], ['online', 'tab_online'], ['ai', 'tab_ai'], ['attsum', 'attSummary'], ['history', 'seeHistory'],
+  ['export', 'exportAll'], ['export', 'logsGrp'], ['export', 'clearKidLog'],
+  ['data', 'dtSqlFile'], ['data', 'dtCsv'], ['data', 'dtBox'], ['data', 'dtInsights'],
+];
+const fold = (x) => String(x || '').toLowerCase().replace(/[\p{Extended_Pictographic}\u{FE0F}]/gu, '').trim();
+function findIndex() {
+  const out = [];
+  adminGroups().forEach(([, items]) => items.forEach(([k, i]) => out.push({ page: k, key: 'tab_' + k, icon: i, words: ['th', 'en'].map(l => fold(tBase('tab_' + k, l)) + ' ' + fold(tBase('m_' + k, l))).join(' ') + ' ' + k })));
+  FIND_ITEMS.forEach(([page, key]) => {
+    if (!pageOk(page)) return;
+    const th = tBase(key, 'th'), en = tBase(key, 'en'); if (!th || th === key) return;
+    out.push({ page, key, words: fold(th) + ' ' + fold(en) });
+  });
+  return out;
+}
+const findBox = (id) => `<div class="msearch"><input class="input" type="search" id="${id}" autocomplete="off" placeholder="🔍 ${t('findPh')}" aria-label="${t('findPh')}"><div class="msearch-res" hidden></div></div>`;
+let findNext = '';
+function bindFind(root) {
+  const inp = root.querySelector('.msearch input'); if (!inp) return;
+  const res = inp.nextElementSibling;
+  const parentName = (pg) => { const set = TABSETS.find(x => x.includes(pg)); return t('tab_' + (SIDE_OF[pg] || (set ? set[0] : pg))); };
+  const show = () => {
+    const q = fold(inp.value); if (!q) { res.hidden = true; res.innerHTML = ''; return; }
+    const parts = q.split(/\s+/);
+    const hits = findIndex().filter(x => parts.every(w => x.words.includes(w))).slice(0, 8);
+    res.hidden = false;
+    res.innerHTML = hits.length ? hits.map((x, n) => `<button type="button" class="msearch-hit" data-n="${n}"><b>${esc(fold(t(x.key)) ? t(x.key).replace(/^[\p{Extended_Pictographic}\u{FE0F}\s]+/u, '') : x.page)}</b>${x.key.startsWith('tab_') ? '' : `<span>${esc(parentName(x.page))}</span>`}</button>`).join('')
+      : `<p class="muted msearch-none">${t('findNone')}</p>`;
+    res.querySelectorAll('.msearch-hit').forEach(btn => btn.onclick = () => {
+      const x = hits[+btn.dataset.n]; findNext = x.key.startsWith('tab_') ? '' : t(x.key);
+      inp.value = ''; res.hidden = true;
+      if (location.hash === '#/admin/' + x.page) { render(); } else location.hash = '#/admin/' + x.page;
+    });
+  };
+  inp.addEventListener('input', show);
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); res.querySelector('.msearch-hit')?.click(); } if (e.key === 'Escape') { inp.value = ''; show(); } });
+}
+// after a search hit opens a page: scroll to the setting and light it up for a moment
+function flashFind() {
+  const want = fold(findNext); findNext = ''; if (!want) return;
+  const el = [...view.querySelectorAll('h2, h3, summary, label, .tg-t b, b, button, .grp')].find(e => fold(e.textContent).includes(want));
+  if (!el) return;
+  const d = el.closest('details'); if (d && !d.open) d.open = true;
+  const box = el.closest('.tg-row, .field, .card, details') || el;
+  box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  box.classList.add('find-flash'); setTimeout(() => box.classList.remove('find-flash'), 2600);
+}
 // ---------- v33: PC side menu for the admin area (shown by CSS only on screens 1024 px and wider; phones keep the home menu)
-const SIDE_OF = { attsum: 'attendance', history: 'points', song: 'songs', sync: 'songs', online: 'admins', ai: 'about', pcats: 'settings', musicset: 'settings' };   // sub-pages light up their parent
+const SIDE_OF = { attsum: 'attendance', history: 'points', song: 'songs', sync: 'songs', online: 'admins', ai: 'about', pcats: 'settings', musicset: 'settings', phone: 'settings', look: 'programs' };   // sub-pages light up their parent
 function setSide(page) {                    // page = the admin page that is open ('home' = admin home), null = no side menu
   const box = $('#adminSide'), on = page !== null;
   document.body.classList.toggle('has-side', on); box.hidden = !on;
   if (!on) { box.innerHTML = ''; return; }
-  box.innerHTML = `<div class="side-prog">${progPicker('sideProg')}</div>
+  const open = grpOpen();
+  box.innerHTML = `<div class="side-prog">${progPicker('sideProg')}</div>${findBox('sideFind')}
     <a class="side-link ${page === 'home' ? 'on' : ''}" data-k="home" href="#/admin"><span class="mi">🏠</span><span>${t('adultMenu')}</span></a>
-    ${adminGroups().map(([g, items]) => `<h3 class="side-grp">${t(g)}</h3>${items.map(([k, i]) =>
-      `<a class="side-link ${k === page ? 'on' : ''}" data-k="${k}" href="#/admin/${k}"><span class="mi">${i}</span><span>${t('tab_' + k)}</span></a>`).join('')}`).join('')}
+    ${adminGroups().map(([g, items]) => `<details class="side-det" data-g="${g}" ${open.includes(g) || items.some(([k]) => k === page) ? 'open' : ''}><summary class="side-grp">${t(g)}</summary>${items.map(([k, i]) =>
+      `<a class="side-link ${k === page ? 'on' : ''}" data-k="${k}" href="#/admin/${k}"><span class="mi">${i}</span><span>${t('tab_' + k)}</span></a>`).join('')}</details>`).join('')}
     <a class="side-link quiet" href="#/"><span class="mi">‹</span><span>${t('sideKids')}</span></a>`;
+  grpRemember(box); bindFind(box);
   bindPicker(box);
   calmAll();
 }
@@ -1003,13 +1072,15 @@ function bindPicker(root) {
   root.querySelectorAll('.prog-pick').forEach(ps => { ps.onchange = () => { location.href = linkFor(ps.value) + '#/admin'; }; });
 }
 function adultHome() {
-  const groups = adminGroups();
+  const groups = adminGroups(), open = grpOpen();
   view.innerHTML = `
     <div class="page-head"><a class="back" href="#/">‹ ${t('back')}</a><h1 class="page-title">${t('adultMenu')}</h1>
       <button class="btn small head-btn" id="copyLink" title="${t('copyUserLinkSub')}">🔗 ${t('copyUserLink')}</button></div>
     <div class="adm-top" id="admTop">${progPicker('progSel')}${isSuper() ? '<span class="sa-until" id="saUntil"></span>' : ''}</div>
-    ${groups.map(([g, items]) => `<h2 class="grp ${g === 'g_super' ? 'grp-super' : ''}">${g === 'g_super' ? '👑 ' : ''}${t(g)}</h2><nav class="menu grouped ${g === 'g_super' ? 'super-menu' : ''}">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
-      <span class="mt"><b>${t('tab_' + k)}</b><span>${t('m_' + k, VERSION)}</span></span><span class="chev">›</span></a>`).join('')}</nav>`).join('')}
+    ${findBox('homeFind')}
+    ${groups.map(([g, items]) => `<details class="mgrp" data-g="${g}" ${open.includes(g) ? 'open' : ''}><summary><span class="mgrp-t">${t(g)}</span><span class="mgrp-n">${items.map(([k]) => t('tab_' + k)).join(' · ')}</span></summary>
+      <nav class="menu grouped">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
+      <span class="mt"><b>${t('tab_' + k)}</b><span>${t('m_' + k, VERSION)}</span></span><span class="chev">›</span></a>`).join('')}</nav></details>`).join('')}
     <button class="btn wide" style="margin-top:24px" id="logout">${t('logout')}</button>
     ${MODE === 'preview' ? `<p class="preview-note">${t('previewNote')}</p>` : ''}`;
   // v37: one sign-out button; for the super admin it also ends the super admin powers on this device (with a warning)
@@ -1018,7 +1089,7 @@ function adultHome() {
     await api.signOut(); location.hash = '#/admin'; render();
   };
   $('#copyLink').onclick = () => copyText(linkFor(program.slug), t('userLinkCopied'));
-  bindPicker($('#admTop'));
+  bindPicker($('#admTop')); grpRemember(view); bindFind(view);
   if (isSuper()) saMod().then(m => { m.superUntil(saCtx(), $('#saUntil')); m.onlineCount(saCtx(), view.querySelector('.menu [data-k="admins"]')); }).catch(console.error);
   // red indicators: things that still need filling in
   const seq = renderSeq;
@@ -1026,7 +1097,7 @@ function adultHome() {
     if (seq !== renderSeq) return;                              // page changed meanwhile
     Object.keys(n).forEach(k => {
       const el = view.querySelector(`.menu [data-k="${k}"]`); if (!el || el.classList.contains('alert')) return;
-      el.classList.add('alert');
+      el.classList.add('alert'); el.closest('details')?.classList.add('has-alert');   // v38: a dot on a folded group too
       el.querySelector('.mi').insertAdjacentHTML('beforeend', '<span class="dot"></span>');
       el.querySelector('.mt span').outerHTML = `<span class="need">${esc(n[k])}</span>`;
     });
@@ -1701,7 +1772,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=37');
+      const { readSheet } = await import('./ocr.js?v=38');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -2018,7 +2089,8 @@ function loadXLSX() {
   if (window.XLSX) return Promise.resolve(window.XLSX);
   return new Promise((res, rej) => { const s = document.createElement('script'); s.src = XLSX_URL; s.onload = () => res(window.XLSX); s.onerror = rej; document.head.appendChild(s); });
 }
-const XL_SHEETS = [['xs_summary', 'summary', '📊'], ['xs_points', 'points', '⭐'], ['xs_att', 'attendance', '✅'], ['xs_attsum', 'attendance-totals', '📈'], ['xs_feedback', 'feedback', '💬'], ['xs_shop', 'shop', '🎁'], ['xs_redeem', 'prizes-given', '🎟️'],
+// v38: "Attendance totals" was the same numbers as the summary per kid (removed); the activity summary now comes with "Kids' activity"
+const XL_SHEETS = [['xs_summary', 'summary', '📊'], ['xs_points', 'points', '⭐'], ['xs_att', 'attendance', '✅'], ['xs_feedback', 'feedback', '💬'], ['xs_shop', 'shop', '🎁'], ['xs_redeem', 'prizes-given', '🎟️'],
   ['xs_adminlog', 'admin-log', '📜'], ['xs_kidlog', 'kid-activity', '👆'], ['xs_kidsum', 'kid-activity-summary', '📈']];
 const LOG_SHEETS = ['xs_adminlog', 'xs_kidlog', 'xs_kidsum'];
 const TBL = { songs: 'lt_songs', kids: 'lt_kids', points: 'lt_points', attendance: 'lt_att', attendance_rounds: 'lt_round', shop_items: 'lt_shop', point_categories: 'lt_pcats', settings: 'lt_settings', staff: 'lt_staff', staff_programs: 'lt_staffprog', kid_events: 'lt_kidlog', redemptions: 'lt_redeem', members: 'lt_members', programs: 'lt_programs' };
@@ -2056,19 +2128,22 @@ const EVT_TH = ['open_app', 'view', 'tap_kid', 'tap_my_card', 'set_me', 'not_me'
 const evName = (e) => EVT_TH.includes(e) ? t('ev_' + e) : e;
 
 async function pExport() {
+  // v38: one clean list (name + short line on the left, a full "Export" button on the right), nothing cut off on phones or PC
+  const rows = (keys) => `<div class="xl-list">${keys.map(xlRow).join('')}</div>`;
   view.innerHTML = `${pageHead(t('tab_export'))}
-    <button class="btn primary wide" data-x="all" style="margin-bottom:6px">📥 ${t('exportAll')}</button>
-    <p class="muted" style="margin:0 0 14px;text-align:center">${t('exportAllSub')}</p>
+    <div class="card xl-all"><button class="btn primary wide" data-x="all">📥 ${t('exportAll')}</button>
+      <p class="muted">${t('exportAllSub')}</p></div>
     <h2 class="grp">${t('exportEach')}</h2>
-    <nav class="menu grouped">${XL_SHEETS.filter(([k]) => !LOG_SHEETS.includes(k) && xlOk(k)).map(xlRow).join('')}</nav>
+    ${rows(XL_SHEETS.filter(([k]) => !LOG_SHEETS.includes(k) && xlOk(k)))}
     ${isSuper() ? `<h2 class="grp grp-super">👑 ${t('logsGrp')}</h2>
-    <nav class="menu grouped super-menu">${XL_SHEETS.filter(([k]) => LOG_SHEETS.includes(k)).map(xlRow).join('')}</nav>
-    <p class="muted" style="margin:6px 4px 0">🔒 ${t('adminLogNote')} · ${t('logsSuperNote')}</p>` : ''}
-    ${isSuper() ? `<button class="btn danger wide" id="clearKid" style="margin-top:24px">🗑️ ${t('clearKidLog')}</button>
-    <p class="muted" style="margin:6px 4px 0">${t('clearKidNote')}</p>` : ''}`;
+    ${rows(XL_SHEETS.filter(([k]) => LOG_SHEETS.includes(k) && k !== 'xs_kidsum'))}
+    <p class="muted xl-note">🔒 ${t('adminLogNote')} · ${t('logsSuperNote')}</p>
+    <h2 class="grp">${t('dangerZone')}</h2>
+    <div class="card"><button class="btn danger wide" id="clearKid">🗑️ ${t('clearKidLog')}</button>
+    <p class="muted xl-note">${t('clearKidNote')}</p></div>` : ''}`;
   view.querySelectorAll('[data-x]').forEach(b => b.onclick = async () => {
     const keep = b.innerHTML; b.disabled = true; b.textContent = t('exporting');
-    try { await buildExcel(b.dataset.x === 'all' ? null : [b.dataset.x]); } catch (err) { fail(err); }
+    try { await buildExcel(b.dataset.x === 'all' ? null : b.dataset.x === 'xs_kidlog' ? ['xs_kidlog', 'xs_kidsum'] : [b.dataset.x]); } catch (err) { fail(err); }
     b.disabled = false; b.innerHTML = keep;
   });
   $('#clearKid')?.addEventListener('click', async () => {
@@ -2084,7 +2159,8 @@ async function pExport() {
 }
 // v32: logs are the super admin's; feedback needs the feedback permission
 const xlOk = (k) => LOG_SHEETS.includes(k) ? isSuper() : k === 'xs_feedback' ? can('feedback') : true;
-const xlRow = ([k, , i]) => `<button class="xl-row" data-x="${k}"><span class="mi">${i}</span><span class="mt"><b>${t(k)}</b></span><span class="xl-dl">📥 ${t('exportOne')}</span></button>`;
+const xlRow = ([k, , i]) => `<div class="xl-item"><span class="mi">${i}</span><span class="xl-t"><b>${t(k)}</b><span>${t('xd_' + k.slice(3))}</span></span>
+  <button class="btn small xl-btn" data-x="${k}">📥 ${t('exportOne')}</button></div>`;
 async function buildExcel(only = null) {
   only = (only || XL_SHEETS.map(x => x[0])).filter(xlOk);
   const want = (k) => only.includes(k);
@@ -2108,7 +2184,6 @@ async function buildExcel(only = null) {
     ['xs_summary', summary],
     ['xs_points', pts.map(p => ({ [t('date')]: dt(p.created_at), [t('nickname')]: p.kids?.nickname || kidName[p.kid_id] || '', [t('category')]: cName(cOf(p.skill)), [t('xc_detail')]: p.detail || '', [t('xc_points')]: p.amount, [t('note')]: p.note || '' }))],
     ['xs_att', [...att].sort((a, b) => a.day.localeCompare(b.day)).map(r => ({ [t('date')]: r.day, [t('nickname')]: kidName[r.kid_id] || '', [t('xc_status')]: stTxt[r.status] }))],
-    ['xs_attsum', kids.map(k => { const a = attC[k.id] || { present: 0, leave: 0, absent: 0 }; return { [t('nickname')]: k.nickname, [t('present')]: a.present, [t('leave')]: a.leave, [t('absent')]: a.absent }; })],
     ['xs_feedback', fb.map(f => ({ [t('date')]: dt(f.created_at), [t('nickname')]: f.kid_name || t('anon'), [t('xc_mood')]: ['', '😢', '😐', '🙂', '😄'][f.mood] || '', [t('xc_msg')]: f.message }))],
     ['xs_adminlog', alog.map(e => { const d = describeLog(e, kidName); return { [t('xc_time')]: dt(e.created_at), [t('xc_admin')]: e.actor_email || t('lt_system'), [t('xc_action')]: d.op, [t('xc_area')]: d.area, [t('xc_item')]: d.item || '', [t('xc_changes')]: d.changes, [t('xc_key')]: e.row_key }; })],
     ['xs_kidlog', kev.map(e => ({ [t('xc_time')]: dt(e.created_at), [t('xc_device')]: e.device_id, [t('nickname')]: kidName[e.kid_id] || '', [t('xc_event')]: evName(e.event), [t('xc_eventcode')]: e.event, [t('xc_detail')]: e.detail, [t('xc_page')]: e.path }))],
@@ -2124,7 +2199,7 @@ async function buildExcel(only = null) {
     ws['!cols'] = cols.map(c => ({ wch: Math.min(50, Math.max(c.length + 2, ...data.map(r => String(r[c] ?? '').length + 2))) }));
     XLSX.utils.book_append_sheet(wb, ws, t(k).slice(0, 31));
   }
-  const slug = only.length === 1 ? (XL_SHEETS.find(s => s[0] === only[0])?.[1] + '-') : '';
+  const slug = (only.length === 1 || only.join() === 'xs_kidlog,xs_kidsum') ? (XL_SHEETS.find(s => s[0] === only[0])?.[1] + '-') : '';
   XLSX.writeFile(wb, `youth-alpha-${slug}${bkkToday()}.xlsx`);
 }
 
@@ -2235,24 +2310,34 @@ function maintView() {
   b.classList.add('maint'); b.classList.remove('adult', 'sheet-full', 'song-page'); setSide(null);
   scene?.stop?.(); $('#kidSheet').hidden = true;
   sc === 'tree' ? snow.start() : snow.stop();
-  music.setPack(sc === 'bunny' ? 'easter' : 'christmas'); music.setTrack('jingle'); music.setAllowed(true);
-  const sound = () => `${music.playing ? '🔊' : '🔇'} ${t(music.playing ? 'mtSoundOn' : 'mtSoundOff')}`;
+  music.setAllowed(false);                                        // v38: no sound button any more, so no music either
+  // v38: no buttons on the maintenance scene (owner's request): just the picture and the words
   view.innerHTML = `<section class="maint-scene ${sc}">${MAINT_ART[sc]}
-    <h1 class="mt-title">🛠️ ${t('mtTitle')}</h1><p class="mt-sub">${t('mtSub')}</p>
-    <div class="mt-btns"><button class="kbtn" id="mtColour">🎨 ${t('mtColour')}</button><button class="kbtn" id="mtSound">${sound()}</button></div></section>`;
-  $('#mtColour').onclick = () => {                                // next colour theme, straight away (no pop-up)
-    const ks = THEMES.map(x => x[0]), i = ks.indexOf(b.dataset.theme || 'snow');
-    applyTheme(ks[(i + 1) % ks.length]);
-  };
-  $('#mtSound').onclick = (e) => { e.stopPropagation(); music.toggle(); $('#mtSound').textContent = sound(); paintChrome(); };
+    <h1 class="mt-title">🛠️ ${t('mtTitle')}</h1><p class="mt-sub">${t('mtSub')}</p></section>`;
 }
 // the super admin's reminder: a thin bar on every page while the program is in maintenance
 function paintMaintBar() {
   let bar = $('#maintBar');
   const show = maintOn() && !document.body.classList.contains('maint') && (isSuper() || maintSup === true);
   if (!show) { if (bar) bar.hidden = true; return; }
-  if (!bar) { bar = document.createElement('a'); bar.id = 'maintBar'; bar.className = 'maint-bar'; $('#offBar').before(bar); }
-  bar.href = '#/admin/programs'; bar.hidden = false; bar.textContent = '🛠️ ' + t('mtBar');
+  if (!bar) {
+    bar = document.createElement('button'); bar.id = 'maintBar'; bar.type = 'button'; bar.className = 'maint-bar'; $('#offBar').before(bar);
+    bar.onclick = endMaintFromBar;
+  }
+  bar.hidden = false; bar.textContent = '🛠️ ' + t('mtBar');
+}
+// v38: tapping the orange bar really ends maintenance (after a warning that names the program); only the super admin may
+async function endMaintFromBar() {
+  if (!isSuper() && maintSup !== true) return;
+  if (!(await confirmBox(t('mtWarnOff', program.name), t('mtTurnOff'), false))) return;
+  const scene = program.maintenance?.scene === 'bunny' ? 'bunny' : 'tree';
+  try {
+    await api.programSetMaint(program.id, false, scene);
+    program.maintenance = { on: false, scene };
+    const row = program.list.find(x => x.id === program.id); if (row) row.maintenance = program.maintenance;
+    try { Object.keys(localStorage).filter(k => k.includes('programs')).forEach(k => localStorage.removeItem(k)); } catch {}
+    paintMaintBar(); toast('✓ ' + t('mtDoneOff', program.name)); render();
+  } catch (e) { fail(e); }
 }
 // an app left open notices the switch within about two minutes
 setInterval(async () => {

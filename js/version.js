@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '37';
+export const VERSION = '38';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,24 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '37', date: '2026-11-17', commit: '',
+      { v: '38', date: '2026-11-17', commit: '',
+        short: { th: 'เมนูผู้ดูแลพับเป็น 5 หมวด มีช่องค้นหาการตั้งค่า หน้าส่งออกอ่านง่ายขึ้น และเครื่องมือข้อมูลใหม่สำหรับผู้ดูแลสูงสุด (ไฟล์ SQL, ช่องพิมพ์ SQL, กราฟสรุป)',
+                 en: 'The admin menu folds into 5 groups with a settings search, a cleaner export page, and new data tools for the super admin (SQL file, SQL box, charts)' },
+        items: [
+          { a: 'admin', th: 'เมนูผู้ดูแลแบ่งเป็น 5 หมวด (ประจำวัน · คน · เนื้อหา · โปรแกรม · ข้อมูล) กดหัวข้อเพื่อเปิด/ปิด เครื่องจำว่าเปิดหมวดไหนไว้ หมวดที่ปิดอยู่มีจุดแดงถ้ามีอะไรต้องทำ',
+            en: 'The admin menu has 5 groups (Daily · People · Content · Program · Data). Tap a group to open or close it; the device remembers which are open, and a closed group shows a red dot when something needs doing' },
+          { a: 'admin', th: 'ช่องค้นหาการตั้งค่าด้านบนเมนู พิมพ์ได้ทั้งไทยและอังกฤษ (เช่น "เพลง", "logo") กดผลลัพธ์แล้วจะเปิดหน้านั้นและไฮไลต์การตั้งค่าที่หา',
+            en: 'A settings search at the top of the menu, in Thai or English (e.g. "เพลง", "logo"). Tapping a result opens that page and lights up the setting' },
+          { a: 'admin', th: 'ลดหน้าที่ซ้ำ: "หน้าตาโปรแกรมนี้" เป็นแท็บในหน้าโปรแกรม "ตัวอย่างบนมือถือ" เป็นแท็บในหน้าตั้งค่า ในหน้าส่งออกเอา "สรุปการมาร่วม" ออก (ตัวเลขเดียวกับสรุปรายคน) และ "สรุปการใช้งาน" มากับ "การใช้งานของเด็ก" แล้ว',
+            en: 'Fewer repeats: "This program\'s look" is a tab of Programs, "Phone preview" a tab of Settings. On the export page "Attendance totals" is gone (same numbers as the summary per kid) and the activity summary now comes with "Kids\' activity"' },
+          { a: 'admin', th: 'หน้าส่งออกเป็นรายการเดียวที่อ่านง่าย มีชื่อกับคำอธิบายสั้น ๆ ทางซ้ายและปุ่ม "ส่งออก" เต็มคำทางขวา ไม่มีข้อความถูกตัดทั้งมือถือและคอมพิวเตอร์',
+            en: 'The export page is one clean list: name and a short line on the left, a full "Export" button on the right, nothing cut off on phones or computers' },
+          { a: 'safety', th: 'ปิดปรับปรุง: หน้าฉากไม่มีปุ่มเปลี่ยนสีและปุ่มเสียงแล้ว (ไม่มีเพลงด้วย) แถบสีส้มของผู้ดูแลสูงสุดกดแล้วเลิกปิดปรับปรุงได้จริง หลังคำเตือนที่บอกชื่อโปรแกรม',
+            en: 'Maintenance: the scene has no colour or sound buttons any more (and no music). Tapping the super admin\'s orange bar now really ends maintenance, after a warning that names the program' },
+          { a: 'data', th: 'ใหม่ (ผู้ดูแลสูงสุด): หน้า "เครื่องมือข้อมูล" ดาวน์โหลดข้อมูลของโปรแกรมเป็นไฟล์ .sql (PostgreSQL และ SQLite), CSV ทีละตาราง หรือ JSON มีช่องพิมพ์ SQL ที่รันบนสำเนาในเครื่อง (SQLite) พร้อมตัวอย่างคำสั่ง จึงไม่กระทบข้อมูลจริง และสรุปภาพรวม: ตัวเลขสำคัญ (ค่าเฉลี่ย มัธยฐาน SD) และกราฟ 4 อัน',
+            en: 'New (super admin): the "Data tools" page. Download the program\'s data as a .sql file (PostgreSQL and SQLite), CSV per table or JSON; an SQL box that runs on a copy on this device (SQLite) with example queries, so live data is never touched; and quick insights: key numbers (mean, median, SD) and 4 charts' },
+        ] },
+      { v: '37', date: '2026-11-17', commit: '1877e86',
         short: { th: 'หน้าผู้ดูแลเรียบง่ายขึ้น (เมนูเป็นช่อง รวมหน้าที่ซ้ำกันเป็นแท็บ เลือกโปรแกรมที่มุมซ้ายบน) และผู้ดูแลสูงสุดปิดปรับปรุงทีละโปรแกรมได้',
                  en: 'Simpler admin panel (menu tiles, repeated pages folded into tabs, program picker at the top left) and the super admin can put one program under maintenance' },
         items: [

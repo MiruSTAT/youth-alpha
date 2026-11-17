@@ -1,6 +1,6 @@
 // Metronome for the song player: sample-accurate clicks (Web Audio look-ahead scheduler),
 // accented first beat, and a callback on every beat for the on-screen beat dots.
-import { lowerBound } from './videosync.js?v=37';
+import { lowerBound } from './videosync.js?v=38';
 let ctx = null, out = null, timer = 0, nextTime = 0, beat = 0;
 const state = { running: false, bpm: 100, beats: 4, onBeat: null };
 let fol = null, folTimer = 0;     // "follow the video" mode

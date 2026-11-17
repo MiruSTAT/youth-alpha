@@ -57,7 +57,7 @@ with sync_playwright() as p:
     go(pg, '#/admin', 1800); pg.screenshot(path=S + 'v33_01_pc_home_kids.png')
     check(side_on(pg), 'PC: side menu is shown in the admin area')
     side = pg.eval_on_selector_all('#adminSide [data-k]', 'els => els.map(e => e.dataset.k)')
-    check(all(k in side for k in ['home', 'admins', 'programs', 'look', 'attendance', 'points', 'kids', 'songs', 'settings', 'export']), 'PC: side menu lists the super admin and admin pages')
+    check(all(k in side for k in ['home', 'admins', 'programs', 'attendance', 'points', 'kids', 'songs', 'settings', 'export']), 'PC: side menu lists the super admin and admin pages')
     check(pg.locator('#adminSide .side-link.on[data-k="home"]').count() == 1, 'PC: "admin home" lit in the side menu')
     left = pg.evaluate("document.querySelector('main').getBoundingClientRect().left")
     width = pg.evaluate("document.querySelector('main').getBoundingClientRect().width")
@@ -66,7 +66,7 @@ with sync_playwright() as p:
     check(cols >= 2, 'PC: admin home menu in two columns')
     pg.click('#adminSide [data-k="points"]'); pg.wait_for_timeout(1000)
     check(pg.evaluate('location.hash') == '#/admin/points' and pg.locator('#adminSide .side-link.on[data-k="points"]').count() == 1, 'PC: side menu opens a page and lights it')
-    pg.click('#adminSide [data-k="look"]'); pg.wait_for_timeout(1300)
+    go(pg, '#/admin/look', 1300)   # v38: Look is a tab of Programs
     check(pg.locator('#lookForm [name=mode]').count() == 1, 'Look page has the app style (mode) choice')
     pg.select_option('#lookForm [name=mode]', 'normal')
     check(all(pg.input_value(f'#lookForm [name=p_{k}]') == 'off' for k in ['scene', 'fall', 'friend', 'special', 'music']), 'choosing Normal mode switches the playful parts off')

@@ -2,10 +2,10 @@
 //  * app files carry ?v=N: taken from the phone first, replaced when a new version comes out
 //  * the page itself: internet first (3.5 s), otherwise the saved copy
 //  * libraries, fonts and uploaded pictures (song sheets, avatars): saved the first time, kept between versions
-const V = '37';
+const V = '38';
 const SHELL = 'ya-v' + V, KEEP = 'ya-keep-1';
 const FILES = ['./', 'manifest.json', 'icon.svg', 'config.js?v=' + V, 'css/style.css?v=' + V,
-  ...['app', 'data', 'i18n', 'music', 'art', 'snow', 'track', 'metronome', 'videosync', 'scene3d', 'version', 'songtext', 'superadmin', 'ocr', 'icons', 'demo'].map(n => `js/${n}.js?v=${V}`)];
+  ...['app', 'data', 'i18n', 'music', 'art', 'snow', 'track', 'metronome', 'videosync', 'scene3d', 'version', 'songtext', 'superadmin', 'ocr', 'icons', 'demo', 'datatools'].map(n => `js/${n}.js?v=${V}`)];
 const LIBS = ['https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js',
   'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js'];
 const KEEP_HOSTS = /^(cdn\.jsdelivr\.net|fonts\.googleapis\.com|fonts\.gstatic\.com)$/;
