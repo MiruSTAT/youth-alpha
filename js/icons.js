@@ -35,7 +35,7 @@ const BY_EMOJI = {
   '🏆': 'trophy', '🎵': 'music', '🎁': 'gift', '🥚': 'gift', '✨': 'gift', '☰': 'menu', '👥': 'users', '👧': 'user', '👤': 'user',
   '📁': 'folder', '🎨': 'palette', '🟢': 'activity', '🤖': 'cpu', '✅': 'check', '⭐': 'star', '🎟️': 'ticket', '🎟': 'ticket',
   '📊': 'chart', '🔑': 'key', '📣': 'megaphone', '🏷️': 'tag', '🏷': 'tag', '💬': 'message', '🎛️': 'sliders', '🎛': 'sliders',
-  '⚙️': 'gear', '⚙': 'gear', '📥': 'download', 'ℹ️': 'info', 'ℹ': 'info', '📖': 'book', '🌐': 'globe', '📲': 'phone',
+  '⚙️': 'gear', '⚙': 'gear', '📥': 'download', 'ℹ️': 'info', 'ℹ': 'info', '📖': 'book', '🌐': 'globe', '📲': 'phone', '📱': 'phone',
   '❓': 'help', '🔒': 'lock', '🏠': 'home',
 };
 export const svgIcon = (name) => P[name] ? `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[name]}</svg>` : '';

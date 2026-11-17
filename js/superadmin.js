@@ -121,13 +121,18 @@ export async function pLook(c) {
   const s = await c.api.settings();
   c.view.innerHTML = `${c.pageHead('🎨 ' + c.t('tab_look'))}
     <p class="muted sa-intro">${c.t('lookPageSub', c.esc(c.program.name))}</p>
+    <div class="look-split"><div>
     <h2 class="grp">${c.t('saKidsApp')}</h2>
     <div class="card toggles"><div class="tg-row"><span class="tg-i">📲</span><span class="tg-t"><b>${c.t('installApp')}</b><span>${c.t('saInstallSub')}</span></span>
       <button class="switch ${s.install_on ? 'on' : ''}" id="swInstall" role="switch" aria-checked="${!!s.install_on}" aria-label="${c.t('installApp')}"><span></span></button></div></div>
+    <h2 class="grp">${c.t('saAdminsGrp')}</h2>
+    <div class="card toggles"><div class="tg-row"><span class="tg-i">📜</span><span class="tg-t"><b>${c.t('clogDetailT')}</b><span>${c.t('clogDetailSub')}</span></span>
+      <button class="switch ${c.program.look?.clogDetail ? 'on' : ''}" id="swClog" role="switch" aria-checked="${!!c.program.look?.clogDetail}" aria-label="${c.t('clogDetailT')}"><span></span></button></div></div>
     <h2 class="grp">🎨 ${c.t('lookTitle')}</h2>
     <div class="card look-card" id="lookCard"></div>
     <h2 class="grp">🧩 ${c.t('layTitle')}</h2>
-    <div class="card lay-card" id="layCard"></div>`;
+    <div class="card lay-card" id="layCard"></div></div>
+    <details class="card look-pv" id="lookPv"><summary>📱 ${c.t('tab_phone')}</summary><p class="muted" style="margin:4px 0 8px">${c.t('pfLookSub')}</p><div id="pfBox"></div></details></div>`;
   c.$('#swInstall').onclick = async (e) => {
     const sw = e.currentTarget, on = !sw.classList.contains('on'); sw.disabled = true;
     try {
@@ -137,8 +142,31 @@ export async function pLook(c) {
     } catch (err) { c.fail(err); }
     sw.disabled = false;
   };
+  // v35: switch "admins can see the detailed change log" (programs.look.clogDetail, saved with program_set_look)
+  c.$('#swClog').onclick = async (e) => {
+    const sw = e.currentTarget, on = !sw.classList.contains('on'); sw.disabled = true;
+    try {
+      const look = { ...(c.program.look || {}), clogDetail: on };
+      await c.api.programSetLook(c.program.id, look); keepLook(c, look);
+      sw.classList.toggle('on', on); sw.setAttribute('aria-checked', String(on));
+      c.toast(`${c.t('clogDetailT')} · ${on ? c.t('moOn') : c.t('moOff')}`);
+    } catch (err) { c.fail(err); }
+    sw.disabled = false;
+  };
+  // v35 real mobile preview: open beside the settings on wide screens, folded on phones (opens when tapped)
+  const pvBox = c.$('#lookPv'), wide = matchMedia('(min-width: 1100px)').matches;
+  pvBox.open = wide;
+  const pf = c.phoneFrame(c.$('#pfBox'), { lazy: !wide });
+  pvBox.addEventListener('toggle', () => { if (pvBox.open) pf.load(); });
+  const draft = { form: null, layout: null };
+  c.pvPush = (part, v) => { draft[part] = v; pf.update({ ...(c.program.look || {}), ...(draft.form || {}), ...(draft.layout ? { layout: draft.layout } : {}) }); };
   drawLook(c);
   drawLayout(c);
+}
+function keepLook(c, look) {
+  c.program.look = look;
+  const row = c.program.list.find(x => x.id === c.program.id); if (row) row.look = look;
+  try { Object.keys(localStorage).filter(k => k.includes('programs')).forEach(k => localStorage.removeItem(k)); } catch { }
 }
 
 // ---------- details for AI: the handoff (HANDOFF.md, published with every release), shown by section, copied as a ready prompt
@@ -451,21 +479,28 @@ function drawLook(c) {
     const fl = file.files[0]; file.value = ''; if (!fl) return;
     const b = c.$('#logoPick'); b.disabled = true; b.textContent = '⏳';
     try { logo.url = await c.uploadImage(fl); } catch (err) { c.fail(err); }
-    b.disabled = false; paintLogo();
+    b.disabled = false; paintLogo(); f.dispatchEvent(new Event('change'));
   };
   // choosing a pack sets every part to that pack's choice (plain church pack: all off); each can be changed again
   const setParts = (v) => PK.forEach(k => { f['p_' + k].value = v === 'off' ? 'off' : (K.PACK_PARTS[v] || K.PACK_PARTS.christmas)[k]; });
   f.pack.onchange = () => setParts(f.pack.value === 'plain' || f.mode.value === 'normal' ? 'off' : f.pack.value);
   // v33: Normal mode switches the playful parts off; back to Kids mode switches them on again (not for the plain church pack)
   f.mode.onchange = () => setParts(f.mode.value === 'normal' || f.pack.value === 'plain' ? 'off' : f.pack.value);
-  f.onsubmit = async (e) => {
-    e.preventDefault();
+  const collect = (check) => {
     const look = { ...(c.program.look || {}), mode: f.mode.value, title: f.title.value.trim(), emoji: f.emoji.value.trim(), pack: f.pack.value, font: f.font.value, size: Number(f.size.value), off: {}, words: { th: {}, en: {} } };
     pageFeats.forEach(([k]) => { if (!f['f_' + k].checked) look.off[k] = true; });
     look.parts = Object.fromEntries(PK.map(k => [k, f['p_' + k].value]));
-    if (logo.type === 'image' && !logo.url) { c.toast(c.t('lookLogoNeed')); return; }
-    look.logo = { type: logo.type, size: logo.size, ...(logo.url ? { url: logo.url } : {}) };
+    if (logo.type === 'image' && !logo.url) { if (check) { c.toast(c.t('lookLogoNeed')); return null; } }
+    else look.logo = { type: logo.type, size: logo.size, ...(logo.url ? { url: logo.url } : {}) };
     K.WORDS.forEach(k => ['th', 'en'].forEach(l => { const v = f[`${l}_${k}`].value.trim(); if (v) look.words[l][k] = v; }));
+    return look;
+  };
+  // v35: every change shows at once in the phone preview (not saved until Save)
+  let pvT = 0; const pv = () => { clearTimeout(pvT); pvT = setTimeout(() => c.pvPush?.('form', collect(false)), 350); };
+  f.addEventListener('input', pv); f.addEventListener('change', pv);
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const look = collect(true); if (!look) return;
     const btn = f.querySelector('[type=submit]'); btn.disabled = true;
     try {
       await c.api.programSetLook(c.program.id, look);
@@ -512,6 +547,7 @@ function drawLayout(c) {
       <div class="pv-home">${vis('home').map(k => `<div class="${k === 'rank' ? 'big' : ''}">${label('home', k)}</div>`).join('')}</div>
       <div class="pv-menu">☰ ${vis('menu').map(k => info('menu', k)[1]).join(' ')}</div>
       <div class="pv-tabs">${vis('tabs').map(k => `<span>${info('tabs', k)[1]}</span>`).join('')}</div>`;
+    c.pvPush?.('layout', JSON.parse(JSON.stringify(lay)));          // v35: the real phone preview follows too
   };
   paint();
 

@@ -1,15 +1,15 @@
-import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=34';
-import { api, MODE, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=34';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=34';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=34';
+import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=35';
+import { api, MODE, DEMO, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=35';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=35';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=35';
 
-import { music } from './music.js?v=34';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=34';
-import { snow } from './snow.js?v=34';
-import { track } from './track.js?v=34';
-import { calmIcon } from './icons.js?v=34';
-import { metro } from './metronome.js?v=34';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=34';
+import { music } from './music.js?v=35';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=35';
+import { snow } from './snow.js?v=35';
+import { track } from './track.js?v=35';
+import { calmIcon } from './icons.js?v=35';
+import { metro } from './metronome.js?v=35';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=35';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -129,7 +129,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=34');
+    const m = await import('./scene3d.js?v=35');
     if (m.initScene($('#scene'), { pack: part('scene') === 'cross' ? 'easter' : 'christmas' })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -870,7 +870,7 @@ const PAGES = {
   kids: ['kids', () => pKids()], members: ['kids', () => pMembers()], notice: ['notice', () => pNotice()],
   shop: ['shop', () => pShop()], redeem: ['shop', (x) => pRedeem(x)], pcats: ['settings', () => pPcats()],
   songs: ['songs', () => pSongs()], song: ['songs', (x) => pSongEdit(x)], sync: ['songs', (x) => pSync(x)],
-  feedback: ['feedback', () => pFeedback()], musicset: ['settings', () => pMusicSet()], settings: ['settings', () => pSettings()],
+  feedback: ['feedback', () => pFeedback()], musicset: ['settings', () => pMusicSet()], settings: ['settings', () => pSettings()], phone: ['settings', () => pPhone()],
   weekly: [null, () => pWeekly()], export: [null, () => pExport()], about: [null, () => pAbout()],
   admins: ['super', async (x) => x ? (await saMod()).pAdminEdit(saCtx(), x) : (await saMod()).pAdmins(saCtx())],
   programs: ['super', async () => (await saMod()).pPrograms(saCtx())], look: ['super', async () => (await saMod()).pLook(saCtx())],
@@ -879,8 +879,8 @@ const PAGES = {
 const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? isSuper() : can(need); };
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
-  PERMS, dTime, adult, renderSeq: () => renderSeq });
-const saMod = () => import('./superadmin.js?v=34');
+  PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame });
+const saMod = () => import('./superadmin.js?v=35');
 
 // "who is online" for the super admin: a ping when an admin page opens and about every 45 s while one stays open
 let pingAt = 0, pingPage = '';
@@ -917,7 +917,7 @@ function adminGroups() {
     ['g_daily', [['attendance', '✅'], ['points', '⭐'], ['redeem', '🎟️'], ['weekly', '📊']]],
     ['g_kids', [['kids', '👧'], ['members', '🔑'], ['notice', '📣']]],
     ['g_songs', [['songs', '🎵']]],
-    ['g_settings', [['shop', '🎁'], ['pcats', '🏷️'], ['feedback', '💬'], ['musicset', '🎛️'], ['settings', '⚙️']]],
+    ['g_settings', [['shop', '🎁'], ['pcats', '🏷️'], ['feedback', '💬'], ['musicset', '🎛️'], ['settings', '⚙️'], ['phone', '📱']]],
     ['g_system', [['export', '📥'], ['about', 'ℹ️']]],
   ].map(([g, items]) => [g, items.filter(([k]) => pageOk(k))]).filter(([, items]) => items.length);
 }
@@ -1519,7 +1519,7 @@ async function pAbout() {
       <button class="btn primary wide" id="verUpd" hidden>🔄 ${t('verUpdate')}</button></div>`;
   // v32: normal admins get a short, simple "what's new" (last 5 versions, no area tags, no technical items);
   // the full grouped change log with the Excel export is the super admin's
-  if (!isSuper()) {
+  if (!isSuper() && !program.look?.clogDetail) {                  // v35: the super admin can let a program's admins see the detailed one
     const plain = new Set(['kids', 'admin', 'songs', 'look', 'fix']);
     const recent = CHANGELOG.slice(0, 5).map(c => ({ ...c, list: c.short ? [th ? c.short.th : c.short.en] : c.items.filter(x => plain.has(x.a)).slice(0, 4).map(x => th ? x.th : x.en) })).filter(c => c.list.length);
     view.innerHTML = `${pageHead(t('tab_about'))}${verCard}
@@ -1527,7 +1527,7 @@ async function pAbout() {
       ${recent.map(c => `<div class="card clog-simple"><div class="clog-h"><b>${t('verN', c.v)}${c.v === VERSION ? ` <span class="now-tag">${t('verThis')}</span>` : ''}</b><span class="muted">${dLong(c.date)}</span></div>
         <ul>${c.list.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}`;
   } else view.innerHTML = `${pageHead(t('tab_about'))}${verCard}
-    <button class="btn wide" id="clogXl" style="margin-bottom:6px">📥 ${t('clogExport')}</button>
+    ${isSuper() ? `<button class="btn wide" id="clogXl" style="margin-bottom:6px">📥 ${t('clogExport')}</button>` : ''}
     <h2 class="grp">${t('clogTitle')}</h2>
     ${UPDATES.map((u, ui) => `<details class="card upd" ${ui === 0 ? 'open' : ''}><summary><span class="ut"><b>${esc(th ? u.th : u.en)}</b><span class="muted">${span(u)} · ${dates(u)}</span></span><span class="chev">›</span></summary>
       ${u.versions.map(c => `<div class="clog ${c.v === VERSION ? 'now' : ''}"><div class="clog-h"><b>${t('verN', c.v)}${c.v === VERSION ? ` <span class="now-tag">${t('verThis')}</span>` : ''}</b><span class="muted">${dLong(c.date)}</span></div>
@@ -1664,7 +1664,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=34');
+      const { readSheet } = await import('./ocr.js?v=35');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -2081,8 +2081,12 @@ async function buildExcel(only = null) {
 let renderSeq = 0;
 async function render() {
   const seq = ++renderSeq, h = location.hash || '';
+  if (DEMO && h.startsWith('#/admin')) { location.hash = '#/'; return; }   // v35 phone preview: kids' side only
   const isAdult = h.startsWith('#/admin');
   document.body.classList.toggle('adult', isAdult);
+  // v35: on phones every kids' page except home opens full (over the tree); pull it down to see the tree
+  document.body.classList.toggle('sheet-full', !isAdult && !!h && h !== '#/' && h !== '#/rank' && !/^#\/me(\/|$)/.test(h) && !h.startsWith('#/songs/'));
+  document.body.classList.remove('tree-peek');
   document.body.classList.toggle('login-page', h === '#/login' && program.login === 'all');   // v31: no tabs on the sign-in page when sign-in is required
   $('#kidSheet').hidden = true;
   document.querySelectorAll('.lightbox').forEach(x => x.remove());
@@ -2114,7 +2118,7 @@ async function render() {
     if (h.startsWith('#/me') || h === '#/rank') { history.replaceState(null, '', '#/'); }
     return await kidRank();
   } catch (e) { fail(e); view.innerHTML = `<p class="empty">${t('errGeneric')}</p>`; }
-  finally { paintOffline(); }
+  finally { paintOffline(); addGrab(); }
 }
 // a quiet line when the phone has no internet and saved data is being shown (kid pages only)
 function paintOffline() {
@@ -2265,4 +2269,98 @@ track('open_app', `${document.body.dataset.theme} · ${getLang()} · ${matchMedi
 let lastTree = 0;
 $('#scene').addEventListener('click', () => { if (Date.now() - lastTree > 3000) { lastTree = Date.now(); track('tree_tap'); } treeTapped(); });
 
-if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
+if (!DEMO && 'serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+// =============================================================== v35: kids' pages open full on phones
+// body.sheet-full (set in render) lifts the page sheet over the tree (CSS, phones only, Kids mode only).
+// Pulling the page down at the top (or tapping the little bar) shows the tree again (body.tree-peek); tap the bar to go back.
+function addGrab() {
+  const sh = document.body.classList.contains('sheet-full') && view.querySelector(':scope > .sheet:not(.song-sheet)');
+  if (!sh || sh.querySelector(':scope > .sheet-grab')) return;
+  sh.insertAdjacentHTML('afterbegin', `<button type="button" class="sheet-grab" aria-label="${t('sheetGrab')}"></button>`);
+  sh.firstElementChild.onclick = () => treePeek(!document.body.classList.contains('tree-peek'));
+}
+function treePeek(on) {
+  const b = document.body; b.classList.add('peek-anim'); b.classList.toggle('tree-peek', on);
+  if (!on) window.scrollTo({ top: 0, behavior: 'smooth' });
+  setTimeout(() => b.classList.remove('peek-anim'), 360);
+  if (on) track('tree_peek');
+}
+(function sheetPull() {
+  let y0 = null, dy = 0, sh = null;
+  const can = () => { const b = document.body; return b.classList.contains('sheet-full') && !b.classList.contains('tree-peek') && b.dataset.mode !== 'normal' && matchMedia('(max-width: 760px)').matches; };
+  document.addEventListener('touchstart', (e) => {
+    sh = can() && window.scrollY <= 0 && e.touches.length === 1 && !e.target.closest('input, textarea, select, iframe') ? e.target.closest('main > .sheet:not(.song-sheet)') : null;
+    y0 = sh ? e.touches[0].clientY : null; dy = 0;
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (y0 == null) return;
+    dy = e.touches[0].clientY - y0;
+    if (dy <= 0 || window.scrollY > 0) { sh.style.transform = ''; return; }      // moving up = normal scrolling
+    e.preventDefault(); sh.style.transform = `translateY(${Math.min(dy * 0.6, 260)}px)`;
+  }, { passive: false });
+  const end = () => {
+    if (y0 == null) return;
+    const el = sh; y0 = null;
+    if (dy > 70) { treePeek(true); el.style.transform = ''; return; }
+    el.style.transition = 'transform .25s ease'; el.style.transform = '';
+    setTimeout(() => { el.style.transition = ''; }, 260);
+  };
+  document.addEventListener('touchend', end); document.addEventListener('touchcancel', end);
+})();
+
+// =============================================================== v35: real mobile preview (the kids' app with sample data)
+// phoneFrame(box) draws a phone frame with the real app opened as index.html?demo=1 (js/demo.js: sample kids, points, songs,
+// prizes; nothing is saved). The frame reads window.YA_DEMO_PROGRAM (name + look) from this page when it starts.
+// Returns { update(look) }: unsaved settings are shown at once (look.pack / parts / mode / font changes reload the frame).
+function phoneFrame(box, { lazy = false } = {}) {
+  const SIZES = { phone: [390, 800], tablet: [768, 1024] };
+  let size = 'phone', look = program.look || {}, loaded = false;
+  const sig = (L) => JSON.stringify([L.pack || 'christmas', L.mode === 'normal' ? 'normal' : 'kids', L.font || 'noto', Object.keys(LOOK.PARTS).map(k => partOf(L, k))]);
+  let lastSig = sig(look);
+  box.innerHTML = `<div class="pf-bar"><span class="pf-tag">👀 ${t('pfSample')}</span>
+      <span class="pf-sz">${Object.keys(SIZES).map(k => `<button type="button" class="chip ${k === size ? 'on' : ''}" data-sz="${k}">${t('pf_' + k)}</button>`).join('')}</span>
+      <button type="button" class="btn small" data-pf="reload">🔄 ${t('pfReload')}</button></div>
+    <div class="pf-stage"><div class="pf-phone"><iframe title="${esc(t('tab_phone'))}" loading="lazy"></iframe></div></div>`;
+  const stage = box.querySelector('.pf-stage'), ph = box.querySelector('.pf-phone'), fr = box.querySelector('iframe');
+  const fit = () => {
+    const [w, h] = SIZES[size], pad = 24, avail = stage.clientWidth || 360;
+    const sc = Math.min(1, avail / (w + pad), (innerHeight * 0.82) / (h + pad));
+    fr.style.width = w + 'px'; fr.style.height = h + 'px';
+    ph.style.width = (w + pad) + 'px'; ph.style.height = (h + pad) + 'px'; ph.style.transform = `scale(${sc})`;
+    stage.style.height = Math.ceil((h + pad) * sc) + 'px';
+  };
+  const load = () => {
+    window.YA_DEMO_PROGRAM = { name: program.name, look: JSON.parse(JSON.stringify(look)) };
+    loaded = true; fr.src = location.pathname + '?demo=1&r=' + Date.now() + '#/';   // r = always a fresh start
+  };
+  box.addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return;
+    if (b.dataset.sz) { size = b.dataset.sz; box.querySelectorAll('[data-sz]').forEach(x => x.classList.toggle('on', x === b)); fit(); }
+    if (b.dataset.pf === 'reload') load();
+  });
+  new ResizeObserver(fit).observe(stage); fit();
+  if (!lazy) load();
+  return {
+    load: () => { if (!loaded) load(); },
+    update(L) {
+      look = L || {};
+      window.YA_DEMO_PROGRAM = { name: program.name, look: JSON.parse(JSON.stringify(look)) };
+      if (!loaded) return;
+      const sg = sig(look);
+      if (sg !== lastSig) { lastSig = sg; load(); return; }               // 3D scene, music, fonts: start the frame again
+      try { fr.contentWindow.YA_DEMO_LOOK?.(window.YA_DEMO_PROGRAM.look); } catch { load(); }
+    },
+  };
+}
+// admin page "Phone preview" (Settings group; admins with the Settings permission and the super admin)
+async function pPhone() {
+  view.innerHTML = `${pageHead(t('tab_phone'))}<p class="muted" style="margin:0 0 10px">${t('pfSub')}</p><div class="card pf-card" id="pfBox"></div>`;
+  phoneFrame($('#pfBox'));
+}
+// inside the frame: the admin page pushes unsaved settings here
+if (DEMO) window.YA_DEMO_LOOK = (look) => {
+  program.look = look || {};
+  const row = program.list.find(x => x.id === program.id); if (row) row.look = program.look;
+  applyLook(); render();
+};

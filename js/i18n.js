@@ -728,3 +728,22 @@ Object.assign(DICT.en, {
   opt_jingle: '🔔 Jingle Bells', opt_easter: '🎺 Easter Hymn',
   lookPartsHint: 'Choosing a pack sets every part to its default; then change any part on its own. The 3D scene changes the next time the app is opened',
 });
+// v35: real mobile preview, detailed change log switch, kids' pages open full on phones
+Object.assign(DICT.th, {
+  tab_phone: 'ตัวอย่างบนมือถือ', m_phone: 'ดูแอปของเด็ก ๆ จริง ๆ ในกรอบมือถือ ด้วยข้อมูลตัวอย่าง',
+  pfSub: 'นี่คือแอปของเด็ก ๆ จริง ๆ แต่ใช้เด็ก คะแนน เพลง และของรางวัลตัวอย่าง กดเล่นได้ทุกอย่าง ไม่มีอะไรถูกบันทึก (โหลดใหม่ = เริ่มใหม่)',
+  pfLookSub: 'สิ่งที่เปลี่ยนในหน้านี้จะเห็นทันทีที่นี่ ก่อนกดบันทึก (ข้อมูลตัวอย่าง ไม่มีอะไรถูกบันทึก)',
+  pfSample: 'ข้อมูลตัวอย่าง · ไม่บันทึก', pfReload: 'โหลดใหม่', pf_phone: 'มือถือ', pf_tablet: 'แท็บเล็ต',
+  saAdminsGrp: 'ผู้ดูแล', clogDetailT: 'ผู้ดูแลเห็นบันทึกการเปลี่ยนแปลงแบบละเอียด',
+  clogDetailSub: 'เปิด = ผู้ดูแลของโปรแกรมนี้เห็นบันทึกทั้งหมดแบบละเอียดในหน้า "เวอร์ชันและสิ่งที่เปลี่ยน" (ส่งออก Excel ยังเป็นของผู้ดูแลสูงสุดเท่านั้น) ปิด = เห็นแค่ "มีอะไรใหม่" แบบสั้น',
+  sheetGrab: 'เลื่อนลงเพื่อดูต้นไม้ / แตะเพื่อสลับ',
+});
+Object.assign(DICT.en, {
+  tab_phone: 'Phone preview', m_phone: "See the real kids' app in a phone frame with sample data",
+  pfSub: "This is the real kids' app with sample kids, points, songs and prizes. Tap anything; nothing is saved (reload = start again).",
+  pfLookSub: 'Changes on this page show here at once, before you press Save (sample data, nothing is saved).',
+  pfSample: 'Sample data · not saved', pfReload: 'Reload', pf_phone: 'Phone', pf_tablet: 'Tablet',
+  saAdminsGrp: 'Admins', clogDetailT: 'Admins see the detailed change log',
+  clogDetailSub: 'On = this program\'s admins see the full detailed change log on the "Version & changes" page (the Excel export stays super admin only). Off = only the short "What\'s new".',
+  sheetGrab: 'Pull down to see the tree / tap to switch',
+});

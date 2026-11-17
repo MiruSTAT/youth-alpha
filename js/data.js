@@ -1,6 +1,9 @@
 // Data layer: Supabase when configured, otherwise a local PREVIEW store.
+// v35: ?demo=1 (phone preview on the admin panel) always uses the local store, filled with sample data and never saved.
+import { DEMO, demoDb } from './demo.js?v=35';
 const cfg = window.YA_CONFIG || {};
-export const MODE = cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY ? 'supabase' : 'preview';
+export const MODE = DEMO ? 'demo' : cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY ? 'supabase' : 'preview';
+export { DEMO };
 export const SKILLS = ['piano', 'singing', 'english', 'thai', 'attendance', 'bonus'];
 export const SKILL_ICON = { piano: '🎹', singing: '🎤', english: '🔤', thai: '📖', attendance: '⛪', bonus: '🎁' };
 
@@ -207,9 +210,9 @@ function supabaseApi() {
 }
 
 // ---------------------------------------------------------------- Preview (local)
-function previewApi() {
-  const KEY = 'ya_preview_db';
-  const load = () => JSON.parse(localStorage.getItem(KEY) || 'null') ||
+function previewApi(seed = null) {
+  const KEY = seed ? 'ya_demo_db' : 'ya_preview_db';             // demo: its own key, inside the in-memory storage
+  const load = () => seed || JSON.parse(localStorage.getItem(KEY) || 'null') ||
     { kids: [], attendance: [], rounds: [], points: [], money: [], settings: { attendance_points: 10 }, loggedIn: false };
   let db = load();
   db.schedule ??= []; db.items ??= [];
@@ -409,7 +412,7 @@ function previewApi() {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=34'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=35'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].filter(() => memberOk()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {
@@ -520,12 +523,13 @@ function previewApi() {
   };
 }
 
-export const api = MODE === 'supabase' ? supabaseApi() : previewApi();
+export const api = MODE === 'supabase' ? supabaseApi() : MODE === 'demo' ? previewApi(demoDb()) : previewApi();
 
 // Keep the last good answer on this phone and use it when the internet is down or very slow,
 // so kids can still see the ranking and the songs (net.stale = a saved answer is being shown).
 export const net = { stale: false };
 export async function cached(key, fn, ms = 6000) {
+  if (DEMO) return fn();                                          // v35 phone preview: never touch the phone's saved answers
   const K = 'ya_c_' + key;
   let old = null; try { old = JSON.parse(localStorage.getItem(K) || 'null'); } catch {}
   const fresh = fn().then(v => { try { localStorage.setItem(K, JSON.stringify(v)); } catch {} net.stale = false; return v; });

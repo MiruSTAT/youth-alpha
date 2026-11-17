@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css?v=34">
+  <link rel="stylesheet" href="css/style.css?v=35">
 </head>
 <body>
   <canvas id="scene" aria-hidden="true"></canvas>
@@ -49,10 +49,21 @@
   <div id="kidSheet" class="kid-sheet" hidden></div>
   <div id="tour" class="tour" hidden></div>
 
+  <script>/* v35 phone preview (?demo=1): sample data only. Swap the phone storage for an in-memory copy before any app code runs,
+     so the preview never reads or changes this phone's real saved data (it starts fresh every time it is opened). */
+    if (/[?&]demo=1(&|$)/.test(location.search)) {
+      window.YA_DEMO = 1;
+      const mem = () => Object.create({ getItem(k) { return Object.prototype.hasOwnProperty.call(this, k) ? this[k] : null; },
+        setItem(k, v) { this[k] = String(v); }, removeItem(k) { delete this[k]; }, clear() { Object.keys(this).forEach(k => delete this[k]); },
+        key(i) { return Object.keys(this)[i] ?? null; }, get length() { return Object.keys(this).length; } });
+      const ls = mem(); ls.ya_tour = JSON.stringify({ done: true, last: Date.now(), n: 0 });
+      try { Object.defineProperty(window, 'localStorage', { value: ls, configurable: true }); Object.defineProperty(window, 'sessionStorage', { value: mem(), configurable: true }); }
+      catch (e) { window.YA_DEMO_UNSAFE = 1; }
+    }</script>
   <script>/* a sign-in link from email puts the session in the address (#access_token=…); remember that before it is cleared */
     window.YA_LINK = /(^#|&)(access_token|error_description)=/.test(location.hash) ? location.hash.slice(0, 40) : '';</script>
-  <script src="config.js?v=34"></script>
+  <script src="config.js?v=35"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
-  <script type="module" src="js/app.js?v=34"></script>
+  <script type="module" src="js/app.js?v=35"></script>
 </body>
 </html>

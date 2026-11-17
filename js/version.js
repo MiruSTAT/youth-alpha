@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '34';
+export const VERSION = '35';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,22 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '34', date: '2026-11-17', commit: '',
+      { v: '35', date: '2026-11-17', commit: '',
+        short: { th: 'ดูแอปของเด็ก ๆ จริง ๆ ในกรอบมือถือด้วยข้อมูลตัวอย่าง และบนมือถือหน้าต่าง ๆ ของเด็ก (ยกเว้นหน้าแรก) เปิดเต็มจอทันที',
+                 en: "See the real kids' app in a phone frame with sample data, and on phones the kids' pages (except home) now open full straight away" },
+        items: [
+          { a: 'admin', th: 'หน้าใหม่ "ตัวอย่างบนมือถือ" (กลุ่มตั้งค่า): แอปของเด็ก ๆ จริง ๆ ในกรอบมือถือ ใช้เด็ก คะแนน เพลง และของรางวัลตัวอย่าง กดเล่นได้ทุกอย่างแต่ไม่มีอะไรถูกบันทึก สลับขนาดมือถือ / แท็บเล็ต และโหลดใหม่ได้ ผู้ดูแลที่มีสิทธิ์ "ตั้งค่า" และผู้ดูแลสูงสุดเปิดได้',
+            en: 'New "Phone preview" page (Settings group): the real kids\' app in a phone frame with sample kids, points, songs and prizes. Everything can be tapped but nothing is saved. Switch phone / tablet size and reload. Open to admins with the Settings permission and the super admin' },
+          { a: 'look', th: 'ผู้ดูแลสูงสุด: หน้า "หน้าตาโปรแกรมนี้" มีตัวอย่างบนมือถืออยู่ข้าง ๆ (บนคอมพิวเตอร์) หรือแตะเปิดได้ (บนมือถือ) ทุกอย่างที่เปลี่ยน (ธีม โหมด โลโก้ คำ การจัดหน้า) เห็นทันทีก่อนกดบันทึก',
+            en: 'Super admin: the "This program\'s look" page has the phone preview beside the settings (on a computer) or folded to tap open (on a phone). Every change (theme, mode, logo, words, layout) shows at once, before you press Save' },
+          { a: 'admin', th: 'ผู้ดูแลสูงสุด: สวิตช์ใหม่ "ผู้ดูแลเห็นบันทึกการเปลี่ยนแปลงแบบละเอียด" ต่อโปรแกรม (ปิดไว้ก่อน) เปิดแล้วผู้ดูแลของโปรแกรมนั้นเห็นบันทึกทั้งหมดแบบละเอียด ส่วนส่งออก Excel ยังเป็นของผู้ดูแลสูงสุดเท่านั้น',
+            en: 'Super admin: a new per-program switch "Admins see the detailed change log" (off at first). When on, that program\'s admins see the full detailed change log; the Excel export stays super admin only' },
+          { a: 'kids', th: 'บนมือถือ หน้าเพลง ร้านของรางวัล เมนู และหน้าความคิดเห็น เปิดเต็มจอทันที ไม่ต้องลากขึ้นจากใต้ต้นไม้อีก อยากดูต้นไม้ให้ดึงหน้าลง หรือแตะขีดเล็ก ๆ ด้านบน (แตะอีกครั้งเพื่อกลับ) หน้าแรกยังเห็นต้นไม้เหมือนเดิม',
+            en: 'On phones the songs, prize shop, menu and feedback pages now open full straight away, no more dragging them up from under the tree. To see the tree, pull the page down or tap the little bar at the top (tap again to go back). Home still shows the tree first' },
+          { a: 'safety', th: 'ตัวอย่างบนมือถือใช้ที่เก็บข้อมูลชั่วคราวของตัวเอง จึงไม่อ่านหรือเปลี่ยนข้อมูลจริงและไม่เปิดหน้าผู้ใหญ่ ไม่มีการเปลี่ยนฐานข้อมูล',
+            en: 'The phone preview keeps its own temporary storage, so it never reads or changes real data and cannot open the adults\' area. No database change' },
+        ] },
+      { v: '34', date: '2026-11-17', commit: 'b18a79d',
         short: { th: 'ตั้งค่าโปรแกรมง่ายขึ้น: โลโก้เป็นรูปภาพได้พร้อมปรับขนาด ส่วนตกแต่งแต่ละส่วนเลือกแบบได้เอง และจัดหน้าตาด้วยการลากอย่างเดียว',
                  en: 'Easier program settings: the logo can be a picture with a size slider, each decoration has its own choice, and the layout is arranged by dragging only' },
         items: [
