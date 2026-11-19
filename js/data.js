@@ -1,6 +1,6 @@
 // Data layer: Supabase when configured, otherwise a local PREVIEW store.
 // v35: ?demo=1 (phone preview on the admin panel) always uses the local store, filled with sample data and never saved.
-import { DEMO, demoDb } from './demo.js?v=38';
+import { DEMO, demoDb } from './demo.js?v=39';
 const cfg = window.YA_CONFIG || {};
 export const MODE = DEMO ? 'demo' : cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY ? 'supabase' : 'preview';
 export { DEMO };
@@ -147,6 +147,7 @@ function supabaseApi() {
     // v32: the admin log of THIS program (program 1 also keeps the rows from before v32, which have no program)
     async auditAll() { return pageAll((a, b) => sb.from('audit_log').select('*').or(P() === 1 ? 'program_id.eq.1,program_id.is.null' : `program_id.eq.${P()}`).order('created_at').range(a, b)); },
     async kidEvents() { return pageAll((a, b) => sb.from('kid_events').select('*').eq('program_id', P()).order('created_at').range(a, b)); },
+    async markStaffDevice(dev) { return ok(await sb.rpc('mark_staff_device', { p_device: dev, p_program: P() })); },   // v39, 024_staff_events.sql
     async kidEventsSince(iso) { return pageAll((a, b) => sb.from('kid_events').select('event,detail,device_id,kid_id,created_at').eq('program_id', P()).gte('created_at', iso).order('created_at').range(a, b)); },
     async reauth(password) {
       const email = (await sb.auth.getUser()).data.user?.email;
@@ -332,7 +333,7 @@ function previewApi(seed = null) {
       }).sort((a, b) => b.seen_at.localeCompare(a.seen_at));
     },
     async kidWeekStats(iso) {
-      const ev = db.events.filter(e => e.created_at >= iso), m = {};
+      const ev = db.events.filter(e => e.created_at >= iso && !e.by_staff), m = {};
       ev.filter(e => e.event === 'song_open' && e.detail).forEach(e => { const x = (m[e.detail] ??= { title: e.detail, n: 0, d: new Set() }); x.n++; x.d.add(e.device_id); });
       return { phones: new Set(ev.map(e => e.device_id)).size, songs: Object.values(m).sort((a, b) => b.n - a.n).slice(0, 5).map(x => ({ title: x.title, n: x.n, devices: x.d.size })) };
     },
@@ -406,7 +407,7 @@ function previewApi(seed = null) {
     async deleteItem(iid) { audit('shop_items', 'DELETE', db.items.find(x => x.id === iid), null); db.items = db.items.filter(x => x.id !== iid); save(); },
 
     async eventInfo() { const { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open, music = {}, announce = '', verse_text = '', verse_ref = '', install_on = false, show_visits = false, show_fb_count = false } = db.settings; return { event_dow, event_start, event_end, fb_dow, fb_start, fb_end, tip_days, fb_open, music, announce, verse_text, verse_ref, install_on, show_visits, show_fb_count }; },
-    async homeCounts() { const s = db.settings; return { visits: s.show_visits ? db.events.filter(e => e.event === 'open_app').length : null, feedback: s.show_fb_count ? db.feedback.length : null }; },
+    async homeCounts() { const s = db.settings; return { visits: s.show_visits ? db.events.filter(e => e.event === 'open_app' && !e.by_staff).length : null, feedback: s.show_fb_count ? db.feedback.length : null }; },
     async allPoints() { return db.points.map(p => ({ ...p, kids: kidOf(p.kid_id) })); },
     async sendFeedback(row) {
       if (!db.settings.fb_open) throw new Error('closed');
@@ -416,7 +417,7 @@ function previewApi(seed = null) {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=38'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=39'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].filter(() => memberOk()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {
@@ -428,7 +429,8 @@ function previewApi(seed = null) {
     async uploadImage(blob) {
       return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = rej; fr.readAsDataURL(blob); });
     },
-    async logEvents(rows) { rows.forEach(r => db.events.push({ id: db.events.length + 1, created_at: now(), ...r })); save(); },
+    async logEvents(rows) { rows.forEach(r => db.events.push({ id: db.events.length + 1, created_at: now(), ...r, by_staff: !!(db.loggedIn || db.sa?.unlocked) })); save(); },
+    async markStaffDevice(dev) { const t0 = new Date(Date.now() - 6e5).toISOString(); let n = 0; db.events.forEach(e => { if (e.device_id === dev && !e.by_staff && e.created_at > t0) { e.by_staff = true; n++; } }); save(); return n; },
     async auditLog(limit = 100) { return [...db.audit].reverse().slice(0, limit); },
     async auditAll() { return db.audit; },
     async kidEvents() { return db.events; },

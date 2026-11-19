@@ -10,6 +10,9 @@ mkdir -p "$YA_SHOTS"
 if [ ! -f "$YA_VENDOR/three.module.min.js" ]; then
   mkdir -p "$YA_VENDOR" && (cd "$YA_VENDOR" && npm i --silent three@0.170.0 >/dev/null && cp node_modules/three/build/three.module.min.js .)
 fi
+if [ ! -f "$YA_VENDOR/xlsx.full.min.js" ]; then   # v39: export tests route the SheetJS CDN file to this local copy
+  (cd "$YA_VENDOR" && npm i --silent xlsx@0.18.5 >/dev/null && cp node_modules/xlsx/dist/xlsx.full.min.js .)
+fi
 rm -rf /tmp/prev && mkdir -p /tmp/prev
 cp -r index.html sw.js manifest.json icon.svg icons css js sheets vendor HANDOFF.md /tmp/prev/
 echo "window.YA_CONFIG = {};" > /tmp/prev/config.js

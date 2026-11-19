@@ -1,15 +1,15 @@
-import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=38';
-import { api, MODE, DEMO, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=38';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=38';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=38';
+import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=39';
+import { api, MODE, DEMO, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=39';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=39';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=39';
 
-import { music } from './music.js?v=38';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=38';
-import { snow } from './snow.js?v=38';
-import { track } from './track.js?v=38';
-import { calmIcon } from './icons.js?v=38';
-import { metro } from './metronome.js?v=38';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=38';
+import { music } from './music.js?v=39';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=39';
+import { snow } from './snow.js?v=39';
+import { track, flush, deviceId } from './track.js?v=39';
+import { calmIcon } from './icons.js?v=39';
+import { metro } from './metronome.js?v=39';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=39';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -137,7 +137,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=38');
+    const m = await import('./scene3d.js?v=39');
     if (m.initScene($('#scene'), { pack: part('scene') === 'cross' ? 'easter' : 'christmas' })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -898,13 +898,13 @@ const PAGES = {
   admins: ['super', async (x) => x ? (await saMod()).pAdminEdit(saCtx(), x) : (await saMod()).pAdmins(saCtx())],
   programs: ['super', async () => (await saMod()).pPrograms(saCtx())], look: ['super', async () => (await saMod()).pLook(saCtx())],
   online: ['super', async () => (await saMod()).pOnline(saCtx())], ai: ['super', async () => (await saMod()).pAi(saCtx())],
-  data: ['super', async () => (await import('./datatools.js?v=38')).pData(dtCtx())],   // v38 roadmap step 8
+  data: ['super', async () => (await import('./datatools.js?v=39')).pData(dtCtx())],   // v38 roadmap step 8
 };
 const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? isSuper() : can(need); };
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
   PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame, paintMaintBar });
-const saMod = () => import('./superadmin.js?v=38');
+const saMod = () => import('./superadmin.js?v=39');
 // v38: helpers for the data tools page (js/datatools.js)
 const dtCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, program, leaderboard, pcats, cName, bkkToday, loadXLSX, isSuper });
 
@@ -1772,7 +1772,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=38');
+      const { readSheet } = await import('./ocr.js?v=39');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -2137,6 +2137,8 @@ async function pExport() {
     ${rows(XL_SHEETS.filter(([k]) => !LOG_SHEETS.includes(k) && xlOk(k)))}
     ${isSuper() ? `<h2 class="grp grp-super">👑 ${t('logsGrp')}</h2>
     ${rows(XL_SHEETS.filter(([k]) => LOG_SHEETS.includes(k) && k !== 'xs_kidsum'))}
+    <label class="xl-staff"><input type="checkbox" id="xlStaff"> ${t('xlStaff')}</label>
+    <p class="muted xl-note">${t('xlStaffSub')}</p>
     <p class="muted xl-note">🔒 ${t('adminLogNote')} · ${t('logsSuperNote')}</p>
     <h2 class="grp">${t('dangerZone')}</h2>
     <div class="card"><button class="btn danger wide" id="clearKid">🗑️ ${t('clearKidLog')}</button>
@@ -2164,9 +2166,11 @@ const xlRow = ([k, , i]) => `<div class="xl-item"><span class="mi">${i}</span><s
 async function buildExcel(only = null) {
   only = (only || XL_SHEETS.map(x => x[0])).filter(xlOk);
   const want = (k) => only.includes(k);
-  const [XLSX, kids, rows, cats, pts, att, fb, shop, alog, kev] = await Promise.all([loadXLSX(), api.kids(), leaderboard(true), pcats(true), api.allPoints(),
+  let [XLSX, kids, rows, cats, pts, att, fb, shop, alog, kev] = await Promise.all([loadXLSX(), api.kids(), leaderboard(true), pcats(true), api.allPoints(),
     api.attendanceAll(), want('xs_feedback') ? api.feedback().catch(() => []) : [], api.shop(),
     want('xs_adminlog') ? api.auditAll() : [], (want('xs_kidlog') || want('xs_kidsum')) ? api.kidEvents() : []]);
+  const withStaff = !!$('#xlStaff')?.checked;                    // v39: admin activity is left out unless the switch is on
+  if (!withStaff) kev = kev.filter(e => !e.by_staff);
   const kidName = Object.fromEntries(kids.map(k => [k.id, k.nickname]));
   const red = want('xs_redeem') ? await api.redemptions(5000) : [];
   const dt = (s) => s ? new Date(new Date(s).getTime() + 7 * 3600e3).toISOString().slice(0, 16).replace('T', ' ') : ''; // Thai time, 2026-11-14 21:41
@@ -2186,7 +2190,7 @@ async function buildExcel(only = null) {
     ['xs_att', [...att].sort((a, b) => a.day.localeCompare(b.day)).map(r => ({ [t('date')]: r.day, [t('nickname')]: kidName[r.kid_id] || '', [t('xc_status')]: stTxt[r.status] }))],
     ['xs_feedback', fb.map(f => ({ [t('date')]: dt(f.created_at), [t('nickname')]: f.kid_name || t('anon'), [t('xc_mood')]: ['', '😢', '😐', '🙂', '😄'][f.mood] || '', [t('xc_msg')]: f.message }))],
     ['xs_adminlog', alog.map(e => { const d = describeLog(e, kidName); return { [t('xc_time')]: dt(e.created_at), [t('xc_admin')]: e.actor_email || t('lt_system'), [t('xc_action')]: d.op, [t('xc_area')]: d.area, [t('xc_item')]: d.item || '', [t('xc_changes')]: d.changes, [t('xc_key')]: e.row_key }; })],
-    ['xs_kidlog', kev.map(e => ({ [t('xc_time')]: dt(e.created_at), [t('xc_device')]: e.device_id, [t('nickname')]: kidName[e.kid_id] || '', [t('xc_event')]: evName(e.event), [t('xc_eventcode')]: e.event, [t('xc_detail')]: e.detail, [t('xc_page')]: e.path }))],
+    ['xs_kidlog', kev.map(e => ({ [t('xc_time')]: dt(e.created_at), [t('xc_device')]: e.device_id, [t('nickname')]: kidName[e.kid_id] || '', [t('xc_event')]: evName(e.event), [t('xc_eventcode')]: e.event, [t('xc_detail')]: e.detail, [t('xc_page')]: e.path, ...(withStaff ? { [t('xc_bystaff')]: e.by_staff ? t('yes') : '' } : {}) }))],
     ['xs_kidsum', (() => { const m = {}; kev.forEach(e => { const x = (m[e.event] ??= { n: 0, d: new Set(), k: new Set() }); x.n++; x.d.add(e.device_id); if (e.kid_id) x.k.add(e.kid_id); });
       return Object.entries(m).sort((a, b) => b[1].n - a[1].n).map(([ev, x]) => ({ [t('xc_event')]: evName(ev), [t('xc_eventcode')]: ev, [t('xc_count')]: x.n, [t('xc_devices')]: x.d.size, [t('xc_kids')]: x.k.size })); })()],
     ['xs_redeem', red.map(r => ({ [t('date')]: dt(r.created_at), [t('nickname')]: r.kids?.nickname || kidName[r.kid_id] || '', [t('itemName')]: r.item_name, [t('xc_points')]: r.price }))],
@@ -2262,6 +2266,12 @@ window.addEventListener('hashchange', () => {
   window.scrollTo(0, 0); render();
 });
 // re-draw admin pages only when someone signs in / out (not on token refresh)
+// v39: right after an admin signs in on this phone, send what is waiting (it now goes out as admin activity) and tag
+// this phone's last 10 minutes too (e.g. "opened the app, went to the menu, signed in"). Quiet: never shows anything.
+api.onAuth?.(async (event) => {
+  if (event && event !== 'SIGNED_IN') return;
+  try { if (!(await api.session())) return; await flush(); await api.markStaffDevice?.(deviceId()); } catch (e) { /* analytics must never break the app */ }
+});
 api.onAuth?.((event) => { maintSup = null; if (location.hash.startsWith('#/admin') && (!event || event === 'SIGNED_IN' || event === 'SIGNED_OUT')) render(); });
 // ---------- v37 (roadmap step 7): maintenance mode per program (programs.maintenance, supabase/023_maintenance.sql)
 // Switched by the super admin on the Programs page. While it is on, kids and every adult who is not the super admin see

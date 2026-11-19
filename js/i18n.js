@@ -829,3 +829,12 @@ Object.assign(DICT.en, {
   dtT_median: 'Median points', dtT_meanSd: (m, s) => `mean ${m} · SD ${s}`,
   dtC_day: 'Kids present per day', dtC_cat: 'Points per category', dtC_came: 'How many days kids came', dtC_cameSub: 'across = days present, height = number of kids', dtDaysCame: 'Days present', dtC_top: 'Top 10 kids',
 });
+// v39: admin activity in the kids' activity log
+Object.assign(DICT.th, {
+  xlStaff: 'รวมการใช้งานของผู้ดูแลด้วย', xlStaffSub: 'ปกติจะไม่รวม: เมื่อผู้ดูแลเข้าสู่ระบบในเครื่องนั้น การใช้งานจะถูกทำเครื่องหมายว่าเป็นของผู้ดูแล (ข้อมูลยังเก็บไว้ครบ ไม่มีการลบ)',
+  xc_bystaff: 'โดยผู้ดูแล', yes: 'ใช่',
+});
+Object.assign(DICT.en, {
+  xlStaff: 'Include admin activity', xlStaffSub: 'Left out by default: while an admin is signed in on a phone, its activity is marked as admin activity (everything is still kept, nothing is deleted)',
+  xc_bystaff: 'By an admin', yes: 'Yes',
+});

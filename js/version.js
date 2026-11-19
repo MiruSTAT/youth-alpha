@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '38';
+export const VERSION = '39';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,17 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '38', date: '2026-11-17', commit: '',
+      { v: '39', date: '2026-11-20', commit: '',
+        short: { th: 'การใช้งานของผู้ดูแลไม่ปนกับการใช้งานของเด็กแล้ว', en: "Admin activity no longer mixes with the kids' activity" },
+        items: [
+          { a: 'data', th: 'เมื่อผู้ดูแลเข้าสู่ระบบในเครื่องใด การดูหน้าและการแตะในเครื่องนั้นถูกทำเครื่องหมายว่า "โดยผู้ดูแล" รวมถึง 10 นาทีก่อนเข้าสู่ระบบ (เช่น เปิดแอป ไปที่เมนู แล้วเข้าสู่ระบบ) ไม่มีการแจ้งเตือนใดๆ ให้เด็กหรือผู้ดูแลเห็น',
+            en: 'While an admin is signed in on a phone, its views and taps are marked "by an admin", and so are the 10 minutes before signing in (e.g. open the app, go to the menu, sign in). Nothing is shown to kids or admins' },
+          { a: 'data', th: 'ส่งออกบันทึกการใช้งานของเด็กและสรุปการใช้งาน: ปกติไม่รวมการใช้งานของผู้ดูแล ติ๊ก "รวมการใช้งานของผู้ดูแลด้วย" ในหน้าส่งออกเพื่อรวม (มีคอลัมน์ "โดยผู้ดูแล") ข้อมูลยังเก็บไว้ครบ ไม่มีการลบ',
+            en: 'Exports of the kids\' activity log and summary leave admin activity out; tick "Include admin activity" on the export page to add it (with a "By an admin" column). Everything is still kept, nothing is deleted' },
+          { a: 'data', th: 'จำนวนการเข้าชมในหน้าแรก และจำนวนโทรศัพท์/เพลงที่เปิดบ่อยในสรุปประจำสัปดาห์ ไม่นับการใช้งานของผู้ดูแล บันทึกก่อนเวอร์ชันนี้ไม่เปลี่ยน',
+            en: 'The home page visit count and the weekly summary (phones, most opened songs) no longer count admin activity. Rows from before this version are unchanged' },
+        ] },
+      { v: '38', date: '2026-11-17', commit: '79e8c7f',
         short: { th: 'เมนูผู้ดูแลพับเป็น 5 หมวด มีช่องค้นหาการตั้งค่า หน้าส่งออกอ่านง่ายขึ้น และเครื่องมือข้อมูลใหม่สำหรับผู้ดูแลสูงสุด (ไฟล์ SQL, ช่องพิมพ์ SQL, กราฟสรุป)',
                  en: 'The admin menu folds into 5 groups with a settings search, a cleaner export page, and new data tools for the super admin (SQL file, SQL box, charts)' },
         items: [

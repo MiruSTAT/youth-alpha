@@ -1175,6 +1175,8 @@ button.maint-bar { width: 100%; border: 0; font-family: inherit; cursor: pointer
 .xl-t span { display: block; font-size: .85rem; color: var(--ink-2); overflow-wrap: anywhere; }
 .xl-btn { flex: none; white-space: nowrap; }
 .xl-note { margin: 8px 4px 0; }
+.xl-staff { display: flex; align-items: center; gap: 10px; margin: 12px 4px 0; font-size: 1.05rem; }
+.xl-staff input { width: 22px; height: 22px; }
 @media (min-width: 1024px) {
   body.adult.has-side .xl-list { display: grid; grid-template-columns: 1fr 1fr; }
   body.adult.has-side .xl-item:nth-child(odd) { border-right: 1px solid var(--line); }

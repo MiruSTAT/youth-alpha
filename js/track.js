@@ -1,7 +1,8 @@
 // Kid activity log: what kids view and tap (for later analysis).
 // No names are typed or stored here — only a random device id, the chosen kid (if they tapped "this is me"),
-// the event name and a short detail. Events are batched and sent every 15 s or when the app is hidden.
-import { api } from './data.js?v=38';
+// the event name and a short detail. v39: rows sent while an admin is signed in get by_staff = true
+// (set by the database itself, trigger kid_events_staff_tag in 024_staff_events.sql). Events are batched and sent every 15 s or when the app is hidden.
+import { api } from './data.js?v=39';
 
 const DEV_KEY = 'ya_dev';
 let dev = '';
@@ -12,6 +13,8 @@ if (!dev) {
 }
 const UUID = /^[0-9a-f-]{36}$/i;
 let queue = [];
+
+export const deviceId = () => dev;   // v39: lets the app tag this phone's last minutes as admin activity after an admin signs in
 
 export function track(event, detail = '') {
   if (document.body.classList.contains('adult')) return;          // only kids' activity
