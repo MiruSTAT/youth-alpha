@@ -1194,45 +1194,11 @@ button.maint-bar { width: 100%; border: 0; font-family: inherit; cursor: pointer
 .dt-big .btn { flex: 1 1 200px; }
 .dt-files > p { margin: 8px 0 0; }
 .dt-h3 { font-size: 1rem; margin: 16px 0 8px; }
-.dt-chart .dt-h3 { margin-top: 0; }
 .dt-tables { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
 .dt-tbl { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
 .dt-tn { flex: 1; min-width: 0; }
 .dt-tn b { display: block; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .9rem; overflow-wrap: anywhere; }
 .dt-tn span { font-size: .8rem; color: var(--ink-2); }
-.dt-q { width: 100%; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .92rem; line-height: 1.45; resize: vertical; min-height: 140px; white-space: pre; overflow-x: auto; }
-.dt-run { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0; }
-.dt-run .btn { flex: 1 1 160px; }
-.dt-scroll { overflow-x: auto; max-height: 420px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; }
-.dt-table { border-collapse: collapse; width: 100%; font-size: .88rem; }
-.dt-table th, .dt-table td { padding: 6px 10px; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
-.dt-table th { position: sticky; top: 0; background: var(--bg); font-weight: 700; }
-.dt-count { margin: 4px 0 6px; }
-.dt-err { background: #fdecee; color: #8a1c2c; border-radius: 10px; padding: 10px 12px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .88rem; overflow-wrap: anywhere; }
-.dt-schema { margin-top: 12px; }
-.dt-schema summary, .dt-nums summary { cursor: pointer; font-weight: 700; color: var(--primary); padding: 6px 0; }
-.dt-schema p { margin: 4px 0; font-size: .88rem; overflow-wrap: anywhere; }
-.dt-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px; }
-.dt-tile { background: var(--white); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; }
-.dt-tile b { display: block; font-size: 1.6rem; line-height: 1.2; }
-.dt-tile span { display: block; font-size: .9rem; color: var(--ink-2); }
-.dt-tile small { display: block; font-size: .78rem; color: var(--ink-2); margin-top: 2px; }
-.dt-charts { display: grid; grid-template-columns: 1fr; gap: 12px; }
-@media (min-width: 1024px) { body.adult.has-side .dt-charts { grid-template-columns: 1fr 1fr; } }
-.dt-chart { margin: 0; min-width: 0; }
-.dt-sub { margin: -4px 0 8px; font-size: .85rem; }
-.hb { display: grid; gap: 6px; }
-.hb-row { display: grid; grid-template-columns: minmax(70px, 34%) 1fr auto; align-items: center; gap: 8px; font-size: .9rem; }
-.hb-l { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hb-track { height: 14px; }
-.hb-bar { display: block; height: 100%; background: var(--primary); border-radius: 0 4px 4px 0; }
-.hb-v { font-variant-numeric: tabular-nums; color: var(--ink-2); min-width: 2.5em; text-align: right; }
-.vc-scroll { overflow-x: auto; }
-.vc { display: flex; align-items: stretch; gap: 3px; height: 180px; padding-bottom: 2px; }
-.vc-col { flex: 1 1 0; min-width: 16px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; position: relative; padding-bottom: 20px; }
-.vc-bar { width: 100%; max-width: 34px; background: var(--primary); border-radius: 4px 4px 0 0; }
-.vc-v { font-size: .72rem; color: var(--ink-2); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
-.vc-l { position: absolute; bottom: 0; font-size: .72rem; color: var(--ink-2); white-space: nowrap; }
 
 /* v40 harden: ties, zero state, errors that stay */
 .rank-row .n { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; }
@@ -1372,11 +1338,15 @@ main:focus-visible { outline: none; }                     /* main gets focus onl
   body.adult.has-side main > .card { max-width: 760px; }
 }
 @media (min-width: 1440px) { body.adult.has-side .options { grid-template-columns: repeat(3, 1fr); } }   /* v42: attendance stays 2 wide (rows need room for 3 chips) */
-/* v41 polish: the open tab is a soft pill behind its icon (the old line along the top read like a progress bar) */
+/* v46: the open tab is one rounded tile that covers the icon AND the label (v41 had a pink pill behind the icon only) */
+.kid-nav a { position: relative; isolation: isolate; }
 .kid-nav a.active { box-shadow: none; }
-.kid-nav a > span { padding: 0 16px; border-radius: 999px; transition: background .2s; }
-.kid-nav a.active > span { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.kid-nav a::before { content: ''; position: absolute; inset: 3px 6px; z-index: -1; border-radius: 14px;
+  background: transparent; border: 1px solid transparent; transition: background .2s, border-color .2s; }
+.kid-nav a.active::before { background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent); }
 .kid-nav a.active > b { font-weight: 700; }
+@media (prefers-reduced-motion: reduce) { .kid-nav a::before { transition: none; } }
 /* v41 small fixes */
 @media (prefers-reduced-motion: reduce) { .alert-banner { animation: none; } }
 .date-row { align-items: center; }
@@ -1527,3 +1497,11 @@ body.sheet-full:not([data-mode="normal"]) .sheet-grab::before { top: 19px; }
 .prog-row.just-made { outline: 3px solid var(--primary); outline-offset: 2px; animation: just-made 2.4s ease-out 1 forwards; }
 @keyframes just-made { 0%, 60% { outline-color: var(--primary); } 100% { outline-color: transparent; } }
 @media (prefers-reduced-motion: reduce) { .prog-row.just-made { animation: none; } }
+
+/* v46: visits counter, bottom-right corner above the tab bar, see-through so it never covers anything important */
+.visit-pill { position: fixed; z-index: 9; right: 12px; bottom: calc(68px + var(--safe-b, 0px) + 10px); display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 999px; background: rgba(16, 24, 56, .45); color: rgba(255, 255, 255, .92); font-size: .85rem;
+  pointer-events: none; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+.visit-pill svg.ico { width: 16px; height: 16px; opacity: .85; }
+.visit-pill b { font-variant-numeric: tabular-nums; }
+body.adult .visit-pill, body.song-page .visit-pill, body.maint .visit-pill { display: none; }

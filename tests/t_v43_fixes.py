@@ -58,10 +58,10 @@ with sync_playwright() as p:
     cx, pg = ctx(b, seed_db())
     go(pg, '#/admin/attendance', 1500)
     c1 = pg.evaluate("getComputedStyle(document.querySelector('.att .chip.present')).color")
-    c2 = pg.evaluate("getComputedStyle(document.querySelector('.summary .c-leave')).color")
+    c2 = pg.evaluate("document.querySelector('.summary .c-leave') ? getComputedStyle(document.querySelector('.summary .c-leave')).color : 'none'")
     ink2 = pg.evaluate("getComputedStyle(document.body).getPropertyValue('--ink-2').trim()")
     check(c1 != 'rgb(34, 197, 94)', f'b: unmarked "✓ มา" text is not the light green (v44: neutral grey until chosen, {c1}, --ink-2 {ink2})')
-    check(c2 == 'rgb(138, 90, 0)', f'b: ลา counter is the darker amber ({c2})')
+    check(c2 == 'none', f'b: no ลา counter when nobody is on leave (v46: ลา removed) ({c2})')
     cx.close()
 
     # ---- c: English attendance never scrolls sideways at 390 px (normal + Select many) (P2)

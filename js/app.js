@@ -1,15 +1,15 @@
-import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=45';
-import { api, MODE, DEMO, ranked, byName, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=45';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=45';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=45';
+import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=46';
+import { api, MODE, DEMO, ranked, byName, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=46';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=46';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=46';
 
-import { music } from './music.js?v=45';
-import { art, burst, SPECIAL, pic, face, prizeIcon, isImg, shrinkImage } from './art.js?v=45';
-import { snow } from './snow.js?v=45';
-import { track, flush, deviceId } from './track.js?v=45';
-import { calmIcon } from './icons.js?v=45';
-import { metro } from './metronome.js?v=45';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=45';
+import { music } from './music.js?v=46';
+import { art, burst, SPECIAL, pic, face, prizeIcon, isImg, shrinkImage } from './art.js?v=46';
+import { snow } from './snow.js?v=46';
+import { track, flush, deviceId } from './track.js?v=46';
+import { calmIcon, svgIcon } from './icons.js?v=46';
+import { metro } from './metronome.js?v=46';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=46';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -143,7 +143,7 @@ async function eventInfo(force = false) {
 // music switches set by the admin (everything is on unless switched off)
 // music switches, in groups (the same groups on the Music settings page and on each song's card)
 const MUSIC_GROUPS = [
-  ['mg_app', [['bgMusic', '🔔'], ['songsTab', '🎵'], ['festive', '🎄'], ['festiveSfx', '✨']]],
+  ['mg_app', [['bgMusic', '🔔'], ['songsTab', '🎵'], ['festive', '🎄'], ['cutscene', '🎁'], ['festiveSfx', '✨']]],
   ['mg_see', [['origSheet', '📄'], ['video', '▶️'], ['lyrics', '📝']]],
   ['mg_text', [['chords', '🎸'], ['transpose', '♯'], ['textSize', 'Aa'], ['langSwitch', '🌐']]],
   ['mg_tools', [['metro', '🥁'], ['beatDots', '🔴'], ['scroll', '⏬'], ['speed', '🐢']]],
@@ -183,7 +183,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=45');
+    const m = await import('./scene3d.js?v=46');
     if (m.initScene($('#scene'), { pack: part('scene') === 'cross' ? 'easter' : 'christmas' })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -263,7 +263,7 @@ async function kidRank() {
   }
 }
 
-// v36 (roadmap step 6): "👀 1,234 visits · 💬 56 feedback" under the ranking title. Each number shows only when its
+// v36 (roadmap step 6): "1,234 visits · 💬 56 feedback" (v46: visits moved to the bottom-right corner). Each number shows only when its
 // switch is on (settings.show_visits / show_fb_count, admin Settings page); the server returns null for a switch that is off.
 // Loaded after the page is drawn, so it never slows the ranking down; offline it uses the last numbers this phone saw.
 async function homeCount() {
@@ -271,10 +271,15 @@ async function homeCount() {
   const c = await read('hc', () => api.homeCounts()).catch(() => null);
   if (!c || !box.isConnected) return;
   const fmt = (n) => Number(n).toLocaleString(getLang() === 'th' ? 'th-TH' : 'en-US');
-  const items = [c.visits != null && `<span class="hc"><span class="hc-i">👀</span><b>${fmt(c.visits)}</b> ${t('hcVisits')}</span>`,
-    c.feedback != null && `<span class="hc"><span class="hc-i">💬</span><b>${fmt(c.feedback)}</b> ${t('hcFeedback')}</span>`].filter(Boolean);
-  if (!items.length) return;
-  box.innerHTML = items.join(''); box.hidden = false; calmSoon();
+  // v46: visits is a small see-through label in the bottom-right corner (line eye icon, no emoji); feedback stays here
+  document.querySelectorAll('.visit-pill').forEach(x => x.remove());
+  if (c.visits != null) {
+    const v = document.createElement('div'); v.className = 'visit-pill'; v.setAttribute('aria-label', `${fmt(c.visits)} ${t('hcVisits')}`);
+    v.innerHTML = `${svgIcon('eye')}<b>${fmt(c.visits)}</b><span>${t('hcVisits')}</span>`;
+    document.body.appendChild(v);
+  }
+  if (c.feedback == null) return;
+  box.innerHTML = `<span class="hc"><span class="hc-i">💬</span><b>${fmt(c.feedback)}</b> ${t('hcFeedback')}</span>`; box.hidden = false; calmSoon();
 }
 
 const verseCard = (ev) => `<div class="verse"><span class="vl">📖 ${t('verseWeek')}</span><p>${esc(ev.verse_text)}</p>${ev.verse_ref ? `<b>${esc(ev.verse_ref)}</b>` : ''}</div>`;
@@ -896,7 +901,9 @@ function startFestive() {
   festive = true; track('festive', 'on');
   scene?.celebrate?.();
   music.setTrack('joy'); if (music.wantsMusic() && !music.playing) music.start(); paintChrome();
-  // the cutscene: a golden flash, presents flying everywhere, a title
+  // the cutscene: a golden flash, presents flying everywhere, a title (v46: admins can switch it off on the Music
+  // settings page, "mo_cutscene"; special mode then starts straight away with the golden look and the music)
+  if (!mo('cutscene')) { document.body.classList.add('festive'); if (part('special') === 'eggs') eggHunt(); return; }
   const cv = $('#scene').getBoundingClientRect(), cx = cv.left + cv.width / 2, cy = cv.top + cv.height * 0.55;
   const box = document.createElement('div'); box.className = 'cutscene';
   const things = packInfo().things;
@@ -965,13 +972,13 @@ const PAGES = {
   admins: ['super', async (x) => x ? (await saMod()).pAdminEdit(saCtx(), x) : (await saMod()).pAdmins(saCtx())],
   programs: ['super', async () => (await saMod()).pPrograms(saCtx())], look: ['super', async () => (await saMod()).pLook(saCtx())],
   online: ['super', async () => (await saMod()).pOnline(saCtx())], ai: ['super', async () => (await saMod()).pAi(saCtx())],
-  data: ['super', async () => (await import('./datatools.js?v=45')).pData(dtCtx())],   // v38 roadmap step 8
+  data: ['super', async () => (await import('./datatools.js?v=46')).pData(dtCtx())],   // v38 roadmap step 8
 };
 const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? isSuper() : can(need); };
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
-const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
+const saCtx = () => ({ maintEnds, maintLive, view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
   PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame, paintMaintBar });
-const saMod = () => import('./superadmin.js?v=45');
+const saMod = () => import('./superadmin.js?v=46');
 // v38: helpers for the data tools page (js/datatools.js)
 const dtCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, program, leaderboard, pcats, cName, bkkToday, loadXLSX, isSuper });
 
@@ -1030,12 +1037,12 @@ function grpRemember(root) {
 // Each entry = [page, text key]; the words are searched in Thai AND English, so either language finds it.
 const FIND_ITEMS = [
   ['settings', 'secPoints'], ['settings', 'attPoints'], ['settings', 'secTips'], ['settings', 'tipDays'], ['settings', 'secHomeCount'], ['settings', 'swVisits'], ['settings', 'swFbCount'],
-  ['musicset', 'simpleSongs'], ['musicset', 'ms_player'], ['musicset', 'mg_app'], ['pcats', 'tab_pcats'], ['phone', 'tab_phone'],
+  ['musicset', 'simpleSongs'], ['musicset', 'ms_player'], ['musicset', 'mg_app'], ['musicset', 'mo_cutscene'], ['pcats', 'tab_pcats'], ['phone', 'tab_phone'],
   ['look', 'installApp'], ['look', 'clogDetailT'], ['look', 'lookTitle'], ['look', 'layTitle'], ['look', 'lookName'], ['look', 'lookEmoji'], ['look', 'lookLogo'],
   ['look', 'lookFont'], ['look', 'lookSize'], ['look', 'lookMode'], ['look', 'lookPack'], ['look', 'lookParts'],
   ['programs', 'progNew'], ['programs', 'mtLabel'], ['online', 'tab_online'], ['ai', 'tab_ai'], ['attsum', 'attSummary'], ['history', 'seeHistory'],
   ['export', 'exportAll'], ['export', 'logsGrp'], ['export', 'clearKidLog'],
-  ['data', 'dtSqlFile'], ['data', 'dtCsv'], ['data', 'dtBox'], ['data', 'dtInsights'],
+  ['data', 'dtSqlFile'], ['data', 'dtCsv'],
 ];
 const fold = (x) => String(x || '').toLowerCase().replace(/[\p{Extended_Pictographic}\u{FE0F}]/gu, '').trim();
 function findIndex() {
@@ -1333,6 +1340,8 @@ async function pAttendance() {
   const status = Object.fromEntries(rows.map(r => [r.kid_id, r.status]));
   // v41: "รอเช็ก" first (order fixed while the page is open, so rows never jump under a finger), then A–Z
   const active = kids.filter(k => k.active).sort((a, b) => (status[a.id] ? 1 : 0) - (status[b.id] ? 1 : 0));
+  // v46: "ลา" is no longer offered (owner's request). Old "leave" rows stay in the database and the exports; a kid already
+  // marked ลา on the day shown keeps a ลา chip (so the admin sees it and can change it) and the ลา total shows only when > 0.
   const stateTxt = { present: ['c-here', t('present')], leave: ['c-leave', t('leave')], absent: ['c-absent', t('absent')] };
   let multi = false; const pick = new Set();
   const draw = () => {
@@ -1347,7 +1356,7 @@ async function pAttendance() {
       ${round?.finished ? `<div class="finished-banner"><span>${t('finished')}</span><button class="btn small" id="reopen">${t('reopen')}</button></div>` : ''}
       <div class="summary">
         <div><b class="c-here">${c.present}</b><span>${t('present')}</span></div>
-        <div><b class="c-leave">${c.leave}</b><span>${t('leave')}</span></div>
+        ${c.leave ? `<div><b class="c-leave">${c.leave}</b><span>${t('leave')}</span></div>` : ''}
         <div><b class="c-absent">${c.absent}</b><span>${t('absent')}</span></div>
         <div><b class="c-wait">${waiting}</b><span>${t('waiting')}</span></div></div>
       ${pts && active.length ? `<p class="att-pts muted">${t('attPtsNote', pts)}</p>` : ''}
@@ -1359,9 +1368,9 @@ async function pAttendance() {
           <span class="t">${esc(k.nickname)}<span class="opt-sub ${cls}">${label}</span></span><span class="check">${pick.has(k.id) ? '✓' : ''}</span></button>`;
         return `<div class="att ${st || 'wait'}" data-n="${esc(k.nickname.toLowerCase())}">
           <button class="att-main ${st === 'present' ? 'on' : ''}" data-k="${k.id}" data-s="present" aria-pressed="${st === 'present'}"><span class="av">${face(k)}</span><span class="nmw"><span class="nm">${esc(k.nickname)}</span>${st === 'present' && pts ? `<span class="state c-here">+${pts} ⭐</span>` : ''}</span></button>
-          <span class="chips">${['present', 'leave', 'absent'].map(s => `<button class="chip ${s} ${st === s ? 'on' : ''}" data-k="${k.id}" data-s="${s}" aria-pressed="${st === s}">${s === 'present' ? '✓ ' : ''}${t(s)}</button>`).join('')}</span></div>`;
+          <span class="chips">${['present', ...(st === 'leave' ? ['leave'] : []), 'absent'].map(s => `<button class="chip ${s} ${st === s ? 'on' : ''}" data-k="${k.id}" data-s="${s}" aria-pressed="${st === s}">${s === 'present' ? '✓ ' : ''}${t(s)}</button>`).join('')}</span></div>`;
       }).join('') || emptyGo(t('noKids'), 'kids', t('addKid'))}</div>
-      ${multi ? `<div class="bottom-bar bulk"><span class="muted">${t('selectedN', pick.size)}</span><div class="st">${['present', 'leave', 'absent'].map(s => `<button class="${s} on" data-bulk="${s}" ${pick.size ? '' : 'disabled'}>${t(s)}</button>`).join('')}</div></div>`
+      ${multi ? `<div class="bottom-bar bulk"><span class="muted">${t('selectedN', pick.size)}</span><div class="st">${['present', 'absent'].map(s => `<button class="${s} on" data-bulk="${s}" ${pick.size ? '' : 'disabled'}>${t(s)}</button>`).join('')}</div></div>`
         : active.length && !round?.finished ? `<div class="bottom-bar"><button class="btn primary" id="finish">✓ ${t('finishRound')}</button></div>` : ''}`;
     $('#day').onchange = (e) => { attDay = e.target.value || today(); pAttendance().catch(fail); };
     const q = $('#q'), filter = () => view.querySelectorAll('.att').forEach(r => r.hidden = !r.dataset.n.includes(q.value.trim().toLowerCase()));
@@ -1579,9 +1588,9 @@ async function pAttSummary() {
   const tot = list.reduce((s, r) => ({ present: s.present + r.present, leave: s.leave + r.leave, absent: s.absent + r.absent }), { present: 0, leave: 0, absent: 0 });
   view.innerHTML = `${pageHead(t('attSummary'), '#/admin/attendance')}
     <p class="muted" style="margin:-6px 0 12px">${t('rounds', days)}</p>
-    <div class="summary"><div><b class="c-here">${tot.present}</b><span>${t('present')}</span></div><div><b class="c-leave">${tot.leave}</b><span>${t('leave')}</span></div><div><b class="c-absent">${tot.absent}</b><span>${t('absent')}</span></div></div>
+    <div class="summary"><div><b class="c-here">${tot.present}</b><span>${t('present')}</span></div>${tot.leave ? `<div><b class="c-leave">${tot.leave}</b><span>${t('leave')}</span></div>` : ''}<div><b class="c-absent">${tot.absent}</b><span>${t('absent')}</span></div></div>
     <div class="card"><div class="list">${list.map(r => `<div class="li"><span class="av">${face(r.k)}</span>
-      <span class="grow">${esc(r.k.nickname)}<span class="sub">${t('attTimes', r.present, r.leave, r.absent)}</span></span>
+      <span class="grow">${esc(r.k.nickname)}<span class="sub">${r.leave ? t('attTimes', r.present, r.leave, r.absent) : t('attTimes2', r.present, r.absent)}</span></span>
       <span class="amt c-here">${r.present}${days ? `<span class="muted"> / ${days}</span>` : ''}</span></div>`).join('') || emptyGo(t('noKids'), 'kids', t('addKid'))}</div></div>`;
 }
 
@@ -1952,7 +1961,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=45');
+      const { readSheet } = await import('./ocr.js?v=46');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -2399,7 +2408,7 @@ async function render() {
   document.body.classList.remove('tree-peek');
   document.body.classList.toggle('login-page', h === '#/login' && program.login === 'all');   // v31: no tabs on the sign-in page when sign-in is required
   $('#kidSheet').hidden = true;
-  document.querySelectorAll('.lightbox').forEach(x => x.remove());
+  document.querySelectorAll('.lightbox, .visit-pill').forEach(x => x.remove());
   stopPlayer();                                                   // leaving a song: stop scrolling / metronome / video
   syncCleanup?.(); syncCleanup = null;
   isAdult || !feat('snow') ? snow.stop() : snow.start();
@@ -2458,7 +2467,18 @@ api.onAuth?.((event) => { maintSup = null; if (location.hash.startsWith('#/admin
 // Switched by the super admin on the Programs page. While it is on, kids and every adult who is not the super admin see
 // only a full-screen scene (no tabs, no menus, no pop-ups): "Under maintenance", a colour switch and a sound switch.
 // The database refuses every write in that program from anyone but the super admin. The super admin sees a thin bar.
-const maintOn = () => program.maintenance?.on === true;
+// v46: the super admin can give maintenance a timer (programs.maintenance.until, 026_maint_timer.sql); once it has passed,
+// maintenance counts as off here and in the database (in_maintenance) without anyone switching it off
+const maintUntil = (m = program.maintenance) => (m?.until ? Date.parse(m.until) || 0 : 0);
+const maintLive = (m) => m?.on === true && !(maintUntil(m) && maintUntil(m) <= Date.now());
+const maintOn = () => maintLive(program.maintenance);
+// "ends 21:45 · 25 min left" for a program's maintenance with a timer ('' when there is no timer)
+function maintEnds(m = program.maintenance) {
+  const u = maintUntil(m); if (!u || !maintLive(m)) return '';
+  const left = Math.max(1, Math.ceil((u - Date.now()) / 60000));
+  const hm = new Date(u).toLocaleTimeString(getLang() === 'th' ? 'th-TH' : 'en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+  return t('mtEnds', hm, left >= 120 ? t('mtLeftH', Math.floor(left / 60), left % 60) : t('mtLeftM', left));
+}
 let maintSup = null;                                             // is this device's adult the super admin? (null = not asked yet)
 async function maintSuper() {
   if (maintSup !== null) return maintSup;
@@ -2515,7 +2535,8 @@ function paintMaintBar() {
     bar = document.createElement('button'); bar.id = 'maintBar'; bar.type = 'button'; bar.className = 'maint-bar'; $('#offBar').before(bar);
     bar.onclick = endMaintFromBar;
   }
-  bar.hidden = false; bar.textContent = '🛠️ ' + t('mtBar');
+  const ends = maintEnds();
+  bar.hidden = false; bar.textContent = '🛠️ ' + t('mtBar') + (ends ? ' · ⏱ ' + ends : '');
 }
 // v38: tapping the orange bar really ends maintenance (after a warning that names the program); only the super admin may
 async function endMaintFromBar() {
@@ -2524,12 +2545,19 @@ async function endMaintFromBar() {
   const scene = program.maintenance?.scene === 'bunny' ? 'bunny' : 'tree';
   try {
     await api.programSetMaint(program.id, false, scene);
-    program.maintenance = { on: false, scene };
+    program.maintenance = { on: false, scene, until: null };
     const row = program.list.find(x => x.id === program.id); if (row) row.maintenance = program.maintenance;
     try { Object.keys(localStorage).filter(k => k.includes('programs')).forEach(k => localStorage.removeItem(k)); } catch {}
     paintMaintBar(); toast('✓ ' + t('mtDoneOff', program.name)); render();
   } catch (e) { fail(e); }
 }
+// v46: a maintenance timer runs out → kids' phones open the app again, the super admin's orange bar goes away; the time
+// left on the bar is kept fresh (checked every 15 s, nothing is fetched)
+setInterval(() => {
+  if (!program.maintenance?.on || !maintUntil()) return;
+  if (!maintOn() && document.body.classList.contains('maint')) { location.reload(); return; }
+  if ($('#maintBar') && !$('#maintBar').hidden || maintOn()) paintMaintBar();
+}, 15000);
 // an app left open notices the switch within about two minutes
 setInterval(async () => {
   if (document.visibilityState !== 'visible' || DEMO || navigator.onLine === false) return;

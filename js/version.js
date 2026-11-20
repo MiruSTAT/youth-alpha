@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '45';
+export const VERSION = '46';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,28 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '45', date: '2026-11-20', commit: '',
+      { v: '46', date: '2026-11-20', commit: '',
+        short: { th: 'ตั้งเวลาปิดปรับปรุงได้ ตัวนับคนเปิดแอปย้ายไปมุมขวาล่าง สวิตช์ฉากเปิดโหมดพิเศษ เช็กชื่อเหลือแค่ มา / ขาด และหน้าเครื่องมือข้อมูลเหลือแค่ดาวน์โหลดไฟล์',
+                 en: 'Maintenance timer, visits counter moved to the bottom-right corner, a switch for the special mode opening scene, attendance is only Here / Absent, and Data tools is downloads only' },
+        items: [
+          { a: 'safety', th: 'ปิดปรับปรุง (ผู้ดูแลสูงสุด หน้าโปรแกรม): เลือกเวลาได้ 15 นาที–1 วัน หรือพิมพ์จำนวนนาทีเอง (สูงสุด 1 สัปดาห์) หรือไม่ตั้งเวลา เมื่อครบเวลาทุกคนกลับมาใช้ได้เองโดยไม่ต้องกดเลิก แถบสีส้มและการ์ดโปรแกรมบอกเวลาที่จะจบและเวลาที่เหลือ',
+            en: 'Maintenance (super admin, Programs page): pick a timer from 15 minutes to 1 day, type your own minutes (up to 1 week) or no timer. When the time is up everyone is let back in by itself, no need to switch it off. The orange bar and the program card show when it ends and the time left' },
+          { a: 'kids', th: 'ตัวนับจำนวนครั้งที่เปิดแอปย้ายไปมุมขวาล่างของหน้าอันดับ เป็นป้ายโปร่งแสงเล็ก ๆ มีไอคอนรูปตา (ไม่มีอีโมจิ) จำนวนความคิดเห็นยังอยู่ใต้หัวข้อเหมือนเดิม',
+            en: 'The visits counter moved to the bottom-right corner of the ranking page as a small see-through label with an eye icon (no emoji). The feedback count stays under the title' },
+          { a: 'look', th: 'แถบด้านล่างของเด็ก: แท็บที่เปิดอยู่เป็นกรอบมนกรอบเดียวคลุมทั้งไอคอนและชื่อ (เดิมเป็นแคปซูลสีชมพูหลังไอคอนอย่างเดียว)',
+            en: 'Kids\' bottom tab bar: the open tab is one rounded tile over the icon and its name (it used to be a pink pill behind the icon only)' },
+          { a: 'admin', th: 'ตั้งค่าเพลง → ส่วนของแอป: สวิตช์ใหม่ "ฉากเปิดโหมดพิเศษ" ปิดแล้วตอนแตะต้นไม้ 5 ครั้งจะไม่มีของขวัญพุ่งและแสงวาบ โหมดพิเศษเริ่มทันที (สวิตช์โหมดพิเศษเดิมยังปิดทั้งโหมดได้)',
+            en: 'Music settings → app part: new switch "Special mode opening scene". Off = no flying presents and golden flash after 5 tree taps, special mode starts straight away (the old special mode switch still turns the whole mode off)' },
+          { a: 'admin', th: 'เช็กชื่อ: เหลือแค่ มา / ขาด (เอา ลา ออก ทั้งปุ่มของแต่ละคนและเลือกหลายคน) ข้อมูล ลา เก่ายังอยู่ครบในฐานข้อมูลและไฟล์ส่งออก เด็กที่ถูกเช็ก ลา ไว้แล้วยังเห็นปุ่ม ลา เพื่อเปลี่ยนได้ และยอดรวม ลา แสดงเฉพาะเมื่อมี',
+            en: 'Attendance: only Here / Absent now (Leave removed from each row and from Select many). Old Leave records stay in the database and the exports; a kid already marked Leave keeps the Leave chip so it can be changed, and the Leave total shows only when there is one' },
+          { a: 'data', th: 'เครื่องมือข้อมูล: เอาช่องพิมพ์ SQL และสรุปภาพรวมออก เหลือดาวน์โหลดไฟล์ .sql (เปิดใน DBeaver ได้) CSV และ JSON หน้านี้เบาลงเพราะไม่ต้องโหลด SQLite (ประมาณ 700 KB)',
+            en: 'Data tools: the SQL box and Quick insights are gone; the page is downloads only: the .sql file (opens in DBeaver), CSV and JSON. The page is lighter because SQLite (about 700 KB) is no longer loaded' },
+          { a: 'admin', th: 'หน้าผู้ดูแลสูงสุด: รายการ "สิ่งที่กำลังจะมา" เป็นรายการใหม่ (ของเดิมทำเสร็จหมดแล้ว)',
+            en: 'Super admin page: a new "Coming next" list (everything on the old list is done)' },
+          { a: 'safety', th: 'ไฟล์คู่มือ (HANDOFF.md) ไม่มีชื่อผู้ใช้สำหรับเข้าระบบและรหัสผ่านทดสอบแล้ว ตรวจทั้งคลังโค้ดไม่พบอีเมลหรือรหัสผ่านจริง',
+            en: 'The handoff file (HANDOFF.md) no longer shows a sign-in username or the test password; the whole repository was checked: no real email or password in it' },
+        ] },
+      { v: '45', date: '2026-11-20', commit: '47ea3ee',
         short: { th: 'หน้าเด็กบนคอมพิวเตอร์อยู่ตรงกลางแม้มีเด็กหรือของรางวัลน้อย แถบเมนูล่างกว้างเท่าหน้า ประวัติคะแนนมีวันและเวลา ปุ่ม "เลิกทำ" หลังให้คะแนน และสร้างโปรแกรมชื่อภาษาไทยได้',
                  en: 'Kids pages stay centred on a computer even with few kids or prizes, the bottom tab bar matches the page, points history shows day and time, "Undo" after giving points, and programs can have Thai names' },
         items: [

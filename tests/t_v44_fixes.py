@@ -54,8 +54,8 @@ with sync_playwright() as p:
         go(pg, '#/admin/attendance', 1500)
         h0 = [r['height'] for r in [pg.locator('.att').nth(i).bounding_box() for i in range(3)]]
         bc = pg.evaluate("getComputedStyle(document.querySelector('.att .chip.present')).borderTopColor")
-        ln = pg.evaluate("getComputedStyle(document.querySelector('.att .chip.leave')).borderTopColor")
-        check(bc == ln, f'a {lang}: unmarked "✓ มา" has the same neutral outline as ลา ({bc})')
+        ln = pg.evaluate("getComputedStyle(document.querySelector('.att .chip.absent')).borderTopColor")
+        check(bc == ln, f'a {lang}: unmarked "✓ มา" has the same neutral outline as ขาด ({bc})')
         y3 = pg.locator('.att').nth(3).bounding_box()['y']
         for i in range(3): pg.locator('.att .att-main').nth(i).click(); pg.wait_for_timeout(500)
         h1 = [r['height'] for r in [pg.locator('.att').nth(i).bounding_box() for i in range(3)]]

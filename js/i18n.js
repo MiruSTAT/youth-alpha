@@ -900,6 +900,31 @@ Object.assign(DICT.th, { today: 'วันนี้', yesterday: 'เมื่�
   undoWarn: (a, n) => `เลิกทำ: ลบคะแนน ${a} ที่เพิ่งให้ ${n}?\nรายการนี้จะยังอยู่ในบันทึกของแอดมิน` });
 Object.assign(DICT.en, { today: 'Today', yesterday: 'Yesterday', undoDo: 'Undo', undone: 'Undone',
   undoWarn: (a, n) => `Undo: remove the ${a} points just given to ${n}?\nThis still stays in the admin log` });
+// v46: maintenance timer, cutscene switch, attendance without ลา, new "Coming next" list
+Object.assign(DICT.th, {
+  mtTimer: 'ตั้งเวลาปิดปรับปรุง', mtNoTimer: 'ไม่ตั้งเวลา (ปิดเองเมื่อกดเลิก)', mtOther: 'หรือใส่จำนวนนาทีเอง', mtOtherPh: 'เช่น 45',
+  mtFor: (m) => m % 60 === 0 ? `${m / 60} ชั่วโมง` : m > 60 ? `${Math.floor(m / 60)} ชั่วโมง ${m % 60} นาที` : `${m} นาที`,
+  mtEnds: (hm, left) => `จบเวลา ${hm} น. (${left})`, mtLeftM: (n) => `อีก ${n} นาที`, mtLeftH: (h, m) => `อีก ${h} ชม. ${m} นาที`,
+  mo_cutscene: 'ฉากเปิดโหมดพิเศษ', mos_cutscene: 'ของขวัญพุ่งกระจายและแสงวาบตอนเริ่มโหมดพิเศษ ปิดแล้วโหมดพิเศษจะเริ่มทันที',
+  attTimes2: (p, a) => `มา ${p} · ขาด ${a}`,
+  saN12: 'โหมดปกติให้ครบทุกหน้า: ร้านของรางวัลแบบรายการเรียบ ๆ และตัวอักษรย่อชื่อภาษาไทยที่อ่านถูก',
+  saN13: 'เด็กรู้ว่าต้องทำอะไรต่อเมื่อคะแนนพอแลกของรางวัล',
+  saN14: 'ชื่อในลิงก์ที่แนะนำตอนสร้างโปรแกรมใหม่ฉลาดขึ้น',
+  saN15: 'หน้าของเด็กบนคอมพิวเตอร์ดูเต็มขึ้นเมื่อมีเด็กไม่กี่คน',
+  saN16: 'เก็บงานเล็ก ๆ: แถบเลิกทำหยุดนับเวลาเมื่อชี้เมาส์ ช่องเลือกวันที่ และปุ่มที่บอกเหตุผลเมื่อกดไม่ได้',
+});
+Object.assign(DICT.en, {
+  mtTimer: 'Maintenance timer', mtNoTimer: 'No timer (ends when you switch it off)', mtOther: 'Or type minutes', mtOtherPh: 'e.g. 45',
+  mtFor: (m) => m % 60 === 0 ? `${m / 60} hour${m === 60 ? '' : 's'}` : m > 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m} minutes`,
+  mtEnds: (hm, left) => `ends ${hm} (${left})`, mtLeftM: (n) => `${n} min left`, mtLeftH: (h, m) => `${h} h ${m} min left`,
+  mo_cutscene: 'Special mode opening scene', mos_cutscene: 'Presents flying out and a golden flash when special mode starts. Off = special mode starts straight away',
+  attTimes2: (p, a) => `Here ${p} · Absent ${a}`,
+  saN12: 'Normal mode on every page: a plain prize list and Thai name initials that read correctly',
+  saN13: 'Kids know what to do next when they have enough points for a prize',
+  saN14: 'Smarter link-name suggestions when making a new program',
+  saN15: 'Kids\' pages on a computer look fuller when there are only a few kids',
+  saN16: 'Small fixes: the undo bar waits while the mouse is on it, the date picker, buttons that say why they are greyed out',
+});
 const NORMAL = { th: {}, en: {} };
 // v41 clarify: Normal mode also says "สมาชิก" / "member" instead of "เด็ก" / "kid" (admin menus, feedback, copy people…).
 // Texts that name the two modes themselves ("โหมดเด็ก", "Kids mode") are left alone.
