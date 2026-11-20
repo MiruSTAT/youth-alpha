@@ -91,7 +91,7 @@ with sync_playwright() as p:
     nav = pg.locator('.kid-nav').bounding_box()
     shown = pg.evaluate("[...document.querySelectorAll('.rank-row')].filter(r => r.getBoundingClientRect().bottom <= innerHeight - 70).length")
     check(colc == '2', f'c: ranking in 2 columns at 1366 px ({colc})')
-    check(nav['width'] <= 640 and abs(nav['x'] + nav['width'] / 2 - 683) < 2, f'c: tab bar capped and centred ({nav["width"]:.0f} px)')
+    check(abs(nav['width'] - 1040) < 2 and abs(nav['x'] + nav['width'] / 2 - 683) < 2, f'c: tab bar as wide as the sheet (v45) and centred ({nav["width"]:.0f} px)')
     check(shown >= 8, f'c: {shown} rank rows visible without scrolling (was 4)')
     pg.screenshot(path=S + 'v42_c_wide.png')
     cx.close()

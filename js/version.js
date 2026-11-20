@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '44';
+export const VERSION = '45';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,26 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '44', date: '2026-11-20', commit: '',
+      { v: '45', date: '2026-11-20', commit: '',
+        short: { th: 'หน้าเด็กบนคอมพิวเตอร์อยู่ตรงกลางแม้มีเด็กหรือของรางวัลน้อย แถบเมนูล่างกว้างเท่าหน้า ประวัติคะแนนมีวันและเวลา ปุ่ม "เลิกทำ" หลังให้คะแนน และสร้างโปรแกรมชื่อภาษาไทยได้',
+                 en: 'Kids pages stay centred on a computer even with few kids or prizes, the bottom tab bar matches the page, points history shows day and time, "Undo" after giving points, and programs can have Thai names' },
+        items: [
+          { a: 'kids', th: 'อันดับบนคอมพิวเตอร์: เด็กไม่เกิน 5 คนอยู่คอลัมน์เดียวตรงกลาง (เดิมเด็กคนเดียวอยู่ครึ่งซ้าย หน้าว่างด้านขวา) 6 คนขึ้นไปแบ่ง 2 คอลัมน์ 13 คนขึ้นไปบนจอกว้างแบ่ง 3 คอลัมน์',
+            en: 'Ranking on a computer: up to 5 kids sit in one centred column (one kid used to sit in the left half with the right side empty); 6+ kids use 2 columns, 13+ on a wide screen 3' },
+          { a: 'kids', th: 'ร้านของรางวัล: ของรางวัลแถวสุดท้ายที่ไม่เต็มอยู่ตรงกลาง (ของชิ้นเดียวอยู่กลางชั้น) มือถือ 2 ชิ้นต่อแถว แท็บเล็ต 3 คอมพิวเตอร์ 4 ของ 1–3 ชิ้นเป็นร้านขนาดเล็กลงตรงกลาง',
+            en: 'Prize shop: a short last shelf is centred (one prize sits in the middle); 2 per shelf on a phone, 3 on a tablet, 4 on a computer; 1–3 prizes get a smaller stall in the middle' },
+          { a: 'look', th: 'หน้าเด็กทุกหน้าบนคอมพิวเตอร์ (เมนู เพลง ความคิดเห็น) ใช้คอลัมน์กลางกว้าง 720 px เท่าหัวข้ออันดับ (เดิมบางหน้ากว้างเต็ม 1,168 px) และแถบเมนูล่างกว้างเท่าหน้าเสมอ ทั้งแท็บเล็ตและคอมพิวเตอร์ (เดิมแคบกว่าหน้า 640 px หรือกว้างเต็มจอบนแท็บเล็ต)',
+            en: 'Every kids page on a computer (menu, songs, feedback) uses the same centred 720 px column as the ranking title (some were 1,168 px wide), and the bottom tab bar is always as wide as the page on tablets and computers (it was 640 px, or the full screen on a tablet)' },
+          { a: 'admin', th: 'ประวัติการให้คะแนน: แบ่งตามวัน (วันนี้ / เมื่อวาน / วันที่) ทุกแถวมีเวลา ปุ่ม "ลบ" เป็นสีเทาเรียบ (เดิมแดงทุกแถว) ยังเตือนชื่อก่อนลบเหมือนเดิม',
+            en: 'Points history: grouped by day (Today / Yesterday / date), every row shows its time, and "Delete" is a quiet grey button (it was red on every row); the named warning before deleting stays' },
+          { a: 'admin', th: 'ให้คะแนน: หลังกดให้คะแนนมีแถบ "✓ ให้คะแนนแล้ว N คน · +10 ดนตรี [เลิกทำ]" 12 วินาที กดเลิกทำจะเตือนชื่อเด็กแล้วลบเฉพาะคะแนนที่เพิ่งให้ (ยังอยู่ในบันทึกผู้ดูแล)',
+            en: 'Give points: after giving, a bar "✓ Points given to N · +10 Music [Undo]" stays 12 s; Undo names the kids, then removes only the points just given (still in the admin log)' },
+          { a: 'admin', th: 'สร้างโปรแกรมใหม่: ชื่อภาษาไทยได้แล้ว ระบบตั้งชื่อในลิงก์ให้ (เช่น program-2026-11) แก้ได้ ถ้าชื่อในลิงก์ผิดหรือซ้ำ ข้อความภาษาไทยขึ้นใต้ช่อง กล่องไม่ปิดและข้อความที่พิมพ์ไม่หาย โปรแกรมใหม่มีกรอบสีให้เห็นหลังสร้าง',
+            en: 'New program: Thai names work now; a link name is suggested (e.g. program-2026-11) and can be changed; a wrong or used link name shows the reason under the field, the box stays open and nothing typed is lost; the new program card is highlighted' },
+          { a: 'fix', th: 'ตรวจหน้าเด็กทุกหน้าที่ 390, 768, 1366 และ 1920 px ไทย/อังกฤษ โหมดเด็ก/โหมดปกติ กับเด็ก 1, 3, 9 คน และของรางวัล 1, 3, 9 ชิ้น: อยู่ตรงกลาง คอลัมน์เดียวกัน ไม่เลื่อนออกด้านข้าง',
+            en: 'Checked every kids page at 390, 768, 1366 and 1920 px, TH/EN, kids/normal mode, with 1, 3 and 9 kids and prizes: centred, one column, no sideways scroll' },
+        ] },
+      { v: '44', date: '2026-11-20', commit: 'f0ff889',
         short: { th: 'แถวเช็กชื่อไม่กระโดดแล้ว หน้าแรกผู้ดูแลบอก "รอเช็ก N คน" แบบสงบ ปุ่ม "✓ มา" เป็นสีเทาจนกว่าจะเลือก หน้าแลกของรางวัลอ่านง่ายขึ้น และทุกหน้าบนคอมพิวเตอร์กว้างเท่ากันทั้งหน้า',
                  en: 'Attendance rows no longer jump, a calm "N still to check" on the admin home, grey "✓ Here" until chosen, a clearer redeem page, and every computer page lines up at one width' },
         items: [

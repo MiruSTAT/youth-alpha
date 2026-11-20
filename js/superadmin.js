@@ -381,27 +381,49 @@ const slugify = (s) => String(s).toLowerCase().normalize('NFKD').replace(/[^a-z0
 async function newProgram(c) {
   const list = c.program.list;
   const pending = c.modal('➕ ' + c.t('progNew'), `
-    <div class="field"><label>${c.t('progName')}</label><input class="input" name="name" required maxlength="60" placeholder="${c.t('progNameEg')}"></div>
-    <div class="field"><label>${c.t('progSlug')}</label><input class="input" name="slug" required pattern="[a-z0-9][a-z0-9\\-]{1,39}" maxlength="40" placeholder="easter-2027" autocapitalize="none" spellcheck="false">
-      <p class="hint">${c.t('progSlugHint')}</p></div>
+    <div class="field"><label>${c.t('progName')}</label><input class="input" name="name" required maxlength="60" placeholder="${c.t('progNameEg')}" aria-describedby="nameErr"><p class="field-err" id="nameErr" role="alert" hidden></p></div>
+    <div class="field"><label>${c.t('progSlug')}</label><input class="input" name="slug" required maxlength="40" placeholder="easter-2027" autocapitalize="none" spellcheck="false" aria-describedby="slugHint slugErr">
+      <p class="hint" id="slugHint">${c.t('progSlugHint')}</p><p class="field-err" id="slugErr" role="alert" hidden></p></div>
     <div class="field"><label>${c.t('progFrom')}</label><select class="input" name="from">${list.map(p => `<option value="${p.id}" ${p.id === c.program.id ? 'selected' : ''}>${c.esc(p.name)}</option>`).join('')}</select>
       <p class="hint">${c.t('progFromHint')}</p></div>
     <label class="chk"><input type="checkbox" name="people"> ${c.t('progPeople')}</label>
     <label class="chk"><input type="checkbox" name="shop" checked> ${c.t('progShop')}</label>
     <label class="chk"><input type="checkbox" name="songs" checked> ${c.t('progSongs')}</label>`, { okText: c.t('progCreate') });
-  // the link name fills itself from the program name until it is typed by hand
+  // the link name fills itself from the program name until it is typed by hand.
+  // v45 (critique P1): a Thai name has no a–z, so a free link name is suggested ("program-2026-11"); mistakes show in Thai
+  // under the field and the box stays open (no browser bubble, no lost typing)
   const f = document.querySelector('#dlgForm'), nm = f.querySelector('[name=name]'), sl = f.querySelector('[name=slug]');
-  let auto = true; sl.oninput = () => { auto = false; }; nm.oninput = () => { if (auto) sl.value = slugify(nm.value); };
+  const hint = f.querySelector('#slugHint'), used = (x) => list.some(p => p.slug === x);
+  const free = (base) => { let x = base, i = 2; while (used(x)) x = `${base}-${i++}`; return x; };
+  const suggest = (n) => { const x = slugify(n); if (x.length >= 2) return x; if (!n.trim()) return '';
+    const d = new Date(); return free(`program-${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); };
+  const err = (input, msg) => { const e = f.querySelector(input === nm ? '#nameErr' : '#slugErr'); e.textContent = msg || ''; e.hidden = !msg; input.toggleAttribute('aria-invalid', !!msg); };
+  let auto = true;
+  sl.oninput = () => { auto = false; err(sl, ''); };
+  sl.onblur = () => { if (sl.value) sl.value = slugify(sl.value) || sl.value; };
+  nm.oninput = () => { err(nm, ''); if (!auto) return; const x = suggest(nm.value); sl.value = x; err(sl, '');
+    hint.textContent = x && slugify(nm.value).length < 2 ? c.t('progSlugAuto') : c.t('progSlugHint'); };
+  f.noValidate = true;
+  const check = (e) => {
+    if (e.submitter?.value !== 'ok') return;
+    const n = nm.value.trim(), x = slugify(sl.value);
+    let bad = false;
+    if (!n) { err(nm, c.t('progNameNeed')); bad = true; }
+    if (x.length < 2) { err(sl, c.t('progSlugBad')); bad = true; } else if (used(x)) { err(sl, c.t('progSlugUsed')); bad = true; } else sl.value = x;
+    if (bad) { e.preventDefault(); (n ? sl : nm).focus(); }
+  };
+  f.addEventListener('submit', check);
   const r = await pending;
+  f.removeEventListener('submit', check); f.noValidate = false;
   if (!(r instanceof FormData)) return;
-  const name = String(r.get('name')).trim(), slug = slugify(r.get('slug') || name);
-  if (slug.length < 2) { c.toast(c.t('progSlugBad')); return; }
-  if (list.some(p => p.slug === slug)) { c.toast(c.t('progSlugUsed')); return; }
+  const name = String(r.get('name')).trim(), slug = slugify(r.get('slug'));
   try {
     const res = await c.api.programCreate({ name, slug, from: +r.get('from'), people: r.get('people') === 'on', shop: r.get('shop') === 'on', songs: r.get('songs') === 'on' });
     if (!res?.ok) throw new Error('create failed');
     c.toast('✓ ' + c.t('progMade', name));
-    drawPrograms(c);
+    await drawPrograms(c);
+    const row = [...document.querySelectorAll('.prog-row')].find(x => x.querySelector('.prog-link')?.textContent.includes(slug));   // v45: show where it went
+    if (row) { row.classList.add('just-made'); row.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
   } catch (e) { c.fail(e); }
 }
 

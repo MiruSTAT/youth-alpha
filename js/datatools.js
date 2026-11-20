@@ -79,7 +79,7 @@ function loadSql() {
   return new Promise((res, rej) => {
     const go = () => window.initSqlJs({ locateFile: (f) => 'vendor/' + f }).then(x => { SQL = x; res(x); }, rej);
     if (window.initSqlJs) return go();
-    const s = document.createElement('script'); s.src = 'vendor/sql-wasm.js?v=44'; s.onload = go; s.onerror = rej; document.head.appendChild(s);
+    const s = document.createElement('script'); s.src = 'vendor/sql-wasm.js?v=45'; s.onload = go; s.onerror = rej; document.head.appendChild(s);
   });
 }
 async function makeDb(c, tb) {

@@ -1,6 +1,6 @@
 // Data layer: Supabase when configured, otherwise a local PREVIEW store.
 // v35: ?demo=1 (phone preview on the admin panel) always uses the local store, filled with sample data and never saved.
-import { DEMO, demoDb } from './demo.js?v=44';
+import { DEMO, demoDb } from './demo.js?v=45';
 const cfg = window.YA_CONFIG || {};
 // v40 polish: one name order everywhere (Thai rules, numbers as numbers: "Kid 2" before "Kid 10", case ignored)
 const NAME_ORDER = new Intl.Collator('th', { numeric: true, sensitivity: 'base' });
@@ -78,8 +78,9 @@ function supabaseApi() {
 
     async addPoints(rows) {
       const given_by = await uid();
-      ok(await sb.from('points').insert(rows.map(r => ({ ...r, given_by }))));
+      return (ok(await sb.from('points').insert(rows.map(r => ({ ...r, given_by }))).select('id')) || []).map(r => r.id);   // v45: ids for "เลิกทำ"
     },
+    async deletePoints(ids) { ok(await sb.from('points').delete().in('id', ids)); },   // v45: undo right after giving
     async recentPoints(limit = 30) {
       return ok(await sb.from('points').select('*, kids(nickname, avatar)').eq('program_id', P()).is('attendance_id', null)
         .order('created_at', { ascending: false }).limit(limit));
@@ -371,7 +372,8 @@ function previewApi(seed = null) {
       if (r) r.finished = finished; else db.rounds.push({ day, session, finished }); save();
     },
 
-    async addPoints(rows) { rows.forEach(r => { const p = { id: id(), attendance_id: null, created_at: now(), ...r }; db.points.push(p); audit('points', 'INSERT', null, p); }); save(); },
+    async addPoints(rows) { const ids = []; rows.forEach(r => { const p = { id: id(), attendance_id: null, created_at: now(), ...r }; db.points.push(p); ids.push(p.id); audit('points', 'INSERT', null, p); }); save(); return ids; },
+    async deletePoints(ids) { ids.forEach(pid => this.deletePoint(pid)); },
     async recentPoints(limit = 30) {
       return db.points.filter(p => !p.attendance_id).sort((a, b) => b.created_at.localeCompare(a.created_at))
         .slice(0, limit).map(p => ({ ...p, kids: kidOf(p.kid_id) }));
@@ -420,7 +422,7 @@ function previewApi(seed = null) {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=44'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=45'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].filter(() => memberOk()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {

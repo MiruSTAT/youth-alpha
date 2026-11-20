@@ -893,6 +893,13 @@ Object.assign(DICT.th, { stWait: (n) => `รอเช็ก ${n} คน`, stTapF
   rdWhyRank: 'คะแนนอันดับ = ดาวทั้งหมดที่เคยได้ ไม่ลดเมื่อแลกของ', rdWhySpend: 'ใช้แลกได้ = ดาวที่เหลือ หลังหักของที่แลกไปแล้ว' });
 Object.assign(DICT.en, { stWait: (n) => `${n} still to check`, stTapFinish: 'Everyone checked: tap "Finish attendance"', rdWhy: 'ⓘ What is the difference?',
   rdWhyRank: 'Ranking points = every star ever earned. They do not go down after a prize.', rdWhySpend: 'Points to spend = stars left after prizes already taken.' });
+// v45
+Object.assign(DICT.th, { progNameNeed: 'ใส่ชื่อโปรแกรมก่อน', progSlugAuto: 'ชื่อโปรแกรมเป็นภาษาไทย จึงตั้งชื่อในลิงก์ให้แล้ว เปลี่ยนเป็นคำภาษาอังกฤษได้ เช่น easter-2027 · เปลี่ยนภายหลังไม่ได้' });
+Object.assign(DICT.en, { progNameNeed: 'Type the program name first', progSlugAuto: 'The name has no English letters, so a link name was picked for you. You can change it, e.g. easter-2027 · cannot be changed later' });
+Object.assign(DICT.th, { today: 'วันนี้', yesterday: 'เมื่อวาน', undoDo: 'เลิกทำ', undone: 'เลิกทำแล้ว',
+  undoWarn: (a, n) => `เลิกทำ: ลบคะแนน ${a} ที่เพิ่งให้ ${n}?\nรายการนี้จะยังอยู่ในบันทึกของแอดมิน` });
+Object.assign(DICT.en, { today: 'Today', yesterday: 'Yesterday', undoDo: 'Undo', undone: 'Undone',
+  undoWarn: (a, n) => `Undo: remove the ${a} points just given to ${n}?\nThis still stays in the admin log` });
 const NORMAL = { th: {}, en: {} };
 // v41 clarify: Normal mode also says "สมาชิก" / "member" instead of "เด็ก" / "kid" (admin menus, feedback, copy people…).
 // Texts that name the two modes themselves ("โหมดเด็ก", "Kids mode") are left alone.

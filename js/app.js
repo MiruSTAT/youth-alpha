@@ -1,15 +1,15 @@
-import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=44';
-import { api, MODE, DEMO, ranked, byName, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=44';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=44';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=44';
+import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=45';
+import { api, MODE, DEMO, ranked, byName, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=45';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=45';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=45';
 
-import { music } from './music.js?v=44';
-import { art, burst, SPECIAL, pic, face, prizeIcon, isImg, shrinkImage } from './art.js?v=44';
-import { snow } from './snow.js?v=44';
-import { track, flush, deviceId } from './track.js?v=44';
-import { calmIcon } from './icons.js?v=44';
-import { metro } from './metronome.js?v=44';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=44';
+import { music } from './music.js?v=45';
+import { art, burst, SPECIAL, pic, face, prizeIcon, isImg, shrinkImage } from './art.js?v=45';
+import { snow } from './snow.js?v=45';
+import { track, flush, deviceId } from './track.js?v=45';
+import { calmIcon } from './icons.js?v=45';
+import { metro } from './metronome.js?v=45';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=45';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -183,7 +183,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=44');
+    const m = await import('./scene3d.js?v=45');
     if (m.initScene($('#scene'), { pack: part('scene') === 'cross' ? 'easter' : 'christmas' })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -546,7 +546,7 @@ async function kidShop() {
   const [{ items }, lb] = await Promise.all([cached(P() + '_shop', () => api.shop()), leaderboard()]);
   const me = lb.find(r => r.id === localStorage.getItem(ME()));
   const live = items.filter(i => i.active).sort((x, y) => (x.sold_out ? 1 : 0) - (y.sold_out ? 1 : 0) || x.price - y.price);   // v41: sold out goes last
-  const rows = []; for (let i = 0; i < live.length; i += 2) rows.push(live.slice(i, i + 2));
+  const rows = live.length ? [live] : [];   // v45: one wrapping row; CSS sets 2/3/4 per line and centres a short last line
   view.innerHTML = `<section class="sheet">
     <h1 class="sheet-title ${live.length ? 'vh' : ''}">🎁 ${t('shopTitle')}</h1>
     ${live.length ? `${me ? `<div class="cat-pts shop-bal"><span>🎁 ${esc(me.nickname)}</span><b>${t('youHave', bal(me))}</b></div>`
@@ -965,13 +965,13 @@ const PAGES = {
   admins: ['super', async (x) => x ? (await saMod()).pAdminEdit(saCtx(), x) : (await saMod()).pAdmins(saCtx())],
   programs: ['super', async () => (await saMod()).pPrograms(saCtx())], look: ['super', async () => (await saMod()).pLook(saCtx())],
   online: ['super', async () => (await saMod()).pOnline(saCtx())], ai: ['super', async () => (await saMod()).pAi(saCtx())],
-  data: ['super', async () => (await import('./datatools.js?v=44')).pData(dtCtx())],   // v38 roadmap step 8
+  data: ['super', async () => (await import('./datatools.js?v=45')).pData(dtCtx())],   // v38 roadmap step 8
 };
 const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? isSuper() : can(need); };
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
   PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame, paintMaintBar });
-const saMod = () => import('./superadmin.js?v=44');
+const saMod = () => import('./superadmin.js?v=45');
 // v38: helpers for the data tools page (js/datatools.js)
 const dtCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, program, leaderboard, pcats, cName, bkkToday, loadXLSX, isSuper });
 
@@ -1470,8 +1470,13 @@ async function pPoints() {
         const btn = e.currentTarget; btn.disabled = true;
         try {
           note = $('#note').value.trim();
-          await api.addPoints([...pw.sel].map(kid_id => ({ kid_id, skill: pw.skill, detail: pw.detail || '', amount: pw.amount, note })));
-          toast(`✓ ${t('given', pw.sel.size)}`); lbCache.at = 0;
+          const ids = await api.addPoints([...pw.sel].map(kid_id => ({ kid_id, skill: pw.skill, detail: pw.detail || '', amount: pw.amount, note })));
+          const names = kids.filter(k => pw.sel.has(k.id)).map(k => k.nickname), amt = signed(pw.amount), cat = cName(cOf(pw.skill));
+          lbCache.at = 0;
+          if (ids?.length) undoBar(`✓ ${t('given', pw.sel.size)} · ${amt} ${cat}`, async () => {
+            if (!await confirmBox(t('undoWarn', amt, names.join(', ')), t('undoDo'))) return false;
+            await api.deletePoints(ids); lbCache.at = 0; toast(`↩ ${t('undone')}`); if (location.hash === '#/admin/history') pHistory(); return true;
+          }); else toast(`✓ ${t('given', pw.sel.size)}`);
           pw = { step: 1, skill: null, detail: '', amount: null, sel: new Set() }; window.scrollTo(0, 0); pPoints();
         } catch (err) { btn.disabled = false; fail(err, () => $('#give')?.click()); }
       };
@@ -1481,16 +1486,40 @@ async function pPoints() {
   wire();
 }
 
+// v45 (critique P1): every row shows its time under a day header (วันนี้ / เมื่อวาน / the date); ลบ is a quiet grey button
 async function pHistory() {
   const [recent] = await Promise.all([api.recentPoints(50), pcats()]);
+  const th = getLang() === 'th', loc = th ? 'th-TH' : 'en-GB';
+  const dayKey = (iso) => { const d = new Date(iso); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+  const yest = (() => { const d = new Date(); d.setDate(d.getDate() - 1); return dayKey(d.toISOString()); })();
+  const head = (k) => k === dayKey(new Date().toISOString()) ? t('today') : k === yest ? t('yesterday') : dayWords(k);
+  const time = (iso) => new Date(iso).toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
+  const days = []; recent.forEach(p => { const k = dayKey(p.created_at); (days.at(-1)?.k === k ? days.at(-1).rows : (days.push({ k, rows: [] }), days.at(-1).rows)).push(p); });
   view.innerHTML = `${pageHead(t('pointsHistory'), '#/admin/points')}
-    <div class="card"><div class="list">${recent.map(p => `<div class="li"><span class="av">${face(p.kids)}</span>
-      <span class="grow">${esc(p.kids?.nickname || '?')}<span class="sub">${pic(cOf(p.skill).icon)} ${esc(cName(cOf(p.skill)))}${p.detail ? ' · ' + esc(p.detail) : ''}${p.note ? ' · ' + esc(p.note) : ''}</span></span>
-      <span class="amt ${p.amount < 0 ? 'neg' : 'pos'}">${signed(p.amount)}</span><button class="btn small danger" data-del="${p.id}">${t('undo')}</button></div>`).join('') || emptyGo(t('none'), 'points', t('tab_points'))}</div></div>`;
+    ${days.map(d => `<h2 class="grp hist-day">${esc(head(d.k))}</h2><div class="card"><div class="list">${d.rows.map(p => `<div class="li hist-row"><span class="av">${face(p.kids)}</span>
+      <span class="grow">${esc(p.kids?.nickname || '?')}<span class="sub"><span class="hist-time">${time(p.created_at)}</span> · ${pic(cOf(p.skill).icon)} ${esc(cName(cOf(p.skill)))}${p.detail ? ' · ' + esc(p.detail) : ''}${p.note ? ' · ' + esc(p.note) : ''}</span></span>
+      <span class="amt ${p.amount < 0 ? 'neg' : 'pos'}">${signed(p.amount)}</span><button class="btn small quiet" data-del="${p.id}" aria-label="${esc(t('undo') + ' ' + (p.kids?.nickname || '') + ' ' + signed(p.amount))}">${t('undo')}</button></div>`).join('')}</div></div>`).join('')
+      || `<div class="card">${emptyGo(t('none'), 'points', t('tab_points'))}</div>`}`;
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     const p = recent.find(x => x.id === b.dataset.del);
     if (await confirmBox(t('delPointWarn', p?.kids?.nickname || '', signed(p?.amount || 0)))) { try { await api.deletePoint(b.dataset.del); lbCache.at = 0; pHistory(); } catch (e) { fail(e); } }
   });
+}
+
+// v45: a quiet bar right after giving points: "✓ ให้คะแนนแล้ว 3 คน · +10 ร้องเพลง  [เลิกทำ] ✕". Stays 12 s or until the page changes.
+// "เลิกทำ" still shows the named warning (owner's rule) and then removes exactly the rows just added.
+function undoBar(msg, onUndo) {
+  $('#undoBar')?.remove(); $('#toast').classList.remove('show');
+  const bar = document.createElement('div'); bar.id = 'undoBar'; bar.className = 'err-bar undo-bar'; bar.setAttribute('role', 'status');
+  bar.innerHTML = `<span class="em">${esc(msg)}</span><button class="btn small" id="undoGo">↩ ${t('undoDo')}</button><button class="x" aria-label="${t('close')}">✕</button>`;
+  const close = () => { bar.remove(); clearTimeout(tm); removeEventListener('hashchange', away); };
+  const away = () => { if (location.hash !== '#/admin/points') close(); };
+  const tm = setTimeout(close, 12000);
+  addEventListener('hashchange', away);
+  bar.querySelector('.x').onclick = close;
+  bar.querySelector('#undoGo').onclick = async (e) => { const b = e.currentTarget; clearTimeout(tm); b.disabled = true;
+    try { if (await onUndo()) close(); else b.disabled = false; } catch (err) { close(); fail(err); } };
+  document.body.appendChild(bar);
 }
 
 // ---------------- Kids list
@@ -1923,7 +1952,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=44');
+      const { readSheet } = await import('./ocr.js?v=45');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
