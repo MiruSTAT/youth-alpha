@@ -43,7 +43,8 @@ h1, h2, h3 { margin: 0; line-height: 1.4; font-weight: 700; }
 [hidden] { display: none !important; }
 
 /* ---------- 3D background (kid side only) ---------- */
-#scene { position: fixed; top: 0; left: 0; width: 100%; height: 46vh; z-index: 0; touch-action: pan-y; }
+:root { --tree-h: 30vh; }   /* v40 layout: height of the 3D tree on the kids' pages (was 46vh); the sheet starts just under it */
+#scene { position: fixed; top: 0; left: 0; width: 100%; height: var(--tree-h); z-index: 0; touch-action: pan-y; }
 #cssSnow { display: none; }
 body.no-webgl #scene { display: none; }
 
@@ -68,8 +69,8 @@ main:focus { outline: none; }
    KID SIDE: tree on top, one solid "sheet" with content
    ========================================================= */
 .sheet {
-  margin-top: calc(46vh - 60px - 24px);
-  min-height: calc(54vh + 24px);
+  margin-top: calc(var(--tree-h) - 60px - 24px);
+  min-height: calc(100vh - var(--tree-h) + 24px);
   background: var(--sheet); border-radius: 28px 28px 0 0; border-top: 1px solid var(--line-d);
   padding: 24px 20px calc(100px + var(--safe-b));
   box-shadow: 0 -10px 30px rgba(0, 0, 0, .25);
@@ -278,7 +279,7 @@ dialog h3 { margin-bottom: 14px; font-size: 1.25rem; }
 .icon-btn.small { width: 36px; height: 36px; font-size: .8rem; text-decoration: none; opacity: .8; }
 .top-actions .icon-btn { width: 40px; height: 40px; }
 @media (max-width: 380px) { .brand-tree { display: none; } .brand { font-size: .95rem; } }
-#snow { position: fixed; inset: 0; z-index: 30; pointer-events: none; }
+#snow { position: fixed; inset: 0; z-index: 1; pointer-events: none; } /* v40: above the 3D tree (#scene, z 0), behind the page (main, z 2), so flakes never cross text */
 body.adult #snow, body.adult #schedBtn, body.adult #lockBtn { display: none; }
 .kid-nav a { min-width: 0; }
 
@@ -893,7 +894,7 @@ body.off-tree #scene, body.off-music #musicBtn { display: none; }
 .look-card .look-words .lw span { font-size: .85rem; opacity: .75; overflow-wrap: anywhere; }
 .look-card .look-sample { padding: 10px 14px; border-radius: 12px; border: 1px dashed currentColor; opacity: .85; margin: 6px 0 10px; }
 @media (max-width: 460px) { .look-card .look-row { grid-template-columns: 1fr; } .look-card .look-words .lw { grid-template-columns: 1fr 1fr; } .look-card .look-words .lw span { grid-column: 1 / -1; } }
-body.off-tree:not(.adult):not(.song-page)::before { content: var(--look-emoji); position: fixed; top: 15vh; left: 0; right: 0; text-align: center; font-size: calc(5.5rem * var(--logo-size, 1)); pointer-events: none; animation: lookBob 4s ease-in-out infinite; }
+body.off-tree:not(.adult):not(.song-page)::before { content: var(--look-emoji); position: fixed; top: calc(var(--tree-h) * .3); left: 0; right: 0; text-align: center; font-size: calc(5.5rem * var(--logo-size, 1)); pointer-events: none; animation: lookBob 4s ease-in-out infinite; }
 @keyframes lookBob { 50% { transform: translateY(-8px); } }
 @media (prefers-reduced-motion: reduce) { body.off-tree::before { animation: none; } }
 /* v34: program logo as a picture (look.logo), with a size slider (--logo-size) */
@@ -1227,3 +1228,90 @@ button.maint-bar { width: 100%; border: 0; font-family: inherit; cursor: pointer
 .vc-bar { width: 100%; max-width: 34px; background: var(--primary); border-radius: 4px 4px 0 0; }
 .vc-v { font-size: .72rem; color: var(--ink-2); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
 .vc-l { position: absolute; bottom: 0; font-size: .72rem; color: var(--ink-2); white-space: nowrap; }
+
+/* v40 harden: ties, zero state, errors that stay */
+.rank-row .n { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.1; }
+.rank-row .n .tie { font-style: normal; font-size: .7rem; font-weight: 600; color: var(--text-d2); margin-top: 2px; }
+.start-line { text-align: center; font-weight: 700; font-size: 1.15rem; color: var(--pt); margin: 0 0 12px; }
+.err-line { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; text-align: center;
+  margin: 0 0 14px; padding: 12px; border-radius: 14px; border: 1px solid var(--absent); font-weight: 600; }
+.err-bar { position: fixed; z-index: 50; left: 50%; transform: translateX(-50%); bottom: calc(84px + var(--safe-b)); width: calc(100% - 24px); max-width: 520px;
+  display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 16px; border-radius: 14px;
+  background: #fff4f3; color: #6b0f1a; border: 1px solid #e6a3a9; box-shadow: 0 6px 20px rgba(20, 20, 40, .18); }
+.err-bar[hidden] { display: none; }
+.err-bar .em { flex: 1; font-weight: 600; line-height: 1.4; }
+.err-bar .x { width: 44px; height: 44px; flex: none; border: 0; border-radius: 50%; background: transparent; color: inherit; font-size: 1.1rem; cursor: pointer; }
+.err-line .kbtn { margin-top: 4px; min-height: 48px; }
+
+/* =========================================================
+   v40 layout (critique step 3): kids' home — own card first, tree 30vh (--tree-h at the top), hint under the title
+   ========================================================= */
+.rank-head { margin: 4px 0 14px; }
+.rank-head .sheet-title { margin: 0; }
+.rank-hint { margin: 4px 0 0; text-align: center; font-size: .95rem; color: var(--text-d2); text-wrap: balance; }
+body[data-theme="snow"] .rank-hint { color: #44507a; }
+.rank-head + .home-count { margin-top: -6px; }
+
+/* =====================================================================
+   v40 distill (critique step 4): Normal mode is for adults — no 3D scene behind the sheet (it only peeked out as a star
+   under the top bar). Snow and the other playful parts are off by default there (partOf in js/app.js).
+   ===================================================================== */
+body[data-mode="normal"] #scene { display: none; }
+
+/* v40 polish: admin menu groups put the list of pages UNDER the group name and let it wrap (it was cut to "ผู้ดูแลและสิ…" on phones) */
+.mgrp-tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.mgrp-tx .mgrp-n { white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.45; }
+.mgrp[open] .mgrp-n { display: none; }
+/* v40 polish: the kids' shop said its name twice (title + "⭐ ร้านค้า ⭐" sign). With prizes on the stand the sign is the one
+   visible title; the h1 stays for screen readers (.vh = visually hidden). An empty shop still shows the h1. */
+.vh { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.stand-sign { text-align: center; text-wrap: balance; }
+/* v40 polish: Give points step 2, + and − amounts in two labelled groups */
+.amt-label { margin: 0 0 8px; font-weight: 700; font-size: .95rem; color: var(--ink-2); }
+.amt-label.minus { margin-top: 22px; color: var(--absent); }
+/* v40 polish: pages with a fixed bottom bar (attendance "เช็กชื่อเสร็จแล้ว", bulk marks) keep the last row well clear of it,
+   also with bigger phone text (the bar grows with the font) */
+body.adult main:has(.bottom-bar) { padding-bottom: calc(140px + 2rem + var(--safe-b)); }
+
+/* =========================================================
+   v40 audit (critique P2 "Accessibility")
+   ========================================================= */
+/* Keyboard focus: one visible ring everywhere (only for keyboard / switch users, :focus-visible), never on a mouse or finger tap.
+   Gold on the dark kid sheets (≥5.5:1 on navy, red, forest); dark navy / blue on the light pages (admin, snow theme, Normal mode). */
+:root { --focus: var(--gold); }
+body.adult, body[data-theme="snow"] { --focus: #1b2a5c; }
+body[data-mode="normal"] { --focus: #2f5bd3; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+main:focus-visible { outline: none; }                     /* main gets focus only by script after a page change */
+.k-input:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+.msearch-hit:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.kid-nav a:focus-visible, .slot:focus-visible { outline-offset: -3px; border-radius: 10px; }
+/* Shop sign: gold on darker wood, 2.8:1 → 5.1:1 (top) / 6.5:1 (bottom) */
+.stand-sign { background: linear-gradient(#6f4420, #5c3519); box-shadow: 0 4px 0 #3f2410; }
+/* Un-nested home parts: the announcement and the verse are no longer bordered boxes inside the home card.
+   Announcement = icon + bold text with a hairline under it; verse = centred quote under a hairline. */
+.notice { padding: 2px 2px 14px; border: 0; border-bottom: 1px solid var(--line-d); border-radius: 0; background: none; }
+.verse { padding: 16px 6px 0; border: 0; border-top: 1px solid var(--line-d); border-radius: 0; }
+.kid-sheet .verse { margin: 4px 0 14px; }
+
+/* =========================================================
+   v40 delight (critique P2 "The shop doesn't know which kid is looking")
+   ========================================================= */
+/* With a name picked, every prize says if this kid can get it ("แลกได้!") or how far away it is ("อีก 10 ⭐").
+   Prizes in reach: the price tag lights up warm and a single shine runs over it when the shop opens (once, not looping). */
+.slot .reach { display: block; margin: -8px auto 14px; width: max-content; max-width: 100%; padding: 2px 10px; border-radius: 999px;
+  font-weight: 700; font-size: 1rem; line-height: 1.4; overflow-wrap: anywhere; }
+.slot.far .reach { color: #6b4321; }                               /* brown on the shelf wood, ≥7:1 */
+.slot.can .reach { color: #fff; background: #1f7a3d; }            /* white on green, 5.4:1 */
+.slot.can .tag { overflow: hidden; box-shadow: 0 2px 0 #d99a00, 0 4px 14px rgba(255, 196, 0, .55); }
+.slot.can .tag::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, .75) 50%, transparent 70%);
+  transform: translateX(-120%); animation: tag-shine 1.1s cubic-bezier(.16, 1, .3, 1) .35s 1 both; }
+.shelf-row:nth-child(2) .slot.can .tag::after { animation-delay: .5s; }
+.shelf-row:nth-child(n+3) .slot.can .tag::after { animation-delay: .65s; }
+@keyframes tag-shine { to { transform: translateX(120%); } }
+@media (prefers-reduced-motion: reduce) { .slot.can .tag::after { animation: none; display: none; } }
+/* No name picked yet: one quiet line that sends the kid to the home page to pick it */
+.shop-hint { margin: 0 0 14px; font-size: 1.05rem; line-height: 1.5; }
+.shop-hint a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.shop-bal b { white-space: nowrap; }

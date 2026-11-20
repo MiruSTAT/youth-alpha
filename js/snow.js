@@ -1,4 +1,5 @@
-// Gentle full-page snowfall (2D canvas, very light). Sits above everything but never blocks taps.
+// Gentle full-page snowfall (2D canvas, very light). Since v40 it sits behind the page content (z-index 1:
+// above the 3D tree, below main), so it falls around the white sheet and never over text. Never blocks taps.
 const c = document.getElementById('snow');
 const ctx = c.getContext('2d');
 let flakes = [], w = 0, h = 0, raf = 0, on = false, color = 'rgba(255,255,255,0.75)';

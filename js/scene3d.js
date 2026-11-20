@@ -5,9 +5,16 @@ import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.m
 
 let renderer, scene, camera, tree, star, snow, gifts = [], ornaments = [], sparks = null, sparkPos, sparkCol, sparkVel, sparkLife, sparkNext = 0;
 let running = false, want = false, covered = false, quality = 0, qAcc = 0, qN = 0, qWarm = 0, skipFrame = false, raf = 0, spinVel = 0.004, dragging = false, lastX = 0, litCount = 0;
-let festive = false, flash = 0, camKick = 0, baseZ = 11, party = [], partyLight = null;
+let festive = false, flash = 0, camKick = 0, baseZ = 11, lookY = 2.4, party = [], partyLight = null;
 let canvas, EASTER = false;
 const clock = new THREE.Clock();
+// v40 audit: "reduce motion" on the phone → the tree stands still (no auto-spin, falling snow, bobbing presents,
+// twinkling or chasing lights, camera kick, flying sparks). State still shows: lit ornaments follow the points,
+// a tap or the special mode makes the star brighten for a moment, presents appear already standing round the tree.
+const RMQ = window.matchMedia?.('(prefers-reduced-motion: reduce)');
+let RM = !!RMQ?.matches;
+RMQ?.addEventListener?.('change', (e) => { RM = e.matches; });
+export const reducedMotion = () => RM;
 
 export function initScene(el, opts = {}) {
   canvas = el; EASTER = opts.pack === 'easter';
@@ -117,7 +124,7 @@ function buildRest() {
   window.addEventListener('pointermove', (e) => { if (!dragging) return; spinVel = (e.clientX - lastX) * 0.004; tree.rotation.y += spinVel; lastX = e.clientX; });
   window.addEventListener('pointerup', (e) => {
     if (!dragging) return; dragging = false;
-    if (performance.now() - tapStart < 250 && Math.abs(e.clientX - tapX) < 8) { burst(); spinVel = 0.12; }
+    if (performance.now() - tapStart < 250 && Math.abs(e.clientX - tapX) < 8) { burst(); if (!RM) spinVel = 0.12; }
   });
   window.addEventListener('resize', resize);
   window.visualViewport?.addEventListener('resize', resize);
@@ -174,13 +181,17 @@ function resize() {
   camera.aspect = w / h;
   // keep the tree fully visible on narrow phones
   baseZ = w / h < 0.9 ? 12.5 : 11;
+  // v40: the canvas is short now (--tree-h 30vh): look a little higher and step back so the star clears the top bar
+  lookY = h < 360 ? 3.3 : 2.4; if (h < 360) baseZ += 1.5;
   camera.position.z = baseZ - camKick * 1.6;
+  camera.lookAt(0, lookY, 0);
   camera.updateProjectionMatrix();
 }
 
 const SPARK_COLS = [[1, 0.83, 0.3], [0.95, 0.25, 0.3], [1, 1, 1]], SPARK_EASTER = [[1, 0.62, 0.78], [0.62, 0.85, 1], [1, 0.95, 0.55]];
 export function burst(count = 40) {
   if (!sparks) return;
+  if (RM) { flash = Math.max(flash, 0.5); return; }   // reduced motion: the star brightens instead of sparks flying
   for (let k = 0; k < count; k++) {
     const i = sparkNext; sparkNext = (sparkNext + 1) % sparkLife.length;
     sparkPos.set([0, 5.2, 0], i * 3);
@@ -210,31 +221,33 @@ function tick() {
       qAcc = 0; qN = 0;
     }
   }
-  if (!dragging) { spinVel += (0.004 - spinVel) * 0.03; tree.rotation.y += spinVel; }
-  star.rotation.y = EASTER ? Math.sin(time * 0.8) * 0.4 : time * 1.5;
-  star.material.emissiveIntensity = 1 + Math.sin(time * 3) * 0.4 + flash * 5;
-  star.scale.setScalar(1 + flash * 0.9 + (festive ? 0.15 + Math.sin(time * 4) * 0.08 : 0));
+  if (!dragging) { if (RM) spinVel = 0; else { spinVel += (0.004 - spinVel) * 0.03; tree.rotation.y += spinVel; } }
+  const mt = RM ? 0 : time;                          // reduced motion: time-driven wobble, twinkle and chase stand still
+  if (!RM) star.rotation.y = EASTER ? Math.sin(time * 0.8) * 0.4 : time * 1.5;
+  star.material.emissiveIntensity = 1 + (RM ? 0 : Math.sin(time * 3) * 0.4) + flash * 5;
+  star.scale.setScalar(1 + (RM ? 0 : flash * 0.9) + (festive ? 0.15 + (RM ? 0 : Math.sin(time * 4) * 0.08) : 0));
   flash *= 0.96;
   ornaments.forEach((o, i) => {
     if (festive) {                                   // special mode: every light on, colours chasing round the tree
-      o.material.emissive.setHSL(((time * 0.25 + i / ornaments.length) % 1), 1, 0.55);
-      o.material.emissiveIntensity = 1.3 + Math.sin(time * 6 + i) * 0.6;
+      o.material.emissive.setHSL(((mt * 0.25 + i / ornaments.length) % 1), 1, 0.55);
+      o.material.emissiveIntensity = 1.3 + (RM ? 0 : Math.sin(time * 6 + i) * 0.6);
       return;
     }
-    const target = i < litCount ? 1.2 + Math.sin(time * 2.5 + i) * 0.5 : 0;
+    const target = i < litCount ? 1.2 + (RM ? 0 : Math.sin(time * 2.5 + i) * 0.5) : 0;
     o.material.emissiveIntensity += (target - o.material.emissiveIntensity) * 0.05;
   });
-  if (camKick > 0.001) { camKick *= 0.97; camera.position.z = baseZ - camKick * 1.6; camera.position.y = 3.2 + camKick * 0.8; camera.lookAt(0, 2.4, 0); }
-  if (partyLight && festive) { partyLight.color.setHSL((time * 0.2) % 1, 1, 0.6); partyLight.intensity = 25 + Math.sin(time * 5) * 10; }
+  if (RM && camKick > 0) { camKick = 0; camera.position.z = baseZ; camera.position.y = 3.2; camera.lookAt(0, lookY, 0); }
+  if (camKick > 0.001) { camKick *= 0.97; camera.position.z = baseZ - camKick * 1.6; camera.position.y = 3.2 + camKick * 0.8; camera.lookAt(0, lookY, 0); }
+  if (partyLight && festive) { partyLight.color.setHSL((mt * 0.2) % 1, 1, 0.6); partyLight.intensity = 25 + (RM ? 0 : Math.sin(time * 5) * 10); }
   stepParty(dt);
-  gifts.forEach(g => { g.position.y = g.userData.baseY + Math.abs(Math.sin(time * 1.6 + g.userData.phase)) * 0.12; });
+  if (!RM) gifts.forEach(g => { g.position.y = g.userData.baseY + Math.abs(Math.sin(time * 1.6 + g.userData.phase)) * 0.12; });
   const p = snow.geometry.attributes.position;
-  for (let i = 0; i < p.count; i++) {
+  if (!RM) for (let i = 0; i < p.count; i++) {
     let y = p.getY(i) - dt * (0.6 + (i % 5) * 0.12);
     if (y < 0) y = 12;
     p.setY(i, y); p.setX(i, p.getX(i) + Math.sin(time + i) * 0.002);
   }
-  p.needsUpdate = true;
+  if (!RM) p.needsUpdate = true;
   if (sparks) {
     let any = false;
     for (let i = 0; i < sparkLife.length; i++) {
@@ -256,7 +269,7 @@ function resume() { if (!renderer || running || !want || covered || document.hid
 function pause() { running = false; cancelAnimationFrame(raf); }
 export function start() { want = true; covered = window.scrollY > (canvas?.clientHeight || 1e9) * 0.92; resume(); }
 export function stop() { want = false; pause(); }
-export const info = () => ({ running, covered, quality });
+export const info = () => ({ running, covered, quality, rm: RM, spin: tree ? +tree.rotation.y.toFixed(4) : null });
 export function refresh() { resize(); }
 
 // ------------------------------------------------------------- special mode (5 quick taps on the tree)
@@ -297,7 +310,12 @@ export function celebrate() {
     u.v = new THREE.Vector3(Math.cos(a) * sp, 3 + Math.random() * 4, Math.sin(a) * sp);
     u.spin = new THREE.Vector3(Math.random() * 6 - 3, Math.random() * 6 - 3, Math.random() * 6 - 3);
     u.delay = i * 0.04; u.rest = false; u.leaving = 0; u.on = true; g.visible = false;
+    if (RM) {                                        // reduced motion: presents are simply there, standing round the tree
+      const rr = 2.4 + Math.random() * 3.4;
+      g.position.set(Math.cos(a) * rr, u.half, Math.sin(a) * rr); u.delay = 0; u.rest = true; g.visible = true;
+    }
   });
+  if (RM) camKick = 0;
   burst(150);
 }
 export function calm() {
@@ -311,7 +329,7 @@ function stepParty(dt) {
     const u = g.userData;
     if (!u.on) continue;
     if (u.leaving > 0) {
-      u.leaving -= dt * 1.5; g.scale.setScalar(Math.max(0.001, u.leaving));
+      u.leaving -= RM ? 1 : dt * 1.5; g.scale.setScalar(Math.max(0.001, u.leaving));
       if (u.leaving <= 0) { u.on = false; g.visible = false; }
       continue;
     }

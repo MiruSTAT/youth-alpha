@@ -1,7 +1,10 @@
 // Data layer: Supabase when configured, otherwise a local PREVIEW store.
 // v35: ?demo=1 (phone preview on the admin panel) always uses the local store, filled with sample data and never saved.
-import { DEMO, demoDb } from './demo.js?v=39';
+import { DEMO, demoDb } from './demo.js?v=40';
 const cfg = window.YA_CONFIG || {};
+// v40 polish: one name order everywhere (Thai rules, numbers as numbers: "Kid 2" before "Kid 10", case ignored)
+const NAME_ORDER = new Intl.Collator('th', { numeric: true, sensitivity: 'base' });
+export const byName = (a, b) => NAME_ORDER.compare(a.nickname || '', b.nickname || '');
 export const MODE = DEMO ? 'demo' : cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY ? 'supabase' : 'preview';
 export { DEMO };
 export const SKILLS = ['piano', 'singing', 'english', 'thai', 'attendance', 'bonus'];
@@ -49,7 +52,7 @@ function supabaseApi() {
     async myRole() { return ok(await sb.rpc('my_role')); },
     async claimAdmin(name) { return ok(await sb.rpc('claim_admin', { p_name: name })); },
 
-    async kids() { return ok(await sb.from('kids').select('*').eq('program_id', P()).order('nickname')); },
+    async kids() { return ok(await sb.from('kids').select('*').eq('program_id', P()).order('nickname')).sort(byName); },  // v40 polish: Thai A–Z (เ/แ/โ in front), the database sorts by bytes
     async addKid(k) { return ok(await sb.from('kids').insert({ ...k, program_id: P() }).select().single()); },
     async updateKid(id, patch) { ok(await sb.from('kids').update(patch).eq('id', id)); },
     async deleteKid(id) { ok(await sb.from('kids').delete().eq('id', id)); },
@@ -339,7 +342,7 @@ function previewApi(seed = null) {
     },
     async claimAdmin() { return 'ok'; },
 
-    async kids() { return [...db.kids].sort((a, b) => a.nickname.localeCompare(b.nickname, 'th')); },
+    async kids() { return [...db.kids].sort(byName); },
     async addKid(k) { const r = { id: id(), active: true, grp: '', created_at: now(), ...k }; db.kids.push(r); audit('kids', 'INSERT', null, r); save(); return r; },
     async updateKid(kid, patch) { const r = db.kids.find(k => k.id === kid), o = { ...r }; Object.assign(r, patch); audit('kids', 'UPDATE', o, r); save(); },
     async deleteKid(kid) {
@@ -417,7 +420,7 @@ function previewApi(seed = null) {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=39'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=40'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].filter(() => memberOk()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {
@@ -552,6 +555,8 @@ export function ranked(rows) {
   const sorted = [...rows].sort((a, b) => b.total - a.total || a.nickname.localeCompare(b.nickname, 'th'));
   let rank = 0, prev = null;
   sorted.forEach((r, i) => { if (r.total !== prev) { rank = i + 1; prev = r.total; } r.rank = rank; });
+  const same = {}; sorted.forEach(r => { same[r.total] = (same[r.total] || 0) + 1; });
+  sorted.forEach(r => { r.tie = same[r.total] > 1 ? same[r.total] : 0; });   // v40: how many kids share this score (0 = nobody)
   return sorted;
 }
 

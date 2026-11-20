@@ -239,10 +239,13 @@ export function setLang(l) { lang = l; localStorage.setItem('ya_lang', l); docum
 let OVR = { th: {}, en: {} };
 export function setOverrides(w) { OVR = { th: { ...(w?.th || {}) }, en: { ...(w?.en || {}) } }; }
 export const tBase = (key, l = lang) => { const v = DICT[l][key] ?? DICT.en[key] ?? key; return typeof v === 'function' ? '' : v; };
+// v40 distill: Normal mode (adult programs) — the kids' words are swapped for adult ones (NORMAL, built at the end of this file)
+let ADULT = false;
+export function setAdult(on) { ADULT = !!on; }
 export function t(key, ...args) {
   const o = OVR[lang]?.[key];
   if (typeof o === 'string' && o.trim()) return o;
-  const v = DICT[lang][key] ?? DICT.en[key] ?? key;
+  const v = (ADULT ? NORMAL[lang]?.[key] : undefined) ?? DICT[lang][key] ?? DICT.en[key] ?? key;
   return typeof v === 'function' ? v(...args) : v;
 }
 document.documentElement.lang = lang;
@@ -837,4 +840,40 @@ Object.assign(DICT.th, {
 Object.assign(DICT.en, {
   xlStaff: 'Include admin activity', xlStaffSub: 'Left out by default: while an admin is signed in on a phone, its activity is marked as admin activity (everything is still kept, nothing is deleted)',
   xc_bystaff: 'By an admin', yes: 'Yes',
+});
+// v40: ranking ties and zero points; errors that stay with a retry
+Object.assign(DICT.th, {
+  tie: 'เสมอ', tieWith: (n) => `เสมอ ${n} คน`, noPtsYet: 'ยังไม่มีคะแนน', startPts: 'เริ่มเก็บคะแนนกันเลย!',
+  errTry: 'ลองใหม่', errKid: 'โหลดไม่ได้ ลองใหม่อีกครั้งนะ',
+  errRetry: 'ไม่สำเร็จ เช็กอินเทอร์เน็ตแล้วลองใหม่', errAgain: 'บันทึกไม่สำเร็จ เช็กอินเทอร์เน็ตแล้วกดปุ่มเดิมอีกครั้ง',
+});
+Object.assign(DICT.en, {
+  tie: 'Tied', tieWith: (n) => `tied, ${n} kids`, noPtsYet: 'No points yet', startPts: "Let's start collecting points!",
+  errTry: 'Try again', errKid: "Couldn't load. Let's try again",
+  errRetry: "Didn't go through. Check the internet and try again", errAgain: "Couldn't save. Check the internet, then tap the same button again",
+});
+// v40 polish: Give points step 2 puts the minus amounts in their own labelled row
+Object.assign(DICT.th, { addPts: 'เพิ่มคะแนน', removePts: 'ลบคะแนน' });
+Object.assign(DICT.en, { addPts: 'Add points', removePts: 'Remove points' });
+// v40 distill: Normal mode wording. Every Thai text that calls the reader "หนู" (the kids' word) says "คุณ" instead;
+// a few texts get their own adult wording. A word the super admin set for the program (look.words) still wins.
+Object.assign(DICT.th, { ptsUnit: 'คะแนน' });
+Object.assign(DICT.en, { ptsUnit: 'pts' });
+// v40 delight: the shop knows who is looking (youHave / canGet / needMore are the old shop keys, used again)
+Object.assign(DICT.th, { shopPickMe: 'แตะชื่อของหนูในหน้าแรก แล้วร้านจะบอกว่าหนูแลกอะไรได้บ้าง' });
+Object.assign(DICT.en, { shopPickMe: 'Tap your name on the home page and the shop will show what you can get' });
+const NORMAL = { th: {}, en: {} };
+for (const [k, v] of Object.entries(DICT.th)) {
+  if (typeof v === 'string' && v.includes('หนู')) NORMAL.th[k] = v.replaceAll('หนู', 'คุณ');
+  else if (typeof v === 'function' && String(v).includes('หนู')) NORMAL.th[k] = (...a) => v(...a).replaceAll('หนู', 'คุณ');
+}
+Object.assign(NORMAL.th, {
+  noKids: 'ยังไม่มีรายชื่อ ผู้ดูแลจะเพิ่มชื่อให้',
+  mLoginSub: 'ใส่ชื่อผู้ใช้และรหัสผ่านที่ได้รับจากผู้ดูแล เพื่อดูคะแนนของคุณ', mLoginRowSub: 'ใช้ชื่อผู้ใช้และรหัสผ่านที่ได้รับจากผู้ดูแล',
+  mLoginSubAll: 'ต้องเข้าสู่ระบบก่อนจึงจะใช้แอปได้ ใส่ชื่อผู้ใช้และรหัสผ่านที่ได้รับจากผู้ดูแล', mForgot: 'ลืมรหัสผ่าน? แจ้งผู้ดูแลให้ตั้งรหัสใหม่',
+});
+Object.assign(NORMAL.en, {
+  tieWith: (n) => `tied, ${n} people`, noKids: 'No names yet. An admin will add them',
+  mLoginSub: 'Type the username and password from your admin to see your points', mLoginRowSub: 'Use the username and password from your admin',
+  mLoginSubAll: 'Please sign in to use the app. Type the username and password from your admin', mForgot: 'Forgot your password? Ask an admin to set a new one',
 });

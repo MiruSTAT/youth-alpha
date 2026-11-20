@@ -43,7 +43,7 @@ with sync_playwright() as p:
     # ---- A: super admin + admin (mode "off" at the start)
     cx, pg = ctx(b, seed_db('off'))
     go(pg, '#/', 1500)
-    check(pg.locator('[data-m=account]').count() == 0 and pg.locator('.my-hint').count() == 1, 'mode off: old app (tap-your-name hint, no sign-in)')
+    check(pg.locator('[data-m=account]').count() == 0 and pg.locator('.rank-hint').count() == 1, 'mode off: old app (tap-your-name hint, no sign-in)')
     go(pg, '#/menu', 1000); check(pg.locator('[data-m=account]').count() == 0, 'mode off: no sign-in row in the menu')
     go(pg, '#/login', 1000); check(pg.evaluate('location.hash') == '#/', 'mode off: #/login goes home')
     go(pg, '#/admin', 1500)

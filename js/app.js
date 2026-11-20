@@ -1,15 +1,15 @@
-import { t, getLang, setLang, setOverrides, tBase } from './i18n.js?v=39';
-import { api, MODE, DEMO, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=39';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=39';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=39';
+import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=40';
+import { api, MODE, DEMO, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=40';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=40';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=40';
 
-import { music } from './music.js?v=39';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=39';
-import { snow } from './snow.js?v=39';
-import { track, flush, deviceId } from './track.js?v=39';
-import { calmIcon } from './icons.js?v=39';
-import { metro } from './metronome.js?v=39';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=39';
+import { music } from './music.js?v=40';
+import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=40';
+import { snow } from './snow.js?v=40';
+import { track, flush, deviceId } from './track.js?v=40';
+import { calmIcon } from './icons.js?v=40';
+import { metro } from './metronome.js?v=40';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=40';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -49,7 +49,30 @@ function toast(msg) {
   const el = $('#toast'); el.textContent = msg; el.classList.add('show');
   clearTimeout(toast._t); toast._t = setTimeout(() => el.classList.remove('show'), 2200);
 }
-function fail(e) { console.error(e); toast(/maintenance/i.test(String(e?.message || e)) ? t('mtBlocked') : t('errGeneric')); }
+// v40: an error stays until it is closed (it used to vanish after 2.2 s). fail(e, retry): retry = what "ลองใหม่" runs again.
+// Admins get a bar above the bottom buttons (Retry + ✕). Kids never get a floating message: a plain line at the top of the page.
+function fail(e, retry) {
+  console.error(e);
+  const mt = /maintenance/i.test(String(e?.message || e)), kid = kidSide();
+  if (mt) retry = null;
+  showErr(mt ? t('mtBlocked') : kid ? t(retry ? 'errKid' : 'errGeneric') : t(retry ? 'errRetry' : 'errAgain'), retry);
+}
+function showErr(msg, retry) {
+  $('#toast').classList.remove('show');
+  if (kidSide()) {
+    view.querySelector('.err-line')?.remove();
+    const p = document.createElement('div'); p.className = 'err-line'; p.setAttribute('role', 'alert');
+    p.innerHTML = `<span>${esc(msg)}</span>${retry ? `<button class="kbtn">${t('errTry')}</button>` : ''}`;
+    (view.querySelector('.sheet') || view).prepend(p);
+    p.querySelector('button')?.addEventListener('click', () => { p.remove(); retry(); });
+    return;
+  }
+  const bar = $('#errBar');
+  bar.innerHTML = `<span class="em">${esc(msg)}</span>${retry ? `<button class="btn small" id="errRetry">${t('errTry')}</button>` : ''}<button class="x" aria-label="${t('close')}">✕</button>`;
+  bar.hidden = false;
+  bar.querySelector('#errRetry')?.addEventListener('click', () => { bar.hidden = true; retry(); });
+  bar.querySelector('.x').onclick = () => { bar.hidden = true; };
+}
 
 function modal(title, inner, { okText = t('save'), extra = '', danger = false } = {}) {
   const dlg = $('#dlg'), form = $('#dlgForm');
@@ -137,7 +160,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=39');
+    const m = await import('./scene3d.js?v=40');
     if (m.initScene($('#scene'), { pack: part('scene') === 'cross' ? 'easter' : 'christmas' })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -170,6 +193,12 @@ function wirePics(root, rows) {
   }));
 }
 
+// v40: "อันดับที่ 2 จาก 12 · เสมอ 2 คน"; no place at all while a kid has no points yet
+function rankText(k, rows) {
+  if (k.total <= 0) return t('noPtsYet');
+  return `${t('rank')} ${k.rank} ${t('of')} ${rows.length}${k.tie ? ` · ${t('tieWith', k.tie)}` : ''}`;
+}
+
 // HOME = ranking, with "my card" on top (no separate "me" page)
 async function kidRank() {
   setNav('rank');
@@ -179,16 +208,21 @@ async function kidRank() {
   const max = Math.max(1, ...rows.map(r => r.total));
   scene?.setGlow(me ? me.total / max : 0.6);
   const medal = ['🥇', '🥈', '🥉'];
+  const allZero = rows.length > 0 && rows.every(r => r.total <= 0);   // v40: start of a program
+  const tapHint = !me && !loginOn() && rows.length > 0 && layKeys('home').includes('me');   // v40 layout: hint lives under the 🏆 title (shown only while the 'me' card could show)
+  const num = (k) => k.total <= 0 ? '<span class="n">–</span>'      // no medal or place until a kid has points
+    : `<span class="n ${k.rank <= 3 ? 'medal' : ''}">${k.rank <= 3 ? medal[k.rank - 1] : k.rank}${k.tie ? `<i class="tie">${t('tie')}</i>` : ''}</span>`;
   const part = {
     notice: () => ev?.announce ? `<div class="notice"><span class="ni">📣</span><p>${esc(ev.announce)}</p></div>` : '',
     me: () => me ? `<button class="my-card" id="myCard"><span class="av" data-pic="${me.id}">${pic(me.avatar)}</span>
-        <span class="who"><b>${esc(me.nickname)}</b><span>🏆 ${t('rank')} ${me.rank} ${t('of')} ${rows.length}</span>${me.spent ? `<span class="sp">🎁 ${t('canSpend')} ${bal(me)} ⭐</span>` : ''}</span>
+        <span class="who"><b>${esc(me.nickname)}</b><span>🏆 ${rankText(me, rows)}</span>${me.spent ? `<span class="sp">🎁 ${t('canSpend')} ${bal(me)} ⭐</span>` : ''}</span>
         <span class="pts"><b id="tot">0</b><span>${t('points')}</span></span></button>`
       : loginOn() ? (member.me ? '' : `<a class="my-hint mem-hint" href="#/login">🔑 ${t('mLoginHint')}</a>`)
-      : rows.length ? `<p class="my-hint">👇 ${t('tapYourName')}</p>` : '',
-    rank: () => `<h1 class="sheet-title" style="margin-bottom:12px">🏆 ${t('ranking')}</h1>${ev?.show_visits || ev?.show_fb_count ? '<div class="home-count" id="homeCount" hidden></div>' : ''}
+      : '',                                                            // v40: the "tap your name" hint moved under the ranking title
+    rank: () => `<div class="rank-head"><h1 class="sheet-title">🏆 ${t('ranking')}</h1>${tapHint ? `<p class="rank-hint">👇 ${t('tapYourName')}</p>` : ''}</div>${ev?.show_visits || ev?.show_fb_count ? '<div class="home-count" id="homeCount" hidden></div>' : ''}
+    ${allZero ? `<p class="start-line">${t('startPts')}</p>` : ''}
     ${rows.length ? `<div class="rank-list">${rows.map(k => `<button class="rank-row ${k.id === mineId ? 'mine' : ''}" data-id="${k.id}">
-      <span class="n ${k.rank <= 3 ? 'medal' : ''}">${k.rank <= 3 ? medal[k.rank - 1] : k.rank}</span>
+      ${num(k)}
       <span class="av" data-pic="${k.id}">${pic(k.avatar)}</span><span class="nm">${esc(k.nickname)}</span><span class="pt">${k.total} ⭐</span></button>`).join('')}</div>`
       : `<p class="empty">${t('noKids')}</p>`}`,
     verse: () => ev?.verse_text ? verseCard(ev) : '',
@@ -231,7 +265,7 @@ function kidDetail(k, rows) {
   const meBtns = loginOn() ? (member.me ? '' : `<a class="kbtn" href="#/login">🔑 ${t('mLoginTitle')}</a>`)
     : isMe ? `<button class="text-btn" id="notMe">${t('notMe')}</button>` : `<button class="kbtn" id="thisMe">${t('thisIsMe')}</button>`;
   const p = kidSheet(`<div class="panel-head"><h2>${esc(k.nickname)}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
-    <div class="kid-detail-head"><button class="av" data-pic="${k.id}" aria-label="${esc(k.nickname)}">${pic(k.avatar)}</button><b>${k.total} ⭐</b><span class="me-rank">🏆 ${t('rank')} ${k.rank} ${t('of')} ${rows.length}</span></div>
+    <div class="kid-detail-head"><button class="av" data-pic="${k.id}" aria-label="${esc(k.nickname)}">${pic(k.avatar)}</button><b>${k.total} ⭐</b><span class="me-rank">🏆 ${rankText(k, rows)}</span></div>
     ${k.spent ? `<div class="cat-pts" style="margin-bottom:14px"><span>🎁 ${t('canSpend')}</span><b>${bal(k)} ⭐</b></div>` : ''}
     ${closed ? `<p class="cat-info mem-note">🔒 ${t('mOnlyOwn')}</p>` : `<p class="section-label">${t('mySkills')}</p>
     <div class="skill-list">${cats.map(c => {
@@ -483,13 +517,16 @@ async function kidShop() {
   const live = items.filter(i => i.active).sort((x, y) => x.price - y.price);
   const rows = []; for (let i = 0; i < live.length; i += 2) rows.push(live.slice(i, i + 2));
   view.innerHTML = `<section class="sheet">
-    <h1 class="sheet-title">🎁 ${t('shopTitle')}</h1>
+    <h1 class="sheet-title ${live.length ? 'vh' : ''}">🎁 ${t('shopTitle')}</h1>
     ${live.length ? `<p class="sheet-sub">${t('shopSub')}</p>
-      ${me ? `<div class="cat-pts shop-bal"><span>🎁 ${t('canSpendOf', esc(me.nickname))}</span><b>${bal(me)} ⭐</b></div>` : ''}<div class="stand">
-      <div class="stand-sign">⭐ ${t('shop')} ⭐</div>
+      ${me ? `<div class="cat-pts shop-bal"><span>🎁 ${esc(me.nickname)}</span><b>${t('youHave', bal(me))}</b></div>`
+        : !loginOn() ? `<p class="shop-hint"><a href="#/">${t('shopPickMe')}</a></p>` : ''}<div class="stand">
+      <div class="stand-sign" aria-hidden="true">⭐ ${t('shopTitle')} ⭐</div>
       <div class="awning"></div>
-      <div class="shelves">${rows.map(row => `<div class="shelf-row">${row.map(i => `<button class="slot" data-i="${i.id}">
-          ${art(i.icon)}<div class="plank"></div><span class="lbl">${esc(i.name)}</span><span class="tag">${i.price} ⭐</span></button>`).join('')}</div>`).join('')}</div>
+      <div class="shelves">${rows.map(row => `<div class="shelf-row">${row.map(i => { const gap = me ? i.price - bal(me) : null;
+          return `<button class="slot${gap === null ? '' : gap <= 0 ? ' can' : ' far'}" data-i="${i.id}">
+          ${art(i.icon)}<div class="plank"></div><span class="lbl">${esc(i.name)}</span><span class="tag">${i.price} ⭐</span>${gap === null ? ''
+          : `<span class="reach">${gap <= 0 ? t('canGet') : t('needMore', gap)}</span>`}</button>`; }).join('')}</div>`).join('')}</div>
       <div class="counter"></div></div>` : `<p class="empty">${t('emptyShop')}</p>`}
 </section>`;
   // tap a prize: it pops out of the shelf (chip bags spill chips, others sparkle)
@@ -898,13 +935,13 @@ const PAGES = {
   admins: ['super', async (x) => x ? (await saMod()).pAdminEdit(saCtx(), x) : (await saMod()).pAdmins(saCtx())],
   programs: ['super', async () => (await saMod()).pPrograms(saCtx())], look: ['super', async () => (await saMod()).pLook(saCtx())],
   online: ['super', async () => (await saMod()).pOnline(saCtx())], ai: ['super', async () => (await saMod()).pAi(saCtx())],
-  data: ['super', async () => (await import('./datatools.js?v=39')).pData(dtCtx())],   // v38 roadmap step 8
+  data: ['super', async () => (await import('./datatools.js?v=40')).pData(dtCtx())],   // v38 roadmap step 8
 };
 const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? isSuper() : can(need); };
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
   PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame, paintMaintBar });
-const saMod = () => import('./superadmin.js?v=39');
+const saMod = () => import('./superadmin.js?v=40');
 // v38: helpers for the data tools page (js/datatools.js)
 const dtCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, program, leaderboard, pcats, cName, bkkToday, loadXLSX, isSuper });
 
@@ -1040,11 +1077,21 @@ function calmNode(root) {
     const svg = calmIcon(f.textContent); if (!svg) return;
     el.dataset.emo = f.textContent; f.replaceWith(document.createRange().createContextualFragment(svg));
   });
-  root.querySelectorAll('h1, h2, h3, summary, label, .btn, .grp, .mt b, .side-super, a.back, th, .my-hint, .hint').forEach(el => {
+  root.querySelectorAll('h1, h2, h3, summary, label, .btn, .kbtn, .grp, .mt b, .side-super, a.back, th, .my-hint, .rank-hint, .hint, .prog-name, .shop-bal span').forEach(el => {
     if (el.closest('.av')) return;
     const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let n;
     while ((n = tw.nextNode()) && !n.textContent.trim());
     const m = n?.textContent.match(EMO); if (m) n.textContent = m[1] + n.textContent.slice(m[0].length);
+  });
+  // v40 polish: search boxes in Normal mode lose the leading 🔍 too (placeholder is an attribute, not a text node)
+  root.querySelectorAll('input[placeholder]').forEach(el => { const m = el.placeholder.match(EMO); if (m) el.placeholder = m[1] + el.placeholder.slice(m[0].length); });
+  // v40 distill: points read as a word ("110 คะแนน" / "110 pts"), not a ⭐ emoji; the shop sign loses its stars
+  const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: (x) => x.textContent.includes('⭐') && !x.parentElement?.closest('.av, script, style') ? 1 : 3 });
+  const unit = t('ptsUnit'), hits = []; let x;
+  while ((x = tw.nextNode())) hits.push(x);
+  hits.forEach(x => {
+    const v = x.parentElement.closest('.stand-sign') ? x.textContent.replace(/\s*⭐\s*/g, ' ').trim() : x.textContent.replace(/(\d)\s*⭐/g, `$1 ${unit}`);
+    if (v !== x.textContent) x.textContent = v;    // only on a change, so the MutationObserver does not loop
   });
 }
 const CALM_ROOTS = ['#view', '#adminSide', '#dlg', '#kidSheet', '#kidNav'];
@@ -1078,7 +1125,7 @@ function adultHome() {
       <button class="btn small head-btn" id="copyLink" title="${t('copyUserLinkSub')}">🔗 ${t('copyUserLink')}</button></div>
     <div class="adm-top" id="admTop">${progPicker('progSel')}${isSuper() ? '<span class="sa-until" id="saUntil"></span>' : ''}</div>
     ${findBox('homeFind')}
-    ${groups.map(([g, items]) => `<details class="mgrp" data-g="${g}" ${open.includes(g) ? 'open' : ''}><summary><span class="mgrp-t">${t(g)}</span><span class="mgrp-n">${items.map(([k]) => t('tab_' + k)).join(' · ')}</span></summary>
+    ${groups.map(([g, items]) => `<details class="mgrp" data-g="${g}" ${open.includes(g) ? 'open' : ''}><summary><span class="mgrp-tx"><span class="mgrp-t">${t(g)}</span><span class="mgrp-n">${items.map(([k]) => t('tab_' + k)).join(' · ')}</span></span></summary>
       <nav class="menu grouped">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
       <span class="mt"><b>${t('tab_' + k)}</b><span>${t('m_' + k, VERSION)}</span></span><span class="chev">›</span></a>`).join('')}</nav></details>`).join('')}
     <button class="btn wide" style="margin-top:24px" id="logout">${t('logout')}</button>
@@ -1267,10 +1314,14 @@ async function pAttendance() {
     view.querySelectorAll('.st button').forEach(b => b.onclick = async () => {
       const k = b.dataset.k, s = b.dataset.s, prev = status[k], y = window.scrollY;
       if (prev === s && !(await confirmBox(t('clearAttWarn', active.find(x => x.id === k)?.nickname || ''), t('clearAtt')))) return;
-      if (prev === s) delete status[k]; else status[k] = s;      // tap again = back to "waiting"
-      draw(); window.scrollTo(0, y);
-      try { prev === s ? await api.clearAttendance(k, attDay) : await api.setAttendance(k, attDay, s); lbCache.at = 0; }
-      catch (e) { if (prev) status[k] = prev; else delete status[k]; draw(); fail(e); }
+      const want = prev === s ? null : s, day = attDay;         // tap again = back to "waiting"
+      const save = async () => {
+        if (want) status[k] = want; else delete status[k];
+        draw(); window.scrollTo(0, y);
+        try { want ? await api.setAttendance(k, day, want) : await api.clearAttendance(k, day); lbCache.at = 0; }
+        catch (e) { if (prev) status[k] = prev; else delete status[k]; draw(); fail(e, day === attDay ? save : null); }
+      };
+      await save();
     });
     $('#multi')?.addEventListener('click', () => { multi = !multi; pick.clear(); draw(); });
     $('#pickAll')?.addEventListener('click', () => { pick.size === active.length ? pick.clear() : active.forEach(k => pick.add(k.id)); draw(); });
@@ -1281,7 +1332,7 @@ async function pAttendance() {
       try {
         for (const k of ids) { await api.setAttendance(k, attDay, s); status[k] = s; }
         lbCache.at = 0; toast(t('bulkDone', ids.length, t(s))); pick.clear(); multi = false; draw();
-      } catch (e) { fail(e); draw(); }
+      } catch (e) { draw(); fail(e, () => view.querySelector(`[data-bulk="${s}"]`)?.click()); }
     });
     const fin = $('#finish');
     if (fin) fin.onclick = async () => {
@@ -1311,7 +1362,11 @@ async function pPoints() {
     view.innerHTML = `${head}
       ${dets.length ? `<p class="muted" style="margin:0 0 8px">${t('pickDetail')}</p><div class="dchips">${['', ...dets].map(d => `<button class="dchip ${pw.detail === d ? 'on' : ''}" data-d="${esc(d)}">${d ? esc(d) : t('noDetail')}</button>`).join('')}</div>` : ''}
       <h2 style="margin-bottom:12px">${pic(cOf(pw.skill).icon)} ${t('s2')}</h2>
-      <div class="amounts">${(baseKey(pw.skill) === 'bonus' ? [5, 10, 20, 50] : [5, 10, 20, 50, -5, -10]).map(a => `<button class="opt ${a < 0 ? 'minus' : ''}" data-a="${a}">${signed(a)}</button>`).join('')}</div>
+      ${(() => { // v40 polish: −5/−10 get their own labelled row, apart from the + amounts, so a minus is never one slip away
+        const amt = (list) => `<div class="amounts">${list.map(a => `<button class="opt ${a < 0 ? 'minus' : ''}" data-a="${a}">${signed(a)}</button>`).join('')}</div>`;
+        if (baseKey(pw.skill) === 'bonus') return amt([5, 10, 20, 50]);
+        return `<p class="amt-label">${t('addPts')}</p>${amt([5, 10, 20, 50])}<p class="amt-label minus">${t('removePts')}</p>${amt([-5, -10])}`;
+      })()}
       <div class="field" style="margin-top:16px"><label>${t('customAmt')}</label>
         <div style="display:flex;gap:10px"><input class="input" id="custom" type="number" inputmode="numeric" min="-1000" max="1000"><button class="btn primary" id="customGo">${t('next')}</button></div></div>`;
     view.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { pw.detail = b.dataset.d; view.querySelectorAll('[data-d]').forEach(x => x.classList.toggle('on', x === b)); });
@@ -1332,13 +1387,13 @@ async function pPoints() {
       view.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { const id = b.dataset.k, y = window.scrollY; pw.sel.has(id) ? pw.sel.delete(id) : pw.sel.add(id); draw(); window.scrollTo(0, y); });
       $('#all').onclick = () => { n === kids.length ? pw.sel.clear() : kids.forEach(k => pw.sel.add(k.id)); draw(); };
       $('#give').onclick = async (e) => {
-        e.currentTarget.disabled = true;
+        const btn = e.currentTarget; btn.disabled = true;
         try {
           const note = $('#note').value.trim();
           await api.addPoints([...pw.sel].map(kid_id => ({ kid_id, skill: pw.skill, detail: pw.detail || '', amount: pw.amount, note })));
           toast(`✓ ${t('given', pw.sel.size)}`); lbCache.at = 0;
           pw = { step: 1, skill: null, detail: '', amount: null, sel: new Set() }; window.scrollTo(0, 0); pPoints();
-        } catch (err) { e.currentTarget.disabled = false; fail(err); }
+        } catch (err) { btn.disabled = false; fail(err, () => $('#give')?.click()); }
       };
     };
     draw(); return;
@@ -1772,7 +1827,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=39');
+      const { readSheet } = await import('./ocr.js?v=40');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -2229,7 +2284,7 @@ async function render() {
     // v37 maintenance mode: kids (and adults who are not the super admin) see only the maintenance scene
     if (!isAdult && maintOn() && !(await maintSuper())) return maintView();
     if (isAdult) { scene?.stop(); return await adultGate(h.split('/')[2]); }
-    await Promise.all([feat('tree') ? ensureScene() : null, eventInfo()]);             // eventInfo: the admin's music switches
+    await Promise.all([treeOn() ? ensureScene() : null, eventInfo()]);             // eventInfo: the admin's music switches
     if (seq !== renderSeq) return;
     // v31: in "all" mode a kid must be signed in first (adults signed in on this phone see everything)
     if (loginOn()) staffHere = !!(await api.session().catch(() => null));
@@ -2250,7 +2305,7 @@ async function render() {
     if (h === '#/feedback') return await kidFeedbackPage();
     if (h.startsWith('#/me') || h === '#/rank') { history.replaceState(null, '', '#/'); }
     return await kidRank();
-  } catch (e) { fail(e); view.innerHTML = `<p class="empty">${t('errGeneric')}</p>`; }
+  } catch (e) { view.innerHTML = kidSide() ? '<section class="sheet"></section>' : `<p class="empty">${t('errGeneric')}</p>`; fail(e, render); }
   finally { paintOffline(); addGrab(); paintMaintBar(); }
 }
 // a quiet line when the phone has no internet and saved data is being shown (kid pages only)
@@ -2383,7 +2438,7 @@ const LOOK = {
   // v29 layout editor: default order of each list; LOCKED items cannot be hidden (the way home / to the adults' area)
   LAYOUT: {
     tabs: [['rank', '🏆', 'ranking'], ['songs', '🎵', 'songs'], ['shop', '🎁', 'shop'], ['menu', '☰', 'menu']],
-    home: [['notice', '📣', 'lay_notice'], ['me', '⭐', 'lay_me'], ['rank', '🏆', 'lay_rank'], ['verse', '📖', 'lay_verse']],
+    home: [['me', '⭐', 'lay_me'], ['notice', '📣', 'lay_notice'], ['rank', '🏆', 'lay_rank'], ['verse', '📖', 'lay_verse']],   // v40: the kid's own card first
     menu: [['account', '👤', 'lay_account'], ['fb', '💬', 'fb'], ['bible', '📖', 'bible'], ['credits', '🎵', 'songCredits'], ['lang', '🌐', 'language'], ['install', '📲', 'installApp'], ['help', '❓', 'help'], ['adult', '🔒', 'adults']],
   },
   LOCKED: { tabs: ['rank', 'menu'], home: ['rank'], menu: ['adult', 'account'] },
@@ -2415,6 +2470,7 @@ function partOf(look, k) {
   const L = look || {}, P = LOOK.PARTS[k], v = L.parts?.[k];
   if (v === 'off' || P.opts[v]) return v;
   if (L.off?.[P.old] === true) return 'off';
+  if (L.mode === 'normal') return 'off';           // v40 distill: Normal mode (adults) starts calm; a part the super admin picked still wins
   return (LOOK.PACK_PARTS[L.pack] || LOOK.PACK_PARTS.christmas)[k];
 }
 const part = (k) => partOf(program.look, k);
@@ -2426,6 +2482,8 @@ function logoOf(L) {
 }
 const OLD_PART = Object.fromEntries(Object.entries(LOOK.PARTS).map(([k, p]) => [p.old, k]));
 const feat = (k) => OLD_PART[k] ? part(OLD_PART[k]) !== 'off' : program.look?.off?.[k] !== true;
+// v40 distill: Normal mode puts the page sheet right under the top bar, so a 3D scene would only peek out as a star: never run it there
+const treeOn = () => feat('tree') && program.look?.mode !== 'normal';
 const packInfo = () => {
   const f = part('friend'), fr = LOOK.FRIENDS[f] || LOOK.FRIENDS.santa;
   return { mascot: LOOK.PARTS.friend.opts[f] || '🎅', gift: fr.gift, label: fr.label,
@@ -2446,6 +2504,7 @@ function applyLook() {
     if (part('friend') === 'lamb') pw[l].santaHo = E[l].santaHo;
     if (part('special') === 'eggs') pw[l].joyTitle = E[l].joyTitle; });
   setOverrides({ th: { ...pw.th, ...L.words?.th }, en: { ...pw.en, ...L.words?.en } });
+  setAdult(L.mode === 'normal');                   // v40 distill: Normal mode says "คุณ" instead of the kids' "หนู" (js/i18n.js NORMAL)
   const title = (L.title || '').trim() || 'Youth Alpha', emoji = (L.emoji || '').trim() || pack.emoji;
   // v34 logo: an emoji (default) or an uploaded picture (look.logo = { type: 'emoji' | 'image', url, size 0.6–2 })
   const lg = logoOf(L), bt = $('.brand-tree'), rs = document.documentElement.style;
@@ -2474,7 +2533,7 @@ function applyLook() {
   LOOK.FEATS.forEach(([k]) => document.body.classList.toggle('off-' + k, !feat(k)));
   const nav = $('#kidNav'), shown = layKeys('tabs');                  // v29: bottom tab order and hidden tabs
   layKeys('tabs', true).forEach(k => { const a = nav.querySelector(`[data-nav="${k}"]`); if (a) { nav.appendChild(a); a.classList.toggle('lay-hide', !shown.includes(k)); } });
-  if (!feat('tree')) scene?.stop();
+  if (!treeOn()) scene?.stop();
   if (!feat('snow')) snow.stop();
   applyAppOpts?.();
 }

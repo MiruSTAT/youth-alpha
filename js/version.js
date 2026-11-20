@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '39';
+export const VERSION = '40';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,28 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '39', date: '2026-11-20', commit: '',
+      { v: '40', date: '2026-11-20', commit: '',
+        short: { th: 'ปรับหน้าตาตามผลตรวจงานออกแบบ: หน้าแรกเด็กเห็นตัวเองเร็วขึ้น โหมดปกติดูเป็นผู้ใหญ่ ข้อผิดพลาดอยู่จนกว่าจะปิด และร้านบอกว่าแต่ละคนแลกอะไรได้',
+                 en: "Design review fixes: kids find themselves faster, Normal mode looks grown-up, errors stay until closed, and the shop shows what each kid can get" },
+        items: [
+          { a: 'look', th: 'หิมะตกอยู่หลังเนื้อหาแล้ว ไม่ทับตัวหนังสือ',
+            en: 'Snow now falls behind the content, never over the text' },
+          { a: 'kids', th: 'ยังไม่มีคะแนนจะไม่มีเหรียญหรืออันดับ (แสดง "–") ถ้าทุกคนยังเป็น 0 จะขึ้น "เริ่มเก็บคะแนนกันเลย!" คะแนนเท่ากันขึ้นคำว่า "เสมอ" และหน้ารายละเอียดเด็กบอก "เสมอ N คน"',
+            en: 'No medal or place until a kid has points ("–"); when everyone is at 0 the list says "Let\'s start collecting points!"; shared scores say "tied", and the kid detail says how many are tied' },
+          { a: 'admin', th: 'ข้อผิดพลาดของผู้ดูแลเป็นแถบที่อยู่จนกว่าจะกด ✕ และมีปุ่ม "ลองใหม่" (โหลดหน้า เช็กชื่อ ให้คะแนน) ฝั่งเด็กแสดงในหน้าโดยไม่มีป๊อปอัป แก้ปุ่มให้คะแนนที่ค้างกดไม่ได้หลังเกิดข้อผิดพลาด',
+            en: 'Admin errors are a bar that stays until you tap ✕, with "Try again" (page load, attendance, give points); kids see the error inside the page, no pop-up. Fixed the Give button staying disabled after an error' },
+          { a: 'kids', th: 'หน้าแรกเด็ก: ต้นคริสต์มาสเตี้ยลง (30% ของจอ จาก 46%) การ์ดของหนูอยู่บนสุด คำแนะนำ "แตะชื่อของหนู" อยู่ใต้หัวข้ออันดับ ที่จอ 390×844 แถวอันดับแรกขึ้นมาจาก y 631 เป็น 463 การ์ดของหนูจาก 489 เป็น 254 (ลำดับที่ผู้ดูแลสูงสุดเคยบันทึกไว้ยังใช้ได้)',
+            en: 'Kids\' home: shorter tree (30% of the screen, was 46%), own card first, the "tap your name" hint sits under the ranking title. At 390×844 the first ranking row moved from y 631 to 463 and the own card from 489 to 254 (an order saved in the layout editor still wins)' },
+          { a: 'look', th: 'โหมดปกติ: ปิดหิมะ ต้นไม้ 3 มิติ เพื่อนที่โผล่มา โหมดพิเศษ และเพลง เป็นค่าเริ่มต้น (ถ้าผู้ดูแลสูงสุดเลือกไว้ยังเป็นตามที่เลือก) ใช้คำว่า "คุณ" แทน "หนู" และ "คะแนน" แทน ⭐ ตัดอีโมจิ 📁 และ 🔍 ฝั่งผู้ดูแล',
+            en: 'Normal mode: snow, 3D tree, peeking friend, special mode and music are off by default (a part the super admin chose still wins); says "คุณ" instead of "หนู" and "pts" instead of ⭐; no 📁 or 🔍 on the admin side' },
+          { a: 'admin', th: 'ชื่อเรียงตามตัวอักษรไทยถูกต้อง ("แบม" อยู่ที่ บ, "Kid 2" ก่อน "Kid 10") ให้คะแนน: แถว −5/−10 แยกออกมาใต้ป้ายสีแดง "ลบคะแนน" มีที่ว่างเหนือปุ่ม "เช็กชื่อเสร็จแล้ว" (แถวสุดท้ายห่าง 95 px จาก 29 px) ชื่อหมวดเมนูไม่ถูกตัด ร้านไม่บอกชื่อซ้ำ',
+            en: 'Names sort in real Thai order ("แบม" under บ, "Kid 2" before "Kid 10"). Give points: −5/−10 have their own row under a red "Remove points" label. More room above "Attendance done" (last row 95 px clear, was 29 px). Menu group text no longer cut off; the shop says its name once' },
+          { a: 'safety', th: 'การเข้าถึง: ต้นไม้ 3 มิติหยุดหมุนและกระพริบเมื่อเครื่องตั้ง "ลดการเคลื่อนไหว" (แสงยังบอกคะแนน) กรอบโฟกัสชัดเจนเมื่อใช้คีย์บอร์ด ป้ายร้านอ่านง่ายขึ้น (คอนทราสต์ 2.8 → 5.1) ประกาศและข้อพระคัมภีร์ไม่เป็นกล่องซ้อนกล่อง',
+            en: 'Accessibility: the 3D tree stops spinning and flashing when the phone asks for reduced motion (lights still show the points), clear keyboard focus rings, easier-to-read shop sign (contrast 2.8 → 5.1), notice and verse no longer boxes inside a box' },
+          { a: 'kids', th: 'ร้านของรางวัล: เมื่อเลือกชื่อแล้วขึ้น "หนูมี 30 ⭐" และใต้รางวัลแต่ละชิ้นบอก "แลกได้!" หรือ "อีก 20 ⭐" ป้ายราคาที่แลกได้มีแสงวิ่งผ่านครั้งเดียว ถ้ายังไม่เลือกชื่อมีลิงก์บอกให้ไปแตะชื่อที่หน้าแรก',
+            en: 'Prize shop: with a name picked it says "You have 30 ⭐" and each prize says "You can get it!" or "20 ⭐ more"; prices in reach shine once. Without a name, one link says to tap your name on the home page' },
+        ] },
+      { v: '39', date: '2026-11-20', commit: '76cea7b',
         short: { th: 'การใช้งานของผู้ดูแลไม่ปนกับการใช้งานของเด็กแล้ว', en: "Admin activity no longer mixes with the kids' activity" },
         items: [
           { a: 'data', th: 'เมื่อผู้ดูแลเข้าสู่ระบบในเครื่องใด การดูหน้าและการแตะในเครื่องนั้นถูกทำเครื่องหมายว่า "โดยผู้ดูแล" รวมถึง 10 นาทีก่อนเข้าสู่ระบบ (เช่น เปิดแอป ไปที่เมนู แล้วเข้าสู่ระบบ) ไม่มีการแจ้งเตือนใดๆ ให้เด็กหรือผู้ดูแลเห็น',
