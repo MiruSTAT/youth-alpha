@@ -4,7 +4,7 @@ import json, os, datetime, openpyxl
 from playwright.sync_api import sync_playwright
 V = os.environ.get('YA_VENDOR', '/tmp/npm3/'); U = 'http://localhost:8766/'; S = os.environ.get('YA_SHOTS', '/tmp/shots/'); errs = []
 CHROME = os.environ.get('YA_CHROME', '/usr/bin/google-chrome')
-FLUSH = "import('./js/track.js?v=39').then(m => m.flush())"
+FLUSH = "import(performance.getEntriesByType('resource').map(e => e.name).find(n => n.includes('/js/track.js'))).then(m => m.flush())"   # v41: same module (and ?v=) the app loaded, so it never goes stale"
 
 def seed_db(sup=False, events=None):
     now = datetime.datetime.now(datetime.UTC).strftime('%Y-%m-%dT%H:%M:%S.000Z')

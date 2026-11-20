@@ -19,6 +19,37 @@ export function pic(val, cls = '') {
   return isImg(val) ? `<img class="pic ${cls}" src="${esc(val)}" alt="" loading="lazy" decoding="async">` : esc(val);
 }
 
+// v41 clarify: a person's face. Kids mode = their avatar; Normal mode = their initial in a calm circle
+// (an uploaded photo is still shown). Thai leading vowels (เ แ โ ใ ไ) take the next letter too: "เจมส์" → "เจ".
+const SEG = typeof Intl !== 'undefined' && Intl.Segmenter ? new Intl.Segmenter('th', { granularity: 'grapheme' }) : null;
+export function initial(name) {
+  const g = SEG ? [...SEG.segment(String(name || '').trim())].map(x => x.segment) : [...String(name || '').trim()];
+  return (/^[เแโใไ]$/.test(g[0] || '') ? g.slice(0, 2).join('') : (g[0] || '?')).toUpperCase();
+}
+export function face(k, cls = '') {
+  if (!k) return '';
+  if (isImg(k.avatar) || typeof document === 'undefined' || document.body?.dataset.mode !== 'normal') return pic(k.avatar, cls);
+  return `<span class="ini ${cls}" aria-hidden="true"><b>${esc(initial(k.nickname))}</b></span>`;
+}
+
+// v41: a prize left on the default 🎁 (or with no icon) gets an emoji guessed from its name, so a shelf
+// is not ten identical gift boxes. A picture or any other emoji the admin picked always wins.
+const GUESS = [
+  [/มันฝรั่ง|เลย์|chip|crisp/i, 'chipbag'], [/ช็อก|ช๊อก|chocolate|choc/i, '🍫'], [/ลูกอม|ทอฟฟี่|เยลลี่|candy|sweet|jelly|gum/i, '🍬'],
+  [/ไอติม|ไอศกรีม|ice ?cream/i, '🍦'], [/เค้ก|cake|ขนมปัง|bread|โดนัท|donut/i, '🍰'], [/ขนม|คุกกี้|บิสกิต|snack|cookie|biscuit/i, '🍪'],
+  [/นม|milk/i, '🥛'], [/น้ำ|โค้ก|ชา|drink|juice|soda|water|tea/i, '🥤'], [/ปากกา|ดินสอ|สี|pen|pencil|crayon|marker/i, '✏️'],
+  [/สมุด|notebook|note/i, '📒'], [/หนังสือ|ไบเบิล|พระคัมภีร์|book|bible/i, '📖'], [/สติกเกอร์|sticker/i, '🌟'],
+  [/ตุ๊กตา|ของเล่น|doll|toy|plush|teddy/i, '🧸'], [/บอล|ball/i, '⚽'], [/เกม|game/i, '🎮'], [/พวงกุญแจ|keychain|key ring/i, '🔑'],
+  [/เสื้อ|shirt|tee/i, '👕'], [/หมวก|hat|cap/i, '🧢'], [/แก้ว|mug|cup/i, '☕'], [/คูปอง|บัตร|ตั๋ว|coupon|voucher|ticket/i, '🎟️'],
+  [/ยางลบ|ไม้บรรทัด|eraser|ruler/i, '📏'], [/กระเป๋า|bag/i, '🎒'], [/ดอกไม้|flower/i, '🌷'], [/ผลไม้|แอปเปิ้ล|fruit|apple/i, '🍎'],
+];
+export function prizeIcon(it) {
+  const v = it?.icon;
+  if (v && v !== '🎁') return v;
+  const hit = GUESS.find(([rx]) => rx.test(it?.name || ''));
+  return hit ? hit[1] : '🎁';
+}
+
 // returns HTML for an icon value (emoji text, an uploaded picture, or a special keyword)
 export function art(val, cls = '') {
   if (SVG[val]) return `<span class="art art-svg ${cls}">${SVG[val]}</span>`;

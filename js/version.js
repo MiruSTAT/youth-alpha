@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '40';
+export const VERSION = '41';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,30 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '40', date: '2026-11-20', commit: '',
+      { v: '41', date: '2026-11-20', commit: '',
+        short: { th: 'แก้ตามผลตรวจงานออกแบบรอบ v40: เช็กชื่อเร็วขึ้นบนมือถือ โหมดปกติเรียก "สมาชิก" และใช้อักษรย่อ ของรางวัลมีรูปตามชื่อและ "หมดแล้ว"',
+                 en: 'Fixes from the v40 design review: faster attendance on a phone, Normal mode says "members" and shows initials, prizes get a picture from their name and a "sold out" state' },
+        items: [
+          { a: 'admin', th: 'เช็กชื่อ: คนละ 1 แถว (สูงประมาณ 60 px จากเดิม 145 px) แตะชื่อ = มา ส่วน ลา / ขาด เป็นปุ่มเล็กด้านขวา คนที่ยัง "รอเช็ก" อยู่บนสุด (ลำดับไม่กระโดดระหว่างแตะ) ตัวนับ มา/ลา/ขาด/รอเช็ก ค้างอยู่ด้านบนเมื่อเลื่อนจอ',
+            en: 'Attendance: one line per person (about 60 px tall, was 145 px); tap the name = Here, Leave / Absent are small buttons on the right; people still "Waiting" are listed first (rows do not jump while you tap); the Here/Leave/Absent/Waiting counters stay on screen while scrolling' },
+          { a: 'admin', th: 'เช็กชื่อ: ปุ่ม "ทุกคนที่รอเช็กมา (N)" บันทึก "มา" ให้ทุกคนที่ยังรอเช็กในครั้งเดียว (ถามยืนยันก่อน) คนที่ลาหรือขาดแล้วไม่เปลี่ยน ไม่ต้องเข้าโหมดเลือกหลายคน',
+            en: 'Attendance: "All waiting are here (N)" saves Here for everyone still waiting in one go (asks first); anyone already on Leave or Absent stays as is. No need for Select many' },
+          { a: 'look', th: 'โหมดปกติ: ทุกข้อความที่เคยเรียก "เด็ก" เปลี่ยนเป็น "สมาชิก" (เมนูผู้ดูแล ความคิดเห็น คัดลอกรายชื่อ ฯลฯ) แสดงอักษรตัวแรกของชื่อในวงกลมแทนรูปสัตว์ (รูปที่อัปโหลดยังแสดง) และแสดงเลขอันดับแทนเหรียญ โหมดเด็กเหมือนเดิม',
+            en: 'Normal mode: every text that said "kid" now says "member" (admin menus, feedback, copy people…); a person shows as the first letter of their name in a circle instead of an animal (an uploaded photo still shows), and places are numbers instead of medals. Kids mode is unchanged' },
+          { a: 'kids', th: 'รายละเอียดคะแนน: ปุ่ม "นี่คือฉัน" อยู่ใต้คะแนนรวม หมวดเรียงจากคะแนนมากไปน้อย หมวดที่ยังเป็น 0 พับไว้ใต้บรรทัด "ยังไม่มีคะแนนอีก N หมวด"',
+            en: 'Points detail: "This is me" sits right under the total; categories go from most points to least; categories still at 0 fold under "N more with no points yet"' },
+          { a: 'kids', th: 'ร้านของรางวัล: ของที่ยังเป็น 🎁 จะได้รูปตามชื่อเอง (เช่น ขนม 🍪 ปากกา ✏️ ตุ๊กตา 🧸) รูปที่ผู้ดูแลเลือกเองยังใช้เหมือนเดิม',
+            en: 'Prize shop: a prize left on 🎁 gets a picture from its name (snack 🍪, pen ✏️, doll 🧸…); a picture the admin picked always wins' },
+          { a: 'admin', th: 'ของรางวัล: ติ๊ก "ของหมดแล้ว" ในหน้าแก้ไขของ ของยังโชว์ในร้าน (สีเทา "หมดแล้ว" อยู่ท้าย) แต่แลกไม่ได้ (ฐานข้อมูล: คอลัมน์ใหม่ shop_items.sold_out ไม่มีข้อมูลเดิมถูกเปลี่ยน)',
+            en: 'Prizes: tick "Sold out" when editing a prize; it stays in the shop (grey, "Sold out", at the end) but cannot be redeemed (database: new column shop_items.sold_out, no existing data changed)' },
+          { a: 'admin', th: 'แลกของรางวัล: เด็กที่มีคะแนนให้แลกอยู่ด้านบน คนที่ยังเป็น 0 พับไว้ด้านล่าง เรียงชื่อแบบไทย',
+            en: 'Redeem: kids with points to spend come first; those at 0 fold away below; names in Thai order' },
+          { a: 'look', th: 'คอมพิวเตอร์: รายชื่อเช็กชื่อ ให้คะแนน และแลกของ แสดง 2 คอลัมน์ (3 คอลัมน์บนจอกว้าง 1440 px ขึ้นไป) การ์ดข้อมูลกว้างไม่เกิน 760 px',
+            en: 'Computer: attendance, Give points and redeem lists show 2 columns (3 on screens 1440 px and wider); info cards are at most 760 px wide' },
+          { a: 'fix', th: 'เล็ก ๆ: วันที่ข้างช่องเลือกวันบอกเป็นคำ ("ศ. 20 พ.ย. 2569") แท็บล่างของเด็กไฮไลต์แบบเม็ดยาหลังไอคอนแทนเส้นด้านบน แถบแจ้งเตือนไม่กะพริบเมื่อเปิด "ลดการเคลื่อนไหว" "ถึง 07:00" บอกว่าเป็นเวลาของผู้ดูแลสูงสุด และปุ่ม "คัดลอกลิงก์ของแอป"',
+            en: 'Small: the date picker also says the day in words ("Fri 20 Nov 2026"); the kids\' tab bar marks the open tab with a soft pill behind the icon instead of a top line; the alert bar does not glow with Reduce motion on; "until 07:00" says it is the super admin time; the button reads "Copy app link"' },
+        ] },
+      { v: '40', date: '2026-11-20', commit: '8dbee43',
         short: { th: 'ปรับหน้าตาตามผลตรวจงานออกแบบ: หน้าแรกเด็กเห็นตัวเองเร็วขึ้น โหมดปกติดูเป็นผู้ใหญ่ ข้อผิดพลาดอยู่จนกว่าจะปิด และร้านบอกว่าแต่ละคนแลกอะไรได้',
                  en: "Design review fixes: kids find themselves faster, Normal mode looks grown-up, errors stay until closed, and the shop shows what each kid can get" },
         items: [

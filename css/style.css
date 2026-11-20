@@ -1315,3 +1315,57 @@ main:focus-visible { outline: none; }                     /* main gets focus onl
 .shop-hint { margin: 0 0 14px; font-size: 1.05rem; line-height: 1.5; }
 .shop-hint a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
 .shop-bal b { white-space: nowrap; }
+
+/* ---------- v41: attendance on a phone (one line per person; tap the name = มา, ลา/ขาด are small chips) ---------- */
+.summary { position: sticky; top: calc(60px + env(safe-area-inset-top)); z-index: 5; }
+.att-list { gap: 6px; }
+.att { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 4px; }
+.att-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 8px; border: 0; border-radius: 10px;
+  background: none; font: inherit; font-size: 1.15rem; font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; }
+.att-main .av { font-size: 1.6rem; line-height: 1; }
+.att-main .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.att-main .state { font-size: .92rem; font-weight: 700; white-space: nowrap; }
+.att.present { border-color: var(--here); background: color-mix(in srgb, var(--here) 7%, var(--white)); }
+.att.leave { border-color: var(--leave); } .att.absent { border-color: var(--absent); }
+.att .chip { flex: none; min-width: 52px; height: 44px; padding: 0 8px; border-radius: 10px; border: 2px solid var(--line); background: var(--white);
+  color: var(--ink-2); font: inherit; font-size: .95rem; font-weight: 700; cursor: pointer; }
+.att .chip.leave.on { background: var(--leave); border-color: var(--leave); color: #fff; }
+.att .chip.absent.on { background: var(--absent); border-color: var(--absent); color: #fff; }
+.list-tools .muted { font-size: .95rem; }
+/* v41 clarify: Normal mode shows a person's initial instead of an animal emoji */
+.ini { display: inline-grid; place-items: center; width: 1.2em; height: 1.2em; border-radius: 50%; vertical-align: middle;
+  background: color-mix(in srgb, var(--accent) 13%, #fff); color: var(--accent); line-height: 1; }
+.ini > b { font-size: .5em; font-weight: 700; }
+/* v41: kid detail — "นี่คือฉัน" near the top, zero categories folded */
+.kd-me { margin: -4px 0 14px; display: flex; justify-content: center; }
+.kd-me .kbtn { margin: 0; }
+.zero-skills { margin-top: 10px; }
+.zero-skills > summary { cursor: pointer; padding: 10px 4px; font-size: 1rem; color: var(--text-d2); list-style-position: inside; }
+.zero-skills .skill-list { margin-top: 6px; opacity: .8; }
+.kd-me .text-btn { margin: 0; }
+/* v41: sold-out prize — greyed on the shelf with a plain "หมดแล้ว" label */
+.slot.out .art { filter: grayscale(1); opacity: .5; }
+.slot.out .lbl, .slot.out .tag { opacity: .6; }
+.slot.out .reach { color: #fff; background: #6b4321; }
+.check-row { display: flex; align-items: center; gap: 10px; min-height: 48px; font-size: 1rem; cursor: pointer; }
+.check-row input { width: 22px; height: 22px; flex: none; }
+.rd-zero { margin-top: 14px; }
+.rd-zero .options { opacity: .75; }
+/* v41 adapt: on a computer the pickers sit side by side (attendance, Give points, prizes) and the
+   one-column pages keep a readable width instead of stretching across the screen */
+@media (min-width: 1024px) {
+  body.adult.has-side .att-list, body.adult.has-side .options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+  body.adult.has-side .options > .muted, body.adult.has-side .att-list > .muted { grid-column: 1 / -1; }
+  body.adult.has-side main > .card { max-width: 760px; }
+}
+@media (min-width: 1440px) { body.adult.has-side .att-list, body.adult.has-side .options { grid-template-columns: repeat(3, 1fr); } }
+/* v41 polish: the open tab is a soft pill behind its icon (the old line along the top read like a progress bar) */
+.kid-nav a.active { box-shadow: none; }
+.kid-nav a > span { padding: 0 16px; border-radius: 999px; transition: background .2s; }
+.kid-nav a.active > span { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.kid-nav a.active > b { font-weight: 700; }
+/* v41 small fixes */
+@media (prefers-reduced-motion: reduce) { .alert-banner { animation: none; } }
+.date-row { align-items: center; }
+.date-row .input { flex: none; width: auto; min-width: 0; }
+.date-say { flex: 1; font-size: 1.05rem; font-weight: 600; color: var(--ink); }

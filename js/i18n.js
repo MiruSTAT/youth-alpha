@@ -622,7 +622,7 @@ Object.assign(DICT.en, {
 
 // ---- update 32: admins per program, merged admin panel, who is online
 Object.assign(DICT.th, {
-  copyUserLink: 'คัดลอกลิงก์ผู้ใช้', copyUserLinkSub: 'ลิงก์ที่เด็ก ๆ ใช้เปิดแอปของโปรแกรมนี้', userLinkCopied: 'คัดลอกลิงก์ผู้ใช้แล้ว',
+  copyUserLink: 'คัดลอกลิงก์ของแอป', copyUserLinkSub: 'ลิงก์ที่เด็ก ๆ ใช้เปิดแอปของโปรแกรมนี้', userLinkCopied: 'คัดลอกลิงก์ผู้ใช้แล้ว',
   pendingMsg2: 'บัญชีนี้รอผู้ดูแลสูงสุดอนุมัติ และเลือกว่าจะเปิดโปรแกรมไหนได้บ้าง',
   noAccessMsg: 'บัญชีนี้ถูกปิด หรือยังไม่มีโปรแกรมที่เปิดได้ ติดต่อผู้ดูแลสูงสุด',
   otherProgMsg: (n) => `บัญชีนี้เปิดโปรแกรม "${n}" ไม่ได้`, otherProgYours: 'โปรแกรมที่บัญชีนี้เปิดได้:',
@@ -659,7 +659,7 @@ Object.assign(DICT.th, {
   onlineNone: 'ตอนนี้ไม่มีใครออนไลน์', onlineAuto: 'อัปเดตเองทุก 20 วินาที',
 });
 Object.assign(DICT.en, {
-  copyUserLink: 'Copy user link', copyUserLinkSub: "The link kids use to open this program's app", userLinkCopied: 'User link copied',
+  copyUserLink: 'Copy app link', copyUserLinkSub: "The link kids use to open this program's app", userLinkCopied: 'User link copied',
   pendingMsg2: 'This account is waiting for the super admin to approve it and choose which programs it may open.',
   noAccessMsg: 'This account is switched off or has no program yet. Please contact the super admin.',
   otherProgMsg: (n) => `This account cannot open the program "${n}".`, otherProgYours: 'Programs this account can open:',
@@ -767,7 +767,7 @@ Object.assign(DICT.en, {
 Object.assign(DICT.th, {
   sub_admins: 'ผู้ดูแล', sub_online: 'ออนไลน์ตอนนี้', sub_about: 'เวอร์ชันและสิ่งที่เปลี่ยน', sub_ai: 'รายละเอียดสำหรับ AI',
   sub_settings: 'ทั่วไป', sub_pcats: 'หมวดคะแนน', sub_musicset: 'เพลงและเสียง',
-  m_settings: 'คำแนะนำ คะแนนการมาร่วม หมวดคะแนน เพลง', saUntilShort: (t) => `ถึง ${t}`,
+  m_settings: 'คำแนะนำ คะแนนการมาร่วม หมวดคะแนน เพลง', saUntilShort: (t) => `ผู้ดูแลสูงสุดใช้ได้ถึง ${t} น. (แล้วยืนยันตัวตนใหม่)`,
   mtTitle: 'ปิดปรับปรุงชั่วคราว', mtSub: 'เดี๋ยวกลับมานะ ขอบคุณที่รอ', mtColour: 'เปลี่ยนสี', mtSoundOn: 'ปิดเสียง', mtSoundOff: 'เปิดเสียง',
   mtBar: 'โปรแกรมนี้ปิดปรับปรุงอยู่ เด็กและผู้ดูแลคนอื่นเห็นแค่หน้าปิดปรับปรุง (แตะเพื่อปิด)',
   mtLabel: 'ปิดปรับปรุง', mtIsOn: (s) => `เปิดอยู่ · ${s}`, mtIsOff: 'ไม่ได้ปิดปรับปรุง', mtTurnOn: 'เริ่มปิดปรับปรุง', mtTurnOff: 'เลิกปิดปรับปรุง',
@@ -781,7 +781,7 @@ Object.assign(DICT.th, {
 Object.assign(DICT.en, {
   sub_admins: 'Admins', sub_online: 'Online now', sub_about: 'Version & changes', sub_ai: 'Details for AI',
   sub_settings: 'General', sub_pcats: 'Point categories', sub_musicset: 'Music',
-  m_settings: 'Tips, attendance points, point categories, music', saUntilShort: (t) => `until ${t}`,
+  m_settings: 'Tips, attendance points, point categories, music', saUntilShort: (t) => `super admin until ${t} (then sign in again)`,
   mtTitle: 'Under maintenance', mtSub: "We'll be back soon. Thanks for waiting!", mtColour: 'Colour', mtSoundOn: 'Sound off', mtSoundOff: 'Sound on',
   mtBar: 'This program is under maintenance. Kids and other admins see only the maintenance page (tap to switch it off)',
   mtLabel: 'Maintenance', mtIsOn: (s) => `on · ${s}`, mtIsOff: 'off', mtTurnOn: 'Start maintenance', mtTurnOff: 'End maintenance',
@@ -862,10 +862,29 @@ Object.assign(DICT.en, { ptsUnit: 'pts' });
 // v40 delight: the shop knows who is looking (youHave / canGet / needMore are the old shop keys, used again)
 Object.assign(DICT.th, { shopPickMe: 'แตะชื่อของหนูในหน้าแรก แล้วร้านจะบอกว่าหนูแลกอะไรได้บ้าง' });
 Object.assign(DICT.en, { shopPickMe: 'Tap your name on the home page and the shop will show what you can get' });
+// v41: attendance on a phone (one-line rows, everyone here)
+Object.assign(DICT.th, { allHere: (n) => `ทุกคนที่รอเช็กมา (${n})`, allHereConfirm: (n) => `บันทึก "มา" ให้ ${n} คนที่ยังรอเช็ก?\nคนที่บันทึก "ลา" หรือ "ขาด" แล้วจะไม่เปลี่ยน`, attTapHint: 'แตะชื่อ = มา' });
+Object.assign(DICT.en, { allHere: (n) => `All waiting are here (${n})`, allHereConfirm: (n) => `Save "Here" for the ${n} still waiting?\nAnyone already on Leave or Absent stays as is`, attTapHint: 'Tap a name = Here' });
+// v41: kid detail folds the categories that are still at 0
+Object.assign(DICT.th, { zeroCats: (n) => `ยังไม่มีคะแนนอีก ${n} หมวด` });
+Object.assign(DICT.en, { zeroCats: (n) => `${n} more with no points yet` });
+// v41: prizes — icon guessed from the name, sold out; redeem list folds kids with nothing to spend
+Object.assign(DICT.th, { soldOut: 'หมดแล้ว', soldOutKid: 'ของชิ้นนี้หมดแล้ว รอของใหม่นะ', soldOutSw: 'ของหมดแล้ว (ยังโชว์ในร้าน แต่แลกไม่ได้)',
+  prizeAutoIcon: 'ถ้าเลือก 🎁 แอปจะเลือกรูปให้เองจากชื่อของ (เช่น "ขนม" → 🍪)', rdZero: (n) => `ยังไม่มีคะแนนให้แลก ${n} คน`, rdNobody: 'ยังไม่มีใครมีคะแนนพอแลกของ' });
+Object.assign(DICT.en, { soldOut: 'Sold out', soldOutKid: 'This one is sold out. More coming soon!', soldOutSw: 'Sold out (still shown in the shop, but can\'t be redeemed)',
+  prizeAutoIcon: 'Leave it on 🎁 and the app picks a picture from the name (e.g. "snack" → 🍪)', rdZero: (n) => `${n} with no points to spend yet`, rdNobody: 'Nobody has points to spend yet' });
 const NORMAL = { th: {}, en: {} };
-for (const [k, v] of Object.entries(DICT.th)) {
-  if (typeof v === 'string' && v.includes('หนู')) NORMAL.th[k] = v.replaceAll('หนู', 'คุณ');
-  else if (typeof v === 'function' && String(v).includes('หนู')) NORMAL.th[k] = (...a) => v(...a).replaceAll('หนู', 'คุณ');
+// v41 clarify: Normal mode also says "สมาชิก" / "member" instead of "เด็ก" / "kid" (admin menus, feedback, copy people…).
+// Texts that name the two modes themselves ("โหมดเด็ก", "Kids mode") are left alone.
+const adultTh = (x) => x.replaceAll('หนู', 'คุณ').replaceAll('เด็ก ๆ', 'สมาชิก').replaceAll('เด็กๆ', 'สมาชิก').replaceAll('เด็ก', 'สมาชิก');
+const adultEn = (x) => x.replace(/\b([Kk])ids\b/g, (_, c) => c === 'K' ? 'Members' : 'members').replace(/\b([Kk])id\b/g, (_, c) => c === 'K' ? 'Member' : 'member');
+const KEEP_TH = /โหมดเด็ก/, KEEP_EN = /Kids mode|kids mode/;
+for (const [lang, fix, keep, rx] of [['th', adultTh, KEEP_TH, /หนู|เด็ก/], ['en', adultEn, KEEP_EN, /\b[Kk]ids?\b/]]) {
+  for (const [k, v] of Object.entries(DICT[lang])) {
+    const src = typeof v === 'function' ? String(v) : v;
+    if (typeof src !== 'string' || !rx.test(src) || keep.test(src)) continue;
+    NORMAL[lang][k] = typeof v === 'function' ? (...a) => fix(v(...a)) : fix(v);
+  }
 }
 Object.assign(NORMAL.th, {
   noKids: 'ยังไม่มีรายชื่อ ผู้ดูแลจะเพิ่มชื่อให้',

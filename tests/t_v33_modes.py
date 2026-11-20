@@ -86,7 +86,7 @@ with sync_playwright() as p:
     go(pg, '#/', 1800); pg.screenshot(path=S + 'v33_03_phone_kids_normal.png')
     check(mode(pg) == 'normal', 'phone: Normal mode on the kids side')
     check(pg.locator('#kidNav svg.ico').count() == 4 and not EMOJI.search(pg.inner_text('#kidNav')), 'phone: tabs use line icons, no emoji')
-    check('🐱' in pg.inner_text('#view'), 'phone: kid avatar still shown')
+    check(pg.locator('#view .ini').count() > 0 and '🐱' not in pg.inner_text('#view'), 'phone: initials instead of the animal avatar (v41)')
     check(not pg.is_visible('#themeBtn') and not pg.is_visible('.brand-tree'), 'phone: no colour-theme button or brand emoji')
     go(pg, '#/menu', 900)
     check(pg.locator('.mrow .mi svg.ico').count() >= 4, 'phone: kid menu rows use line icons')

@@ -68,14 +68,14 @@ with sync_playwright() as p:
     cx, pg = ctx(b, seed_db())
     go(pg, '#/admin/attendance', 1600)
     pg.evaluate(BREAK)
-    pg.locator('.st button').first.click(); pg.wait_for_timeout(3500)     # longer than the old 2.2 s toast
+    pg.locator('.att [data-s]').first.click(); pg.wait_for_timeout(3500)     # longer than the old 2.2 s toast
     check(pg.locator('#errBar').is_visible(), 'admin error: bar still shown after 3.5 s')
     check('ลองใหม่' in pg.inner_text('#errBar'), 'admin error: has a "ลองใหม่" button')
     pg.screenshot(path=S + 'v40_2_errbar.png')
     pg.evaluate(FIX); pg.click('#errRetry'); pg.wait_for_timeout(800)
     check(not pg.locator('#errBar').is_visible(), 'admin error: bar closes on retry')
     check(len(dbnow(pg)['attendance']) >= 1, 'admin error: retry saved the attendance')
-    pg.evaluate(BREAK); pg.locator('.st button').nth(4).click(); pg.wait_for_timeout(600)
+    pg.evaluate(BREAK); pg.locator('.att [data-s]').nth(4).click(); pg.wait_for_timeout(600)
     pg.click('#errBar .x'); pg.wait_for_timeout(300)
     check(not pg.locator('#errBar').is_visible(), 'admin error: ✕ closes the bar')
     pg.evaluate(FIX)

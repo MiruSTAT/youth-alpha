@@ -1,15 +1,15 @@
-import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=40';
-import { api, MODE, DEMO, ranked, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=40';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=40';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=40';
+import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=41';
+import { api, MODE, DEMO, ranked, byName, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=41';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=41';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=41';
 
-import { music } from './music.js?v=40';
-import { art, burst, SPECIAL, pic, isImg, shrinkImage } from './art.js?v=40';
-import { snow } from './snow.js?v=40';
-import { track, flush, deviceId } from './track.js?v=40';
-import { calmIcon } from './icons.js?v=40';
-import { metro } from './metronome.js?v=40';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=40';
+import { music } from './music.js?v=41';
+import { art, burst, SPECIAL, pic, face, prizeIcon, isImg, shrinkImage } from './art.js?v=41';
+import { snow } from './snow.js?v=41';
+import { track, flush, deviceId } from './track.js?v=41';
+import { calmIcon } from './icons.js?v=41';
+import { metro } from './metronome.js?v=41';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=41';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -160,7 +160,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=40');
+    const m = await import('./scene3d.js?v=41');
     if (m.initScene($('#scene'), { pack: part('scene') === 'cross' ? 'easter' : 'christmas' })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -211,10 +211,10 @@ async function kidRank() {
   const allZero = rows.length > 0 && rows.every(r => r.total <= 0);   // v40: start of a program
   const tapHint = !me && !loginOn() && rows.length > 0 && layKeys('home').includes('me');   // v40 layout: hint lives under the 🏆 title (shown only while the 'me' card could show)
   const num = (k) => k.total <= 0 ? '<span class="n">–</span>'      // no medal or place until a kid has points
-    : `<span class="n ${k.rank <= 3 ? 'medal' : ''}">${k.rank <= 3 ? medal[k.rank - 1] : k.rank}${k.tie ? `<i class="tie">${t('tie')}</i>` : ''}</span>`;
+    : `<span class="n ${k.rank <= 3 ? 'medal' : ''}">${k.rank <= 3 && !calmOn() ? medal[k.rank - 1] : k.rank}${k.tie ? `<i class="tie">${t('tie')}</i>` : ''}</span>`;
   const part = {
     notice: () => ev?.announce ? `<div class="notice"><span class="ni">📣</span><p>${esc(ev.announce)}</p></div>` : '',
-    me: () => me ? `<button class="my-card" id="myCard"><span class="av" data-pic="${me.id}">${pic(me.avatar)}</span>
+    me: () => me ? `<button class="my-card" id="myCard"><span class="av" data-pic="${me.id}">${face(me)}</span>
         <span class="who"><b>${esc(me.nickname)}</b><span>🏆 ${rankText(me, rows)}</span>${me.spent ? `<span class="sp">🎁 ${t('canSpend')} ${bal(me)} ⭐</span>` : ''}</span>
         <span class="pts"><b id="tot">0</b><span>${t('points')}</span></span></button>`
       : loginOn() ? (member.me ? '' : `<a class="my-hint mem-hint" href="#/login">🔑 ${t('mLoginHint')}</a>`)
@@ -223,7 +223,7 @@ async function kidRank() {
     ${allZero ? `<p class="start-line">${t('startPts')}</p>` : ''}
     ${rows.length ? `<div class="rank-list">${rows.map(k => `<button class="rank-row ${k.id === mineId ? 'mine' : ''}" data-id="${k.id}">
       ${num(k)}
-      <span class="av" data-pic="${k.id}">${pic(k.avatar)}</span><span class="nm">${esc(k.nickname)}</span><span class="pt">${k.total} ⭐</span></button>`).join('')}</div>`
+      <span class="av" data-pic="${k.id}">${face(k)}</span><span class="nm">${esc(k.nickname)}</span><span class="pt">${k.total} ⭐</span></button>`).join('')}</div>`
       : `<p class="empty">${t('noKids')}</p>`}`,
     verse: () => ev?.verse_text ? verseCard(ev) : '',
   };
@@ -262,19 +262,25 @@ function kidDetail(k, rows) {
   const cats = catCache.list.filter(c => c.active || k.skills[c.key]);
   // v31 "personal" login: only the signed-in kid (and adults) see the points per category
   const closed = program.login === 'personal' && !staffHere && k.id !== member.me?.kid_id;
+  // v41: most points first; categories still at 0 fold away under one line; "นี่คือฉัน" sits near the top
+  const ptsOf = (c) => k.skills[c.key] || 0;
+  const sorted = [...cats].sort((a, b) => ptsOf(b) - ptsOf(a));
+  const withPts = sorted.filter(c => ptsOf(c) !== 0), zero = sorted.filter(c => ptsOf(c) === 0);
+  const row = (list) => list.map(c => {
+    const det = k.details?.[c.key];
+    return `<button class="skill-row ${c.info ? 'has-info' : ''}" data-c="${c.key}"><span class="i">${pic(c.icon)}</span><span class="l">${esc(cName(c))}</span>
+        <span class="v">${ptsOf(c)}</span><span class="chev">${c.info ? 'ⓘ' : ''}</span></button>`
+      + (det ? `<div class="sub-rows">${Object.entries(det).map(([d, v]) => `<div><span>${esc(d)}</span><span>${v}</span></div>`).join('')}</div>` : '');
+  }).join('');
   const meBtns = loginOn() ? (member.me ? '' : `<a class="kbtn" href="#/login">🔑 ${t('mLoginTitle')}</a>`)
     : isMe ? `<button class="text-btn" id="notMe">${t('notMe')}</button>` : `<button class="kbtn" id="thisMe">${t('thisIsMe')}</button>`;
   const p = kidSheet(`<div class="panel-head"><h2>${esc(k.nickname)}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
-    <div class="kid-detail-head"><button class="av" data-pic="${k.id}" aria-label="${esc(k.nickname)}">${pic(k.avatar)}</button><b>${k.total} ⭐</b><span class="me-rank">🏆 ${rankText(k, rows)}</span></div>
+    <div class="kid-detail-head"><button class="av" data-pic="${k.id}" aria-label="${esc(k.nickname)}">${face(k)}</button><b>${k.total} ⭐</b><span class="me-rank">🏆 ${rankText(k, rows)}</span></div>
+    ${meBtns ? `<div class="kd-me">${meBtns}</div>` : ''}
     ${k.spent ? `<div class="cat-pts" style="margin-bottom:14px"><span>🎁 ${t('canSpend')}</span><b>${bal(k)} ⭐</b></div>` : ''}
     ${closed ? `<p class="cat-info mem-note">🔒 ${t('mOnlyOwn')}</p>` : `<p class="section-label">${t('mySkills')}</p>
-    <div class="skill-list">${cats.map(c => {
-      const det = k.details?.[c.key];
-      return `<button class="skill-row ${c.info ? 'has-info' : ''}" data-c="${c.key}"><span class="i">${pic(c.icon)}</span><span class="l">${esc(cName(c))}</span>
-        <span class="v">${k.skills[c.key] || 0}</span><span class="chev">${c.info ? 'ⓘ' : ''}</span></button>`
-        + (det ? `<div class="sub-rows">${Object.entries(det).map(([d, v]) => `<div><span>${esc(d)}</span><span>${v}</span></div>`).join('')}</div>` : '');
-    }).join('')}</div>`}
-    ${meBtns}`);
+    <div class="skill-list">${row(withPts)}</div>
+    ${zero.length ? `<details class="zero-skills"><summary>${t('zeroCats', zero.length)}</summary><div class="skill-list">${row(zero)}</div></details>` : ''}`}`);
   wirePics(p, rows);
   p.querySelectorAll('.skill-row.has-info').forEach(b => b.onclick = () => { track('cat_info', b.dataset.c); catInfo(cOf(b.dataset.c), k.skills[b.dataset.c] || 0); });
   const close = () => { $('#kidSheet').hidden = true; kidRank(); };
@@ -514,7 +520,7 @@ async function kidShop() {
   setNav('shop'); scene?.setGlow(0.7);
   const [{ items }, lb] = await Promise.all([cached(P() + '_shop', () => api.shop()), leaderboard()]);
   const me = lb.find(r => r.id === localStorage.getItem(ME()));
-  const live = items.filter(i => i.active).sort((x, y) => x.price - y.price);
+  const live = items.filter(i => i.active).sort((x, y) => (x.sold_out ? 1 : 0) - (y.sold_out ? 1 : 0) || x.price - y.price);   // v41: sold out goes last
   const rows = []; for (let i = 0; i < live.length; i += 2) rows.push(live.slice(i, i + 2));
   view.innerHTML = `<section class="sheet">
     <h1 class="sheet-title ${live.length ? 'vh' : ''}">🎁 ${t('shopTitle')}</h1>
@@ -523,9 +529,9 @@ async function kidShop() {
         : !loginOn() ? `<p class="shop-hint"><a href="#/">${t('shopPickMe')}</a></p>` : ''}<div class="stand">
       <div class="stand-sign" aria-hidden="true">⭐ ${t('shopTitle')} ⭐</div>
       <div class="awning"></div>
-      <div class="shelves">${rows.map(row => `<div class="shelf-row">${row.map(i => { const gap = me ? i.price - bal(me) : null;
-          return `<button class="slot${gap === null ? '' : gap <= 0 ? ' can' : ' far'}" data-i="${i.id}">
-          ${art(i.icon)}<div class="plank"></div><span class="lbl">${esc(i.name)}</span><span class="tag">${i.price} ⭐</span>${gap === null ? ''
+      <div class="shelves">${rows.map(row => `<div class="shelf-row">${row.map(i => { const gap = me && !i.sold_out ? i.price - bal(me) : null;
+          return `<button class="slot${i.sold_out ? ' out' : gap === null ? '' : gap <= 0 ? ' can' : ' far'}" data-i="${i.id}">
+          ${art(prizeIcon(i))}<div class="plank"></div><span class="lbl">${esc(i.name)}</span><span class="tag">${i.price} ⭐</span>${i.sold_out ? `<span class="reach">${t('soldOut')}</span>` : gap === null ? ''
           : `<span class="reach">${gap <= 0 ? t('canGet') : t('needMore', gap)}</span>`}</button>`; }).join('')}</div>`).join('')}</div>
       <div class="counter"></div></div>` : `<p class="empty">${t('emptyShop')}</p>`}
 </section>`;
@@ -534,7 +540,7 @@ async function kidShop() {
     const it = live.find(x => x.id === b.dataset.i);
     track('shop_tap', it?.name);
     b.classList.remove('popping'); void b.offsetWidth; b.classList.add('popping');
-    burst(b.querySelector('.art'), it.icon === 'chipbag' ? 'chips' : '✨', 12); music.ding();
+    burst(b.querySelector('.art'), prizeIcon(it) === 'chipbag' ? 'chips' : '✨', 12); music.ding();
     setTimeout(() => zoomPrize(it, me), 380);                   // then show it big (small pictures are hard to see)
   });
 }
@@ -544,9 +550,9 @@ function zoomPrize(it, me) {
   const box = document.createElement('div');
   box.className = 'lightbox prize-zoom'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true');
   const left = me ? bal(me) - it.price : null;
-  box.innerHTML = `<div class="lb-inner pz">${art(it.icon, 'pz-art')}
+  box.innerHTML = `<div class="lb-inner pz">${art(prizeIcon(it), 'pz-art')}
     <p class="pz-name">${esc(it.name)}</p><p class="pz-price">${it.price} ⭐</p>
-    ${me ? `<p class="pz-me">${left >= 0 ? t('pzEnough', esc(me.nickname)) : t('pzNeed', -left)}</p>` : ''}</div>
+    ${it.sold_out ? `<p class="pz-me">${t('soldOutKid')}</p>` : me ? `<p class="pz-me">${left >= 0 ? t('pzEnough', esc(me.nickname)) : t('pzNeed', -left)}</p>` : ''}</div>
     <button class="lb-x" aria-label="${t('close')}">✕</button>`;
   const close = () => { box.remove(); document.removeEventListener('keydown', key); };
   const key = (e) => { if (e.key === 'Escape') close(); };
@@ -935,13 +941,13 @@ const PAGES = {
   admins: ['super', async (x) => x ? (await saMod()).pAdminEdit(saCtx(), x) : (await saMod()).pAdmins(saCtx())],
   programs: ['super', async () => (await saMod()).pPrograms(saCtx())], look: ['super', async () => (await saMod()).pLook(saCtx())],
   online: ['super', async () => (await saMod()).pOnline(saCtx())], ai: ['super', async () => (await saMod()).pAi(saCtx())],
-  data: ['super', async () => (await import('./datatools.js?v=40')).pData(dtCtx())],   // v38 roadmap step 8
+  data: ['super', async () => (await import('./datatools.js?v=41')).pData(dtCtx())],   // v38 roadmap step 8
 };
 const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? isSuper() : can(need); };
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
   PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame, paintMaintBar });
-const saMod = () => import('./superadmin.js?v=40');
+const saMod = () => import('./superadmin.js?v=41');
 // v38: helpers for the data tools page (js/datatools.js)
 const dtCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, program, leaderboard, pcats, cName, bkkToday, loadXLSX, isSuper });
 
@@ -1274,11 +1280,14 @@ async function memberForm(m, kids) {
 
 // ---------------- Attendance
 let attDay = today();
+// v41: a day in words, Thai style ("ศ. 20 พ.ย. 2569"), next to every date picker
+const dayWords = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString(getLang() === 'th' ? 'th-TH' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '';
 async function pAttendance() {
   const [kids, rows, round0] = await Promise.all([api.kids(), api.attendance(attDay), api.round(attDay)]);
   let round = round0;
-  const active = kids.filter(k => k.active);
   const status = Object.fromEntries(rows.map(r => [r.kid_id, r.status]));
+  // v41: "รอเช็ก" first (order fixed while the page is open, so rows never jump under a finger), then A–Z
+  const active = kids.filter(k => k.active).sort((a, b) => (status[a.id] ? 1 : 0) - (status[b.id] ? 1 : 0));
   const stateTxt = { present: ['c-here', t('present')], leave: ['c-leave', t('leave')], absent: ['c-absent', t('absent')] };
   let multi = false; const pick = new Set();
   const draw = () => {
@@ -1288,7 +1297,7 @@ async function pAttendance() {
     const qv = $('#q')?.value || '';
     view.innerHTML = `${pageHead(t('tab_attendance'))}
       <a class="btn wide" href="#/admin/attsum" style="margin-bottom:12px">📊 ${t('attSummary')}</a>
-      <div class="date-row"><input type="date" class="input" id="day" value="${attDay}"></div>
+      <div class="date-row"><input type="date" class="input" id="day" value="${attDay}" aria-describedby="daySay"><span class="date-say" id="daySay">${dayWords(attDay)}</span></div>
       ${active.length > 8 ? `<input class="input" id="q" placeholder="🔍 ${t('search')}" style="margin-bottom:12px" value="${esc(qv)}">` : ''}
       ${round?.finished ? `<div class="finished-banner"><span>${t('finished')}</span><button class="btn small" id="reopen">${t('reopen')}</button></div>` : ''}
       <div class="summary">
@@ -1296,22 +1305,22 @@ async function pAttendance() {
         <div><b class="c-leave">${c.leave}</b><span>${t('leave')}</span></div>
         <div><b class="c-absent">${c.absent}</b><span>${t('absent')}</span></div>
         <div><b class="c-wait">${waiting}</b><span>${t('waiting')}</span></div></div>
-      ${active.length ? `<div class="list-tools"><button class="btn small ${multi ? 'primary' : ''}" id="multi">☑️ ${multi ? t('multiDone') : t('multiSelect')}</button>
+      ${active.length ? `<div class="list-tools">${!multi && waiting && !round?.finished ? `<button class="btn small primary" id="allHere">✓ ${t('allHere', waiting)}</button>` : `<span class="muted">${multi ? '' : t('attTapHint')}</span>`}<button class="btn small ${multi ? 'primary' : ''}" id="multi">☑️ ${multi ? t('multiDone') : t('multiSelect')}</button>
         ${multi ? `<button class="btn small" id="pickAll">${pick.size === active.length ? t('clear') : t('selectAll')}</button>` : ''}</div>` : ''}
       <div class="att-list">${active.map(k => {
         const st = status[k.id], [cls, label] = st ? stateTxt[st] : ['c-wait', t('waiting')];
-        if (multi) return `<button class="opt att-pick ${pick.has(k.id) ? 'on' : ''}" data-p="${k.id}" data-n="${esc(k.nickname.toLowerCase())}"><span class="i">${pic(k.avatar)}</span>
+        if (multi) return `<button class="opt att-pick ${pick.has(k.id) ? 'on' : ''}" data-p="${k.id}" data-n="${esc(k.nickname.toLowerCase())}"><span class="i">${face(k)}</span>
           <span class="t">${esc(k.nickname)}<span class="opt-sub ${cls}">${label}</span></span><span class="check">${pick.has(k.id) ? '✓' : ''}</span></button>`;
-        return `<div class="att" data-n="${esc(k.nickname.toLowerCase())}">
-          <div class="who"><span class="av">${pic(k.avatar)}</span><span class="nm">${esc(k.nickname)}</span>${st ? '' : `<span class="state ${cls}">${label}</span>`}</div>
-          <div class="st">${['present', 'leave', 'absent'].map(s => `<button class="${s} ${st === s ? 'on' : ''}" data-k="${k.id}" data-s="${s}">${t(s)}</button>`).join('')}</div></div>`;
+        return `<div class="att ${st || 'wait'}" data-n="${esc(k.nickname.toLowerCase())}">
+          <button class="att-main ${st === 'present' ? 'on' : ''}" data-k="${k.id}" data-s="present" aria-pressed="${st === 'present'}"><span class="av">${face(k)}</span><span class="nm">${esc(k.nickname)}</span><span class="state ${cls}">${st === 'present' ? '✓ ' : ''}${label}</span></button>
+          ${['leave', 'absent'].map(s => `<button class="chip ${s} ${st === s ? 'on' : ''}" data-k="${k.id}" data-s="${s}" aria-pressed="${st === s}">${t(s)}</button>`).join('')}</div>`;
       }).join('') || `<p class="muted">${t('noKids')}</p>`}</div>
       ${multi ? `<div class="bottom-bar bulk"><span class="muted">${t('selectedN', pick.size)}</span><div class="st">${['present', 'leave', 'absent'].map(s => `<button class="${s} on" data-bulk="${s}" ${pick.size ? '' : 'disabled'}>${t(s)}</button>`).join('')}</div></div>`
         : active.length && !round?.finished ? `<div class="bottom-bar"><button class="btn primary" id="finish">✓ ${t('finishRound')}</button></div>` : ''}`;
     $('#day').onchange = (e) => { attDay = e.target.value || today(); pAttendance().catch(fail); };
     const q = $('#q'), filter = () => view.querySelectorAll('.att').forEach(r => r.hidden = !r.dataset.n.includes(q.value.trim().toLowerCase()));
     if (q) { q.oninput = filter; if (qv) filter(); }
-    view.querySelectorAll('.st button').forEach(b => b.onclick = async () => {
+    view.querySelectorAll('.att [data-s]').forEach(b => b.onclick = async () => {
       const k = b.dataset.k, s = b.dataset.s, prev = status[k], y = window.scrollY;
       if (prev === s && !(await confirmBox(t('clearAttWarn', active.find(x => x.id === k)?.nickname || ''), t('clearAtt')))) return;
       const want = prev === s ? null : s, day = attDay;         // tap again = back to "waiting"
@@ -1324,6 +1333,13 @@ async function pAttendance() {
       await save();
     });
     $('#multi')?.addEventListener('click', () => { multi = !multi; pick.clear(); draw(); });
+    $('#allHere')?.addEventListener('click', async () => {      // v41: everyone still "รอเช็ก" → "มา" (leave/absent are kept)
+      const ids = active.filter(k => !status[k.id]).map(k => k.id);
+      if (!ids.length || !(await confirmBox(t('allHereConfirm', ids.length), t('allHere', ids.length), false))) return;
+      $('#allHere').disabled = true;
+      try { for (const k of ids) { await api.setAttendance(k, attDay, 'present'); status[k] = 'present'; } lbCache.at = 0; toast(t('bulkDone', ids.length, t('present'))); draw(); }
+      catch (e) { draw(); fail(e, () => $('#allHere')?.click()); }
+    });
     $('#pickAll')?.addEventListener('click', () => { pick.size === active.length ? pick.clear() : active.forEach(k => pick.add(k.id)); draw(); });
     view.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { const id = b.dataset.p, y = window.scrollY; pick.has(id) ? pick.delete(id) : pick.add(id); draw(); window.scrollTo(0, y); });
     view.querySelectorAll('[data-bulk]').forEach(b => b.onclick = async () => {
@@ -1380,7 +1396,7 @@ async function pPoints() {
       view.innerHTML = `${head}<h2 style="margin-bottom:12px">${t('s3')}</h2>
         <div class="list-tools"><span class="muted">${pic(cOf(pw.skill).icon)} ${esc(cName(cOf(pw.skill)))}${pw.detail ? ' · ' + esc(pw.detail) : ''} · ${signed(pw.amount)}</span>
           <button class="btn small" id="all">${n === kids.length && n ? t('clear') : t('selectAll')}</button></div>
-        <div class="options">${kids.map(k => `<button class="opt ${pw.sel.has(k.id) ? 'on' : ''}" data-k="${k.id}"><span class="i">${pic(k.avatar)}</span><span class="t">${esc(k.nickname)}</span><span class="check">${pw.sel.has(k.id) ? '✓' : ''}</span></button>`).join('') || `<p class="muted">${t('noKids')}</p>`}</div>
+        <div class="options">${kids.map(k => `<button class="opt ${pw.sel.has(k.id) ? 'on' : ''}" data-k="${k.id}"><span class="i">${face(k)}</span><span class="t">${esc(k.nickname)}</span><span class="check">${pw.sel.has(k.id) ? '✓' : ''}</span></button>`).join('') || `<p class="muted">${t('noKids')}</p>`}</div>
         <div class="field" style="margin-top:14px"><label>${t('note')}</label><input class="input" id="note" maxlength="80"></div>
         <div class="bottom-bar"><button class="btn primary" id="give" ${n ? '' : 'disabled'}>${t('giveTo', signed(pw.amount), pic(cOf(pw.skill).icon), n)}</button></div>`;
       wire();
@@ -1404,7 +1420,7 @@ async function pPoints() {
 async function pHistory() {
   const [recent] = await Promise.all([api.recentPoints(50), pcats()]);
   view.innerHTML = `${pageHead(t('pointsHistory'), '#/admin/points')}
-    <div class="card"><div class="list">${recent.map(p => `<div class="li"><span class="av">${pic(p.kids?.avatar || '')}</span>
+    <div class="card"><div class="list">${recent.map(p => `<div class="li"><span class="av">${face(p.kids)}</span>
       <span class="grow">${esc(p.kids?.nickname || '?')}<span class="sub">${pic(cOf(p.skill).icon)} ${esc(cName(cOf(p.skill)))}${p.detail ? ' · ' + esc(p.detail) : ''}${p.note ? ' · ' + esc(p.note) : ''}</span></span>
       <span class="amt ${p.amount < 0 ? 'neg' : 'pos'}">${signed(p.amount)}</span><button class="btn small danger" data-del="${p.id}">${t('undo')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
@@ -1418,7 +1434,7 @@ async function pKids() {
   const kids = await api.kids(), link = location.href.split('#')[0];
   view.innerHTML = `${pageHead(t('tab_kids'))}
     <button class="btn primary wide" id="add" style="margin-bottom:12px">+ ${t('addKid')}</button>
-    <div class="card"><p class="muted" style="margin:0 0 4px">${t('kidsCount', kids.length)}</p><div class="list">${kids.map(k => `<div class="li click" data-edit="${k.id}"><span class="av">${pic(k.avatar)}</span>
+    <div class="card"><p class="muted" style="margin:0 0 4px">${t('kidsCount', kids.length)}</p><div class="list">${kids.map(k => `<div class="li click" data-edit="${k.id}"><span class="av">${face(k)}</span>
       <span class="grow">${esc(k.nickname)}${k.grp || !k.active ? `<span class="sub">${[k.grp, k.active ? '' : t('hidden')].filter(Boolean).map(esc).join(' · ')}</span>` : ''}</span><span class="muted">${t('edit')} ›</span></div>`).join('') || `<p class="muted">${t('noKids')}</p>`}</div></div>
     <div class="card"><p class="muted" style="margin:0 0 8px">🔗 ${t('shareLink')}</p>
       <input class="input" readonly value="${esc(link)}" id="lnk" style="margin-bottom:10px"><button class="btn wide" id="cp">${t('copy')}</button></div>`;
@@ -1462,7 +1478,7 @@ async function pAttSummary() {
   view.innerHTML = `${pageHead(t('attSummary'), '#/admin/attendance')}
     <p class="muted" style="margin:-6px 0 12px">${t('rounds', days)}</p>
     <div class="summary"><div><b class="c-here">${tot.present}</b><span>${t('present')}</span></div><div><b class="c-leave">${tot.leave}</b><span>${t('leave')}</span></div><div><b class="c-absent">${tot.absent}</b><span>${t('absent')}</span></div></div>
-    <div class="card"><div class="list">${list.map(r => `<div class="li"><span class="av">${pic(r.k.avatar)}</span>
+    <div class="card"><div class="list">${list.map(r => `<div class="li"><span class="av">${face(r.k)}</span>
       <span class="grow">${esc(r.k.nickname)}<span class="sub">${t('attTimes', r.present, r.leave, r.absent)}</span></span>
       <span class="amt c-here">${r.present}${days ? `<span class="muted"> / ${days}</span>` : ''}</span></div>`).join('') || `<p class="muted">${t('noKids')}</p>`}</div></div>`;
 }
@@ -1550,8 +1566,8 @@ async function pShop() {
   const list = [...items].sort((x, y) => x.price - y.price);
   view.innerHTML = `${pageHead(t('tab_shop'))}
     <button class="btn primary wide" id="addItem" style="margin-bottom:12px">+ ${t('addItem')}</button>
-    <div class="card"><div class="list">${list.map(i => `<div class="li click" data-item="${i.id}">${art(i.icon)}
-      <span class="grow">${esc(i.name)}${i.active ? '' : `<span class="sub">${t('hidden')}</span>`}</span><span class="amt">${i.price} ⭐</span><span class="muted">›</span></div>`).join('') || `<p class="muted">${t('need_shopEmpty')}</p>`}</div></div>`;
+    <div class="card"><div class="list">${list.map(i => `<div class="li click" data-item="${i.id}">${art(prizeIcon(i))}
+      <span class="grow">${esc(i.name)}${!i.active ? `<span class="sub">${t('hidden')}</span>` : i.sold_out ? `<span class="sub c-absent">${t('soldOut')}</span>` : ''}</span><span class="amt">${i.price} ⭐</span><span class="muted">›</span></div>`).join('') || `<p class="muted">${t('need_shopEmpty')}</p>`}</div></div>`;
   $('#addItem').onclick = () => itemForm(null);
   view.querySelectorAll('[data-item]').forEach(b => b.onclick = () => itemForm(list.find(i => i.id === b.dataset.item)));
 }
@@ -1559,13 +1575,14 @@ async function itemForm(it) {
   const p = modal(it ? t('edit') : t('addItem'), `
     <div class="field"><label>${t('itemName')}</label><input class="input" name="name" required maxlength="40" value="${esc(it?.name || '')}"></div>
     <div class="field"><label>${t('price')}</label><input class="input" name="price" type="number" inputmode="numeric" min="0" max="100000" required value="${it?.price ?? ''}"></div>
-    <div class="field"><label>${t('avatar')}</label>${pickRow('icon', ICONS, it?.icon || '🎁')}</div>`,
+    <div class="field"><label>${t('avatar')}</label><p class="hint">${t('prizeAutoIcon')}</p>${pickRow('icon', ICONS, it?.icon || '🎁')}</div>
+    ${it ? `<label class="check-row"><input type="checkbox" name="sold_out" ${it.sold_out ? 'checked' : ''}> ${t('soldOutSw')}</label>` : ''}`,
     { extra: it ? `<button class="btn small" value="toggle" formnovalidate>${it.active ? t('hidden') : t('show')}</button><button class="btn small danger" value="delete" formnovalidate>${t('del')}</button>` : '' });
   wirePickers($('#dlgForm'));
   const r = await p;
   try {
     if (r instanceof FormData) {
-      await api.saveItem({ ...(it ? { id: it.id } : {}), name: r.get('name').trim(), price: Math.max(0, Math.trunc(Number(r.get('price')) || 0)), icon: r.get('icon') });
+      await api.saveItem({ ...(it ? { id: it.id, sold_out: r.get('sold_out') === 'on' } : {}), name: r.get('name').trim(), price: Math.max(0, Math.trunc(Number(r.get('price')) || 0)), icon: r.get('icon') });
       toast(t('saved'));
     } else if (r === 'toggle') await api.saveItem({ id: it.id, active: !it.active });
     else if (r === 'delete') { if (!(await confirmBox(t('delWarn', it.name)))) return; await api.deleteItem(it.id); }
@@ -1582,12 +1599,16 @@ async function pRedeem(kidId) {
   const kid = kidId ? rows.find(r => r.id === kidId) : null;
   if (kidId && !kid) { location.hash = '#/admin/redeem'; return; }
   if (!kid) {
-    const kids = [...rows].sort((a, b) => a.nickname.localeCompare(b.nickname, 'th'));
+    const kids = [...rows].sort(byName);
+    // v41: kids with points to spend first; kids at 0 fold away (they can't get a prize yet)
+    const has = kids.filter(k => bal(k) > 0), broke = kids.filter(k => bal(k) <= 0);
+    const kidBtns = (list) => list.map(k => `<button class="opt" data-k="${k.id}" data-n="${esc(k.nickname.toLowerCase())}"><span class="i">${face(k)}</span>
+        <span class="t">${esc(k.nickname)}<span class="opt-sub">${t('canSpend')} ${bal(k)} ⭐</span></span><span class="chev">›</span></button>`).join('');
     view.innerHTML = `${pageHead(t('tab_redeem'))}
       <h2 style="margin-bottom:12px">${t('rd1')}</h2>
       ${kids.length > 8 ? `<input class="input" id="q" placeholder="🔍 ${t('search')}" style="margin-bottom:12px">` : ''}
-      <div class="options">${kids.map(k => `<button class="opt" data-k="${k.id}" data-n="${esc(k.nickname.toLowerCase())}"><span class="i">${pic(k.avatar)}</span>
-        <span class="t">${esc(k.nickname)}<span class="opt-sub">${t('canSpend')} ${bal(k)} ⭐</span></span><span class="chev">›</span></button>`).join('') || `<p class="muted">${t('noKids')}</p>`}</div>
+      <div class="options">${kidBtns(has) || `<p class="muted">${kids.length ? t('rdNobody') : t('noKids')}</p>`}</div>
+      ${broke.length ? `<details class="zero-skills rd-zero"><summary>${t('rdZero', broke.length)}</summary><div class="options">${kidBtns(broke)}</div></details>` : ''}
       <h2 class="grp" style="margin-top:26px">${t('rdHist')}</h2>
       <div class="card"><div class="list">${hist.map(h => `<div class="li">${art(h.item_icon)}
         <span class="grow">${esc(h.kids?.nickname || '?')}<span class="sub">${esc(h.item_name)} · ${dShort(h.created_at)}</span></span>
@@ -1603,17 +1624,17 @@ async function pRedeem(kidId) {
   }
   const live = items.filter(i => i.active).sort((x, y) => x.price - y.price), b = bal(kid);
   view.innerHTML = `${pageHead(t('tab_redeem'), '#/admin/redeem')}
-    <div class="card rd-kid"><span class="av">${pic(kid.avatar)}</span><span class="grow"><b>${esc(kid.nickname)}</b><span class="sub">${t('rankPts')} ${kid.total} ⭐</span></span>
+    <div class="card rd-kid"><span class="av">${face(kid)}</span><span class="grow"><b>${esc(kid.nickname)}</b><span class="sub">${t('rankPts')} ${kid.total} ⭐</span></span>
       <span class="rd-bal"><b>${b} ⭐</b><span>${t('canSpend')}</span></span></div>
     <h2 style="margin-bottom:12px">${t('rd2')}</h2>
-    <div class="options">${live.map(i => { const ok = i.price <= b; return `<button class="opt ${ok ? '' : 'dim'}" data-i="${i.id}" ${ok ? '' : 'disabled'}><span class="i">${art(i.icon)}</span>
-      <span class="t">${esc(i.name)}<span class="opt-sub">${ok ? t('rdLeft', b - i.price) : t('rdShort', i.price - b)}</span></span><span class="amt">${i.price} ⭐</span></button>`; }).join('') || `<p class="muted">${t('need_shopEmpty')}</p>`}</div>`;
+    <div class="options">${live.map(i => { const ok = i.price <= b && !i.sold_out; return `<button class="opt ${ok ? '' : 'dim'}" data-i="${i.id}" ${ok ? '' : 'disabled'}><span class="i">${art(prizeIcon(i))}</span>
+      <span class="t">${esc(i.name)}<span class="opt-sub">${i.sold_out ? t('soldOut') : ok ? t('rdLeft', b - i.price) : t('rdShort', i.price - b)}</span></span><span class="amt">${i.price} ⭐</span></button>`; }).join('') || `<p class="muted">${t('need_shopEmpty')}</p>`}</div>`;
   view.querySelectorAll('[data-i]').forEach(btn => btn.onclick = async () => {
     const it = live.find(x => x.id === btn.dataset.i);
     if (!(await confirmBox(t('rdConfirm', it.name, kid.nickname, it.price, b - it.price), t('rdGo'), false))) return;
     btn.disabled = true;
     try {
-      await api.redeem({ kid_id: kid.id, item_id: it.id, item_name: it.name, item_icon: it.icon, price: it.price });
+      await api.redeem({ kid_id: kid.id, item_id: it.id, item_name: it.name, item_icon: prizeIcon(it), price: it.price });
       lbCache.at = 0; toast('✓ ' + t('rdDone', kid.nickname, it.name)); location.hash = '#/admin/redeem';
     } catch (e) { btn.disabled = false; console.error(e); toast(/not enough/.test(e?.message || '') ? t('rdShort', it.price - b) : t('errGeneric')); }
   });
@@ -1665,8 +1686,8 @@ async function pWeekly() {
     <div class="summary"><div><b class="c-here">${given}</b><span>${t('wkPts')}</span></div><div><b>${came}<span class="muted" style="font-size:.9rem"> / ${active.length}</span></b><span>${t('wkCame')}</span></div>
       <div><b>${phones}</b><span>${t('wkPhones')}</span></div>${can('feedback') ? `<div><b>${fbW}</b><span>${t('wkFb')}</span></div>` : ''}</div>
     ${card('🙋 ' + t('wkMissed'), last2.length === 2 ? t('wkMissedSub', dShort(last2[0]), dShort(last2[1])) : t('wkNeed2'),
-      last2.length < 2 ? '' : missed.map(k => `<div class="li"><span class="av">${pic(k.avatar)}</span><span class="grow">${esc(k.nickname)}<span class="sub">${last2.map(d => `${dShort(d)}: ${stTxt(stOf(k.id, d))}`).join(' · ')}</span></span></div>`).join('') || `<p class="c-here" style="margin:8px 0 4px">✓ ${t('wkNoMiss')}</p>`)}
-    ${card('⭐ ' + t('wkTop'), '', top.map(([id, n], i) => `<div class="li"><span class="av">${pic(kidOf[id].avatar)}</span><span class="grow">${esc(kidOf[id].nickname)}</span><span class="amt pos">+${n}</span></div>`).join('') || none)}
+      last2.length < 2 ? '' : missed.map(k => `<div class="li"><span class="av">${face(k)}</span><span class="grow">${esc(k.nickname)}<span class="sub">${last2.map(d => `${dShort(d)}: ${stTxt(stOf(k.id, d))}`).join(' · ')}</span></span></div>`).join('') || `<p class="c-here" style="margin:8px 0 4px">✓ ${t('wkNoMiss')}</p>`)}
+    ${card('⭐ ' + t('wkTop'), '', top.map(([id, n], i) => `<div class="li"><span class="av">${face(kidOf[id])}</span><span class="grow">${esc(kidOf[id].nickname)}</span><span class="amt pos">+${n}</span></div>`).join('') || none)}
     ${card('🎵 ' + t('wkSongs'), '', topSongs.map(([title, x]) => `<div class="li"><span class="grow">${esc(title)}<span class="sub">${t('wkSongN', x.n, x.d.size)}</span></span><span class="amt">${x.n}</span></div>`).join('') || none)}
     ${card('🎟️ ' + t('wkPrizes'), '', redW.map(r => `<div class="li">${art(r.item_icon)}<span class="grow">${esc(r.kids?.nickname || '?')}<span class="sub">${esc(r.item_name)} · ${dShort(r.created_at)}</span></span><span class="amt neg">−${r.price} ⭐</span></div>`).join('') || none)}`;
 }
@@ -1827,7 +1848,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=40');
+      const { readSheet } = await import('./ocr.js?v=41');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
