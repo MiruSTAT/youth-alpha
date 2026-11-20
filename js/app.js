@@ -166,7 +166,7 @@ function applyAppOpts() {
 
 // ------------------------------------------------------------- top bar
 function paintChrome() {
-  $('#langBtn').textContent = getLang() === 'th' ? 'EN' : 'TH';
+  langLabel();
   $('#musicBtn').textContent = music.playing ? '🔊' : '🔇';
   $('#musicBtn').setAttribute('aria-label', music.playing ? t('musicOff') : t('musicOn'));
   $('#themeBtn').setAttribute('aria-label', t('themeBtn'));
@@ -2525,6 +2525,13 @@ function maintView() {
   // v38: no buttons on the maintenance scene (owner's request): just the picture and the words
   view.innerHTML = `<section class="maint-scene ${sc}">${MAINT_ART[sc]}
     <h1 class="mt-title">🛠️ ${t('mtTitle')}</h1><p class="mt-sub">${t('mtSub')}</p><p class="mt-timer" id="mtTimer" aria-live="polite">${maintEnds() ? '⏱ ' + maintEnds() : ''}</p></section>`;
+  // v47: only the language switch is left in the top bar (songs, music and themes are closed during maintenance);
+  // it gets a translate (globe) icon so kids can see what it does (langLabel(), also called by paintChrome()).
+  langLabel();
+}
+function langLabel() {
+  const l = getLang() === 'th' ? 'EN' : 'TH';
+  $('#langBtn').innerHTML = document.body.classList.contains('maint') ? `${svgIcon('globe')}<span>${l}</span>` : l;
 }
 // the super admin's reminder: a thin bar on every page while the program is in maintenance
 function paintMaintBar() {

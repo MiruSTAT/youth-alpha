@@ -23,10 +23,12 @@ export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
       { v: '47', date: '2026-11-20', commit: '',
-        short: { th: 'หน้าปิดปรับปรุงบอกเวลาที่จะเปิดอีกครั้ง', en: 'The maintenance page shows when the app opens again' },
+        short: { th: 'หน้าปิดปรับปรุงบอกเวลาที่จะเปิดอีกครั้ง และมีปุ่มเปลี่ยนภาษาไทย/อังกฤษ', en: 'The maintenance page shows when the app opens again and has a Thai/English switch' },
         items: [
           { a: 'kids', th: 'หน้าปิดปรับปรุงที่เด็กเห็น: ถ้าผู้ดูแลสูงสุดตั้งเวลาไว้ จะเห็น "จบเวลา 23:15 น. (อีก 30 นาที)" ตัวใหญ่ใต้ข้อความ อัปเดตเองทุก 15 วินาที',
             en: 'Maintenance page for kids: when the super admin set a timer, it shows "ends 23:15 (30 min left)" in big text under the message, updated every 15 seconds' },
+          { a: 'kids', th: 'ระหว่างปิดปรับปรุง: เพลงและธีมใช้ไม่ได้ (ไม่มีปุ่ม 🎨 และ 🔊 ไม่มีเพลงพื้นหลัง เปิดหน้าเพลงก็เห็นแค่หน้าปิดปรับปรุง) เหลือแค่ปุ่มเปลี่ยนภาษา ไทย/อังกฤษ ที่มีไอคอนรูปลูกโลกให้รู้ว่ากดแปลภาษาได้',
+            en: 'During maintenance: songs and themes are closed (no 🎨 and 🔊 buttons, no background music, a song link shows the maintenance page). Only the Thai/English switch is left, now with a globe icon so kids know it changes the language' },
         ] },
       { v: '46', date: '2026-11-20', commit: '4f1205e',
         short: { th: 'ตั้งเวลาปิดปรับปรุงได้ ตัวนับคนเปิดแอปย้ายไปมุมขวาล่าง สวิตช์ฉากเปิดโหมดพิเศษ เช็กชื่อเหลือแค่ มา / ขาด และหน้าเครื่องมือข้อมูลเหลือแค่ดาวน์โหลดไฟล์',

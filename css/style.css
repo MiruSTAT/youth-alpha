@@ -1507,3 +1507,5 @@ body.sheet-full:not([data-mode="normal"]) .sheet-grab::before { top: 19px; }
 body.adult .visit-pill, body.song-page .visit-pill, body.maint .visit-pill { display: none; }
 .mt-timer { margin: 10px 0 0; font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mt-timer:empty { display: none; }
+body.maint .top-actions #langBtn { width: auto; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+body.maint #langBtn svg.ico { width: 20px; height: 20px; }
