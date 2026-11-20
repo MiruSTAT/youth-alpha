@@ -18,6 +18,9 @@ Before a big change: give the owner a short summary of what you will do and wait
 
 const maskEmail = (e) => { const [a, d] = String(e || '').split('@'); return a && d ? a.slice(0, 2) + '•••@' + d : '•••'; };
 
+// v46: maintenance timer choices in minutes (0 = no timer)
+const MT_TIMES = [0, 15, 30, 60, 120, 240, 480, 1440];
+
 // ---------- step 1 succeeded (called from the login form): send the link and say where it went
 export async function startFromLogin(c, username, password) {
   const r = await c.api.superStart(username, password);
@@ -183,7 +186,7 @@ export async function pAi(c) {
       <div class="sa-btns"><button class="btn primary" id="hoCopy" disabled>📋 ${c.t('saCopy')}</button><button class="btn" id="hoDl" disabled>📥 ${c.t('saDownload')}</button></div></div>
     <div id="hoBody"></div>
     <h2 class="grp">${c.t('saNext')}</h2>
-    <div class="card"><ul class="sa-next">${['saN7', 'saN8', 'saN9', 'saN10', 'saN11', 'saN6'].map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
+    <div class="card"><ul class="sa-next">${['saN12', 'saN13', 'saN14', 'saN15', 'saN16']   /* v46: the old list was all done */.map(k => `<li>${c.t(k)}</li>`).join('')}</ul></div>`;
   let md = '';
   try { md = await fetch('HANDOFF.md?t=' + Date.now(), { cache: 'no-store' }).then(r => r.ok ? r.text() : Promise.reject(new Error('http ' + r.status))); }
   catch (e) { console.error(e); const st = c.$('#hoState'); if (st) st.textContent = c.t('saHoFail'); return; }
@@ -342,27 +345,34 @@ async function drawPrograms(c) {
       <div class="prog-btns"><button class="btn small" data-copy="${p.id}">📋 ${c.t('progCopy')}</button>
         <a class="btn small" href="${c.esc(c.linkFor(p.slug))}#/admin">⚙️ ${c.t('progOpen')}</a>
         <button class="btn small" data-edit="${p.id}">✏️ ${c.t('progEdit')}</button></div>
-      <div class="prog-maint ${p.maintenance?.on ? 'on' : ''}"><span>🛠️ ${c.t('mtLabel')}: <b>${p.maintenance?.on ? c.t('mtIsOn', c.t('mt_' + (p.maintenance.scene === 'bunny' ? 'bunny' : 'tree'))) : c.t('mtIsOff')}</b></span>
-        <button class="btn small" data-maint="${p.id}">${p.maintenance?.on ? c.t('mtTurnOff') : c.t('mtTurnOn')}</button></div></div>`).join('');
+      <div class="prog-maint ${c.maintLive(p.maintenance) ? 'on' : ''}"><span>🛠️ ${c.t('mtLabel')}: <b>${c.maintLive(p.maintenance) ? c.t('mtIsOn', c.t('mt_' + (p.maintenance.scene === 'bunny' ? 'bunny' : 'tree'))) + (c.maintEnds(p.maintenance) ? ' · ⏱ ' + c.maintEnds(p.maintenance) : '') : c.t('mtIsOff')}</b></span>
+        <button class="btn small" data-maint="${p.id}">${c.maintLive(p.maintenance) ? c.t('mtTurnOff') : c.t('mtTurnOn')}</button></div></div>`).join('');
   box.querySelectorAll('[data-copy]').forEach(b => b.onclick = async () => {
     const p = list.find(x => x.id === +b.dataset.copy);
     try { await navigator.clipboard.writeText(c.linkFor(p.slug)); c.toast('✓ ' + c.t('progCopied')); } catch { c.toast(c.linkFor(p.slug)); }
   });
   // v37 maintenance mode: switch it on (pick a scene) or off, with a warning that names the program
   box.querySelectorAll('[data-maint]').forEach(b => b.onclick = async () => {
-    const p = list.find(x => x.id === +b.dataset.maint), on = !p.maintenance?.on;
-    let scene = p.maintenance?.scene === 'bunny' ? 'bunny' : 'tree';
+    const p = list.find(x => x.id === +b.dataset.maint), on = !c.maintLive(p.maintenance);
+    let scene = p.maintenance?.scene === 'bunny' ? 'bunny' : 'tree', minutes = 0;
     if (on) {
+      // v46: a timer — maintenance ends by itself after the chosen time (0 = no timer, ends only when switched off)
       const r = await c.modal('🛠️ ' + c.esc(p.name), `<p>${c.t('mtWhat')}</p>
-        <div class="field"><label>${c.t('mtScene')}</label><div class="seg">${['tree', 'bunny'].map(k => `<label><input type="radio" name="scene" value="${k}" ${k === scene ? 'checked' : ''}>${c.t('mt_' + k)}</label>`).join('')}</div></div>`,
+        <div class="field"><label>${c.t('mtScene')}</label><div class="seg">${['tree', 'bunny'].map(k => `<label><input type="radio" name="scene" value="${k}" ${k === scene ? 'checked' : ''}>${c.t('mt_' + k)}</label>`).join('')}</div></div>
+        <div class="field"><label for="mtMin">${c.t('mtTimer')}</label><select class="input" id="mtMin" name="min">${MT_TIMES.map(m => `<option value="${m}" ${m === 60 ? 'selected' : ''}>${m ? c.t('mtFor', m) : c.t('mtNoTimer')}</option>`).join('')}</select></div>
+        <div class="field"><label for="mtOther">${c.t('mtOther')}</label><input class="input" id="mtOther" name="other" type="number" min="1" max="10080" inputmode="numeric" placeholder="${c.t('mtOtherPh')}"></div>`,
         { okText: c.t('mtTurnOn') });
       if (!(r instanceof FormData)) return;
       scene = String(r.get('scene') || 'tree');
-      if (!(await c.confirmBox(c.t('mtWarnOn', p.name), c.t('mtTurnOn'), false))) return;
+      const other = Math.trunc(Number(r.get('other')) || 0);
+      minutes = Math.min(10080, Math.max(0, other > 0 ? other : Math.trunc(Number(r.get('min')) || 0)));
+      if (!(await c.confirmBox(c.t('mtWarnOn', p.name) + (minutes ? '\n⏱ ' + c.t('mtFor', minutes) : ''), c.t('mtTurnOn'), false))) return;
     } else if (!(await c.confirmBox(c.t('mtWarnOff', p.name), c.t('mtTurnOff'), false))) return;
     try {
-      await c.api.programSetMaint(p.id, on, scene);
-      if (p.id === c.program.id) c.program.maintenance = { on, scene };
+      await c.api.programSetMaint(p.id, on, scene, minutes);
+      const m = { on, scene, until: on && minutes ? new Date(Date.now() + minutes * 60000).toISOString() : null };
+      p.maintenance = m;
+      if (p.id === c.program.id) c.program.maintenance = m;
       c.toast('✓ ' + c.t(on ? 'mtDoneOn' : 'mtDoneOff', p.name));
       drawPrograms(c); c.paintMaintBar?.();
     } catch (e) { c.fail(e); }

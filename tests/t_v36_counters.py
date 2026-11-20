@@ -65,7 +65,7 @@ with sync_playwright() as p:
     cx, pg = ctx(b, seed_db(sup=False, sw=True))
     go(pg, '#/', 3000)
     hc = pg.locator('#homeCount')
-    txt = hc.inner_text() if hc.count() else ''
+    txt = (hc.inner_text() if hc.count() else '') + ' ' + (pg.locator('.visit-pill').inner_text() if pg.locator('.visit-pill').count() else '')   # v46: visits in the corner label
     check(hc.is_visible(), 'on: counter row visible')
     check('1,234' in txt and '56' in txt, 'on: shows 1,234 visits and 56 feedback  [%s]' % txt.replace('\n', ' '))
     check('hi' not in txt, 'on: no feedback text shown')
@@ -78,15 +78,15 @@ with sync_playwright() as p:
     db = seed_db(sup=False, sw=True); db['settings']['show_fb_count'] = False
     cx, pg = ctx(b, db)
     go(pg, '#/', 3000)
-    txt = pg.locator('#homeCount').inner_text()
-    check('1,234' in txt and '56' not in txt, 'visits only: feedback number hidden')
+    txt = pg.locator('.visit-pill').inner_text() + ' ' + (pg.locator('#homeCount').inner_text() if pg.locator('#homeCount').is_visible() else '')
+    check('1,234' in txt and '56' not in txt, 'visits only: feedback number hidden (v46: visits in the corner label) [%s]' % txt)
     cx.close()
 
     # ---- E: Normal mode: line icons, no emojis in the row
     cx, pg = ctx(b, seed_db({'mode': 'normal'}, sup=False, sw=True))
     go(pg, '#/', 3000)
-    check(pg.locator('#homeCount svg.ico').count() == 2, 'Normal mode: two line icons')
-    check('👀' not in pg.locator('#homeCount').inner_text(), 'Normal mode: no emoji')
+    check(pg.locator('#homeCount svg.ico').count() == 1 and pg.locator('.visit-pill svg.ico').count() == 1, 'Normal mode: two line icons (v46: one in the corner label)')
+    check('👀' not in pg.locator('#homeCount').inner_text() + pg.locator('.visit-pill').inner_text(), 'Normal mode: no emoji')
     cx.close()
     b.close()
 

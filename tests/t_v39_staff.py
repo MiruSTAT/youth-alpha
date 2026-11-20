@@ -72,7 +72,7 @@ with sync_playwright() as p:
     seeded = [mk(i + 1, 'open_app', i < 4) for i in range(10)] + [mk(20 + i, 'view', i < 2) for i in range(5)]
     cx, pg = ctx(b, seed_db(events=seeded))
     go(pg, '#/', 3000)
-    txt = pg.locator('#homeCount').inner_text() if pg.locator('#homeCount').count() else ''
+    txt = pg.locator('.visit-pill').inner_text() if pg.locator('.visit-pill').count() else ''   # v46: visits moved to the corner label
     check('6' in txt and '10' not in txt, 'home visits count kid opens only (6 of 10 seeded): %r' % txt)
     pg.screenshot(path=S + 'v39_home.png')
     cx.close()
