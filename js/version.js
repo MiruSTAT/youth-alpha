@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '46';
+export const VERSION = '47';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,13 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '46', date: '2026-11-20', commit: '',
+      { v: '47', date: '2026-11-20', commit: '',
+        short: { th: 'หน้าปิดปรับปรุงบอกเวลาที่จะเปิดอีกครั้ง', en: 'The maintenance page shows when the app opens again' },
+        items: [
+          { a: 'kids', th: 'หน้าปิดปรับปรุงที่เด็กเห็น: ถ้าผู้ดูแลสูงสุดตั้งเวลาไว้ จะเห็น "จบเวลา 23:15 น. (อีก 30 นาที)" ตัวใหญ่ใต้ข้อความ อัปเดตเองทุก 15 วินาที',
+            en: 'Maintenance page for kids: when the super admin set a timer, it shows "ends 23:15 (30 min left)" in big text under the message, updated every 15 seconds' },
+        ] },
+      { v: '46', date: '2026-11-20', commit: '4f1205e',
         short: { th: 'ตั้งเวลาปิดปรับปรุงได้ ตัวนับคนเปิดแอปย้ายไปมุมขวาล่าง สวิตช์ฉากเปิดโหมดพิเศษ เช็กชื่อเหลือแค่ มา / ขาด และหน้าเครื่องมือข้อมูลเหลือแค่ดาวน์โหลดไฟล์',
                  en: 'Maintenance timer, visits counter moved to the bottom-right corner, a switch for the special mode opening scene, attendance is only Here / Absent, and Data tools is downloads only' },
         items: [

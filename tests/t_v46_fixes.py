@@ -106,7 +106,7 @@ with sync_playwright() as p:
         cx.close()
     cx, pg = ctx(b, seed_db(sup=False, maint={'on': True, 'scene': 'tree', 'until': iso(0.15)}))
     go(pg, '#/', 1500)
-    check(pg.locator('.maint-scene').count() == 1, 'e: scene while the last seconds run')
+    check(pg.locator('.maint-scene').count() == 1 and '⏱' in pg.inner_text('#mtTimer'), 'e: scene while the last seconds run, kids see the timer (v47)')
     pg.wait_for_timeout(26000)
     check(pg.locator('.maint-scene').count() == 0 and pg.locator('.rank-row').count() > 0, 'e: timer ran out → the kids\' app is back without anyone switching it off')
     cx.close()

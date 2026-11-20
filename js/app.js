@@ -1,15 +1,15 @@
-import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=46';
-import { api, MODE, DEMO, ranked, byName, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=46';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=46';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=46';
+import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=47';
+import { api, MODE, DEMO, ranked, byName, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=47';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=47';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=47';
 
-import { music } from './music.js?v=46';
-import { art, burst, SPECIAL, pic, face, prizeIcon, isImg, shrinkImage } from './art.js?v=46';
-import { snow } from './snow.js?v=46';
-import { track, flush, deviceId } from './track.js?v=46';
-import { calmIcon, svgIcon } from './icons.js?v=46';
-import { metro } from './metronome.js?v=46';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=46';
+import { music } from './music.js?v=47';
+import { art, burst, SPECIAL, pic, face, prizeIcon, isImg, shrinkImage } from './art.js?v=47';
+import { snow } from './snow.js?v=47';
+import { track, flush, deviceId } from './track.js?v=47';
+import { calmIcon, svgIcon } from './icons.js?v=47';
+import { metro } from './metronome.js?v=47';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=47';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -183,7 +183,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=46');
+    const m = await import('./scene3d.js?v=47');
     if (m.initScene($('#scene'), { pack: part('scene') === 'cross' ? 'easter' : 'christmas' })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -972,13 +972,13 @@ const PAGES = {
   admins: ['super', async (x) => x ? (await saMod()).pAdminEdit(saCtx(), x) : (await saMod()).pAdmins(saCtx())],
   programs: ['super', async () => (await saMod()).pPrograms(saCtx())], look: ['super', async () => (await saMod()).pLook(saCtx())],
   online: ['super', async () => (await saMod()).pOnline(saCtx())], ai: ['super', async () => (await saMod()).pAi(saCtx())],
-  data: ['super', async () => (await import('./datatools.js?v=46')).pData(dtCtx())],   // v38 roadmap step 8
+  data: ['super', async () => (await import('./datatools.js?v=47')).pData(dtCtx())],   // v38 roadmap step 8
 };
 const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? isSuper() : can(need); };
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ maintEnds, maintLive, view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
   PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame, paintMaintBar });
-const saMod = () => import('./superadmin.js?v=46');
+const saMod = () => import('./superadmin.js?v=47');
 // v38: helpers for the data tools page (js/datatools.js)
 const dtCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, program, leaderboard, pcats, cName, bkkToday, loadXLSX, isSuper });
 
@@ -1961,7 +1961,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=46');
+      const { readSheet } = await import('./ocr.js?v=47');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));
@@ -2524,7 +2524,7 @@ function maintView() {
   music.setAllowed(false);                                        // v38: no sound button any more, so no music either
   // v38: no buttons on the maintenance scene (owner's request): just the picture and the words
   view.innerHTML = `<section class="maint-scene ${sc}">${MAINT_ART[sc]}
-    <h1 class="mt-title">🛠️ ${t('mtTitle')}</h1><p class="mt-sub">${t('mtSub')}</p></section>`;
+    <h1 class="mt-title">🛠️ ${t('mtTitle')}</h1><p class="mt-sub">${t('mtSub')}</p><p class="mt-timer" id="mtTimer" aria-live="polite">${maintEnds() ? '⏱ ' + maintEnds() : ''}</p></section>`;
 }
 // the super admin's reminder: a thin bar on every page while the program is in maintenance
 function paintMaintBar() {
@@ -2557,6 +2557,7 @@ setInterval(() => {
   if (!program.maintenance?.on || !maintUntil()) return;
   if (!maintOn() && document.body.classList.contains('maint')) { location.reload(); return; }
   if ($('#maintBar') && !$('#maintBar').hidden || maintOn()) paintMaintBar();
+  const mt = $('#mtTimer'); if (mt) mt.textContent = maintEnds() ? '⏱ ' + maintEnds() : '';   // v47: kids see the time left too
 }, 15000);
 // an app left open notices the switch within about two minutes
 setInterval(async () => {

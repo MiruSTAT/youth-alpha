@@ -1505,3 +1505,5 @@ body.sheet-full:not([data-mode="normal"]) .sheet-grab::before { top: 19px; }
 .visit-pill svg.ico { width: 16px; height: 16px; opacity: .85; }
 .visit-pill b { font-variant-numeric: tabular-nums; }
 body.adult .visit-pill, body.song-page .visit-pill, body.maint .visit-pill { display: none; }
+.mt-timer { margin: 10px 0 0; font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mt-timer:empty { display: none; }
