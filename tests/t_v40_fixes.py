@@ -186,8 +186,8 @@ with sync_playwright() as p:
     check(rows == [[5, 10, 20, 50], [-5, -10]], f'5: + and − amounts in separate rows ({rows})')
     lab = pg.locator('.amt-label').all_inner_texts()
     check(lab == ['เพิ่มคะแนน', 'ลบคะแนน'], f'5: rows labelled "เพิ่มคะแนน" / "ลบคะแนน" ({lab})')
-    pg.click('[data-a="-5"]'); pg.wait_for_timeout(400)
-    check('-5' in pg.inner_text('.list-tools'), '5: tapping −5 still goes to step 3 with −5')
+    pg.click('[data-a="-5"]'); pg.click('#amtGo'); pg.wait_for_timeout(400)   # v42: a tap picks, Next moves on
+    check('-5' in pg.inner_text('.list-tools'), '5: −5 then Next goes to step 3 with −5')
     go(pg, '#/admin', 1200)
     cut = pg.evaluate("[...document.querySelectorAll('.mgrp:not([open]) .mgrp-n')].filter(e => e.scrollWidth > e.clientWidth + 1 || getComputedStyle(e).textOverflow === 'ellipsis').length")
     full = pg.evaluate("[...document.querySelectorAll('.mgrp:not([open]) .mgrp-n')].map(e => e.getBoundingClientRect().width > 0).every(Boolean)")

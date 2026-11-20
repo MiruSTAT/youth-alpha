@@ -2,7 +2,7 @@
 // No names are typed or stored here — only a random device id, the chosen kid (if they tapped "this is me"),
 // the event name and a short detail. v39: rows sent while an admin is signed in get by_staff = true
 // (set by the database itself, trigger kid_events_staff_tag in 024_staff_events.sql). Events are batched and sent every 15 s or when the app is hidden.
-import { api } from './data.js?v=41';
+import { api } from './data.js?v=42';
 
 const DEV_KEY = 'ya_dev';
 let dev = '';

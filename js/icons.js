@@ -18,6 +18,8 @@ const P = {
   chart: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   key: '<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>',
   megaphone: '<path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6l-5 4H4a1 1 0 0 0-1 1zM15 8a5 5 0 0 1 0 8M18 5a9 9 0 0 1 0 14"/>',
+  type: '<path d="M4 7V5h16v2M12 5v14M9 19h6"/>',
+  sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/>',
   tag: '<path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
   message: '<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/>',
   sliders: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
@@ -37,7 +39,7 @@ const BY_EMOJI = {
   '📁': 'folder', '🎨': 'palette', '🟢': 'activity', '🤖': 'cpu', '✅': 'check', '⭐': 'star', '🎟️': 'ticket', '🎟': 'ticket',
   '📊': 'chart', '🔑': 'key', '📣': 'megaphone', '🏷️': 'tag', '🏷': 'tag', '💬': 'message', '🎛️': 'sliders', '🎛': 'sliders',
   '⚙️': 'gear', '⚙': 'gear', '📥': 'download', 'ℹ️': 'info', 'ℹ': 'info', '📖': 'book', '🌐': 'globe', '📲': 'phone', '📱': 'phone',
-  '❓': 'help', '🔒': 'lock', '🏠': 'home', '👀': 'eye',
+  '❓': 'help', '🔤': 'type', '🙋': 'help', '🧽': 'sparkle', '⛪': 'home', '🎉': 'sparkle', '🔒': 'lock', '🏠': 'home', '👀': 'eye',
 };
 export const svgIcon = (name) => P[name] ? `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${P[name]}</svg>` : '';
 export const calmIcon = (emoji) => svgIcon(BY_EMOJI[String(emoji).trim()]);

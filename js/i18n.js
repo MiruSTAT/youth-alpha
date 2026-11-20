@@ -873,6 +873,18 @@ Object.assign(DICT.th, { soldOut: 'หมดแล้ว', soldOutKid: 'ขอ�
   prizeAutoIcon: 'ถ้าเลือก 🎁 แอปจะเลือกรูปให้เองจากชื่อของ (เช่น "ขนม" → 🍪)', rdZero: (n) => `ยังไม่มีคะแนนให้แลก ${n} คน`, rdNobody: 'ยังไม่มีใครมีคะแนนพอแลกของ' });
 Object.assign(DICT.en, { soldOut: 'Sold out', soldOutKid: 'This one is sold out. More coming soon!', soldOutSw: 'Sold out (still shown in the shop, but can\'t be redeemed)',
   prizeAutoIcon: 'Leave it on 🎁 and the app picks a picture from the name (e.g. "snack" → 🍪)', rdZero: (n) => `${n} with no points to spend yet`, rdNobody: 'Nobody has points to spend yet' });
+Object.assign(DICT.th, { clogHintOff: 'ตอนนี้ผู้ดูแลของโปรแกรมนี้เห็นแค่ "มีอะไรใหม่" แบบสั้น', clogHintOn: 'ตอนนี้ผู้ดูแลของโปรแกรมนี้เห็นบันทึกแบบละเอียดนี้ด้วย', clogHintGo: 'เปลี่ยนที่ หน้าตาโปรแกรมนี้ → ผู้ดูแล' });
+Object.assign(DICT.en, { clogHintOff: 'This program\'s admins see only the short "What\'s new" now.', clogHintOn: 'This program\'s admins see this detailed log too.', clogHintGo: 'Change it in This program\'s look → Admins' });
+Object.assign(DICT.th, { switchMe: (n) => `เปลี่ยนเป็น ${n} ใช่ไหม?` });
+Object.assign(DICT.en, { switchMe: (n) => `Switch to ${n}?` });
+Object.assign(DICT.th, { hideInstead: 'ซ่อนแทน', hideInsteadNote: 'ซ่อน = ชื่อหายจากหน้าเด็ก แต่คะแนนและการเช็กชื่อยังอยู่ครบ กดแสดงกลับได้ทุกเมื่อ', delForGood: (n) => `ลบ "${n}" ถาวร` });
+Object.assign(DICT.en, { hideInstead: 'Hide instead', hideInsteadNote: 'Hide = the name leaves the kids\' pages, but all points and attendance stay. You can show it again any time.', delForGood: (n) => `Delete "${n}" for good` });
+Object.assign(DICT.th, { homeToday: 'งานวันนี้', homeNeeds: 'ต้องทำต่อ', homeAllSet: 'ไม่มีอะไรค้าง ✓', open: 'เปิด' });
+Object.assign(DICT.en, { homeToday: "Today's jobs", homeNeeds: 'Still to do', homeAllSet: 'Nothing waiting ✓', open: 'Open' });
+Object.assign(DICT.th, { errSignin: 'การเข้าสู่ระบบหมดเวลาแล้ว เข้าสู่ระบบใหม่แล้วลองอีกครั้ง', errPerm: 'บัญชีนี้ไม่มีสิทธิ์ทำสิ่งนี้ ถามผู้ดูแลสูงสุด', errDup: 'มีชื่อหรือข้อมูลนี้อยู่แล้ว ลองเปลี่ยนชื่อ', errValue: 'มีค่าที่ใส่ไม่ได้ เช็กตัวเลขหรือความยาวข้อความ', errServer: (m) => `บันทึกไม่สำเร็จ: ${m}` });
+Object.assign(DICT.en, { errSignin: 'Your sign-in ran out. Sign in again, then try again', errPerm: "This account isn't allowed to do this. Ask the super admin", errDup: 'That name or item is already there. Try another name', errValue: 'Something typed is not allowed. Check the numbers or the text length', errServer: (m) => `Couldn't save: ${m}` });
+Object.assign(DICT.th, { detailsPh: 'เปียโน\nร้องเพลง', attPtsNote: (n) => `มา = +${n} ⭐ ต่อคน` });
+Object.assign(DICT.en, { detailsPh: 'Piano\nSinging', attPtsNote: (n) => `Here = +${n} ⭐ each` });
 const NORMAL = { th: {}, en: {} };
 // v41 clarify: Normal mode also says "สมาชิก" / "member" instead of "เด็ก" / "kid" (admin menus, feedback, copy people…).
 // Texts that name the two modes themselves ("โหมดเด็ก", "Kids mode") are left alone.

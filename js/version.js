@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '41';
+export const VERSION = '42';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,38 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '41', date: '2026-11-20', commit: '',
+      { v: '42', date: '2026-11-20', commit: '',
+        short: { th: 'แก้ตามผลตรวจงานออกแบบรอบ v41: ปุ่ม "✓ มา" ในเช็กชื่อ หน้าเด็กบนจอคอม/โปรเจกเตอร์ กล่องแก้ไขเด็กพอดีมือถือ ตัวหนังสือเล็กอ่านง่ายขึ้น',
+                 en: 'Fixes from the v41 design review: a "✓ Here" button in attendance, a wide kids\' page for computers and projectors, the Edit kid box fits a phone, small text easier to read' },
+        items: [
+          { a: 'admin', th: 'เช็กชื่อ: ทุกแถวมีปุ่ม "✓ มา" ข้าง ลา / ขาด (ยังแตะชื่อได้เหมือนเดิม) คนที่มาแล้วขึ้น "+10 ⭐" และใต้ตัวเลขบอกว่า "มา = +10 ⭐ ต่อคน" (ตามคะแนนที่ตั้งไว้)',
+            en: 'Attendance: every row has a "✓ Here" button next to Leave / Absent (tapping the name still works); people marked Here show "+10 ⭐", and a line under the counters says "Here = +10 ⭐ each" (from the points setting)' },
+          { a: 'fix', th: 'เช็กชื่อ: ชื่อไม่ถูกบีบจนแตกเป็นตัวอักษรทีละตัวอีกแล้ว (ภาษาอังกฤษปุ่มยาวกว่า) ถ้าที่ไม่พอ ปุ่มจะลงไปบรรทัดใต้ชื่อ บนคอมเช็กชื่อแสดง 2 คอลัมน์',
+            en: 'Attendance: names are no longer squeezed into one letter per line (English buttons are wider); if there is no room the buttons move under the name. On a computer attendance shows 2 columns' },
+          { a: 'kids', th: '"นี่คือฉัน": เมื่อมือถือเลือกเด็กไว้แล้ว ปุ่มใหญ่ขึ้นแค่ในหน้าของตัวเอง หน้าเพื่อนจะเป็นลิงก์เล็ก "เปลี่ยนเป็น X ใช่ไหม?"',
+            en: '"This is me": once a phone is set to a kid, the big button shows only on that kid\'s own page; a friend\'s page shows a small "Switch to X?" link' },
+          { a: 'kids', th: 'หน้าเด็กบนคอม / โปรเจกเตอร์: ต้นไม้เตี้ยลง หน้ากว้างขึ้น อันดับเรียง 2 คอลัมน์ (3 คอลัมน์บนจอใหญ่มาก) เห็นได้ 9 แถวแทน 4 แถบเมนูล่างไม่ยืดเต็มจอ',
+            en: 'Kids\' pages on a computer / projector: a lower tree, a wider page, the ranking in 2 columns (3 on very big screens): 9 rows visible instead of 4; the bottom tab bar no longer stretches across the screen' },
+          { a: 'admin', th: 'กล่องแก้ไขเด็กพอดีจอมือถือ 390 px (รูปการ์ตูนไม่ล้น) ปุ่มบันทึก / ซ่อน / ลบ อยู่ด้านล่างให้เห็นตลอด ตอนลบ ปุ่มหลักคือ "ซ่อนแทน" (คะแนนและการเช็กชื่อยังอยู่ครบ) ส่วนลบถาวรเป็นปุ่มแดงที่บอกชื่อ',
+            en: 'The Edit kid box fits a 390 px phone (avatars no longer spill over) and Save / Hide / Delete stay in view at the bottom. Delete now offers "Hide instead" as the main button (all points and attendance stay); deleting for good is a red button with the name' },
+          { a: 'kids', th: 'ตัวหนังสือเล็กสีเทาฝั่งเด็กใหญ่ขึ้นและเข้มขึ้น ("เสมอ" จาก 11 เป็น 14 px ขึ้นไป บรรทัดใต้การ์ดของฉัน คำแนะนำในอันดับและร้านค้า)',
+            en: 'Small grey text on the kids\' side is bigger and darker ("tied" from 11 to 14+ px, the line under my card, the ranking and shop hints)' },
+          { a: 'admin', th: 'ให้คะแนน ขั้นที่ 2: แตะจำนวนแล้วยังไม่ไปต่อทันที ต้องกด "ถัดไป: +10" ก่อน จึงไม่เผลอเลือกผิดโดยเฉพาะ −5',
+            en: 'Give points step 2: tapping an amount no longer jumps ahead; tap "Next: +10" to go on, so a slip (especially −5) is easy to fix' },
+          { a: 'admin', th: 'หน้าแรกผู้ดูแลบนคอม: แสดง "งานวันนี้" 4 อย่างเป็นแถวเดียว และ "ต้องทำต่อ" แทนการแสดงเมนูซ้ำกับแถบด้านข้าง',
+            en: 'Admin home on a computer: shows "Today\'s jobs" (4 in one row) and "Still to do" instead of repeating the side menu' },
+          { a: 'look', th: 'โหมดปกติ: หมวดคะแนนในหน้าให้คะแนนใช้ไอคอนเส้นแทนอีโมจิ',
+            en: 'Normal mode: point categories on Give points use line icons instead of emoji' },
+          { a: 'admin', th: 'รายการว่างบอกขั้นต่อไป (เช่น "ยังไม่มีรายชื่อ → เพิ่มเด็ก") บันทึกไม่สำเร็จบอกเหตุผลจริง (หมดเวลาเข้าสู่ระบบ ไม่มีสิทธิ์ ชื่อซ้ำ ค่าไม่ถูกต้อง) แทนการโทษอินเทอร์เน็ตทุกครั้ง',
+            en: 'Empty lists say what to do next (e.g. "No names yet → Add kid"); a failed save gives the real reason (sign-in ran out, no permission, duplicate, value not allowed) instead of always blaming the internet' },
+          { a: 'look', th: 'จุดแดงเตือนบนเมนูกระพริบ 3 ครั้งแล้วหยุด (ยังมีกรอบแดงและจุดอยู่) ปุ่มบนแถบด้านบนและที่จับแผ่นล่างใหญ่ขึ้นเป็น 44 px',
+            en: 'Red alerts on the menu pulse 3 times and then stay still (the red ring and dot remain); top bar buttons and the sheet handle are 44 px to tap' },
+          { a: 'admin', th: 'หน้าเวอร์ชันและการเปลี่ยนแปลง (ผู้ดูแลสูงสุด): บอกว่าผู้ดูแลของโปรแกรมนี้เห็นบันทึกแบบสั้นหรือแบบละเอียด พร้อมลิงก์ไปที่สวิตช์',
+            en: 'Version & changes (super admin): says whether this program\'s admins see the short or the detailed log, with a link to the switch' },
+          { a: 'fix', th: 'ภาษาอังกฤษ: คำอธิบายหมวด "งานบ้าน" และ "มาร่วม" ที่ตั้งมาแต่แรก และตัวอย่างในช่องรายละเอียดหมวด เปลี่ยนตามภาษาแล้ว',
+            en: 'English: the built-in notes of the "Chores" and "Came" categories and the example in the category details box now follow the language' },
+        ] },
+      { v: '41', date: '2026-11-20', commit: 'a041d30',
         short: { th: 'แก้ตามผลตรวจงานออกแบบรอบ v40: เช็กชื่อเร็วขึ้นบนมือถือ โหมดปกติเรียก "สมาชิก" และใช้อักษรย่อ ของรางวัลมีรูปตามชื่อและ "หมดแล้ว"',
                  en: 'Fixes from the v40 design review: faster attendance on a phone, Normal mode says "members" and shows initials, prizes get a picture from their name and a "sold out" state' },
         items: [

@@ -246,15 +246,19 @@ body.adult main { padding: 16px 16px calc(110px + var(--safe-b)); }
 .li.click { cursor: pointer; }
 .pos { color: var(--here); } .neg { color: var(--absent); }
 .total-row { display: flex; justify-content: space-between; font-weight: 700; font-size: 1.05rem; }
-.emoji-pick { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
-.emoji-pick button { font-size: 1.6rem; height: 52px; border-radius: 12px; border: 2px solid transparent; background: var(--bg); cursor: pointer; }
+.emoji-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; }   /* v42: fits a 390 px phone */
+.emoji-pick button { min-width: 0; font-size: 1.6rem; height: 52px; border-radius: 12px; border: 2px solid transparent; background: var(--bg); cursor: pointer; }
 .emoji-pick button.on { border-color: var(--primary); background: var(--white); }
 .seg { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
 .seg label { min-height: 52px; border: 2px solid var(--line); border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 700; cursor: pointer; }
 .seg input { display: none; }
 .seg label:has(input:checked) { border-color: var(--primary); background: #eef1fa; }
 
-dialog { border: 0; border-radius: 20px; padding: 20px; width: min(440px, 94vw); max-height: 90vh; color: var(--ink); }
+dialog { border: 0; border-radius: 20px; padding: 20px 20px 0; width: min(440px, calc(100vw - 24px)); max-width: none; max-height: 90vh; color: var(--ink); box-sizing: border-box; overflow-x: hidden; }
+@media (max-width: 420px) { dialog { padding: 16px 14px 0; } }
+/* v42: Save / Cancel (and hide / delete) stay at the bottom of a tall box instead of below the fold */
+.dlg-foot { position: sticky; bottom: 0; background: var(--white); margin: 0 -20px; padding: 2px 20px 16px; box-shadow: 0 -8px 12px -10px rgba(15, 26, 58, .25); }
+@media (max-width: 420px) { .dlg-foot { margin: 0 -14px; padding: 2px 14px 14px; } }
 dialog::backdrop { background: rgba(15, 26, 58, .55); }
 dialog h3 { margin-bottom: 14px; font-size: 1.25rem; }
 .dlg-actions { display: flex; gap: 10px; margin-top: 16px; }
@@ -1319,16 +1323,21 @@ main:focus-visible { outline: none; }                     /* main gets focus onl
 /* ---------- v41: attendance on a phone (one line per person; tap the name = มา, ลา/ขาด are small chips) ---------- */
 .summary { position: sticky; top: calc(60px + env(safe-area-inset-top)); z-index: 5; }
 .att-list { gap: 6px; }
-.att { display: flex; align-items: center; gap: 6px; padding: 4px 6px 4px 4px; }
-.att-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 4px 8px; border: 0; border-radius: 10px;
+.att { display: flex; align-items: center; gap: 4px; padding: 4px 4px 4px 2px; }
+.att-main { flex: 1 1 auto; min-width: auto; display: flex; align-items: center; gap: 8px; min-height: 52px; padding: 4px 6px; border: 0; border-radius: 10px;
   background: none; font: inherit; font-size: 1.15rem; font-weight: 600; color: var(--ink); text-align: left; cursor: pointer; }
 .att-main .av { font-size: 1.6rem; line-height: 1; }
-.att-main .nm { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.att-main .nm { flex: 1; overflow-wrap: break-word; }   /* v42: never squeezed into single letters */
 .att-main .state { font-size: .92rem; font-weight: 700; white-space: nowrap; }
 .att.present { border-color: var(--here); background: color-mix(in srgb, var(--here) 7%, var(--white)); }
 .att.leave { border-color: var(--leave); } .att.absent { border-color: var(--absent); }
-.att .chip { flex: none; min-width: 52px; height: 44px; padding: 0 8px; border-radius: 10px; border: 2px solid var(--line); background: var(--white);
-  color: var(--ink-2); font: inherit; font-size: .95rem; font-weight: 700; cursor: pointer; }
+.att .chip { flex: none; min-width: 46px; height: 44px; padding: 0 5px; border-radius: 10px; border: 2px solid var(--line); background: var(--white);
+  color: var(--ink-2); font: inherit; font-size: .88rem; font-weight: 700; cursor: pointer; }
+.att { flex-wrap: wrap; }                         /* v42: chips drop under the name instead of squeezing it */
+.att .chips { display: flex; gap: 4px; margin-left: auto; }
+.att .chip.present { color: var(--here); border-color: color-mix(in srgb, var(--here) 45%, var(--line)); min-width: 58px; }
+.att .chip.present.on { background: var(--here); border-color: var(--here); color: #fff; }
+.att-pts { margin: -4px 0 8px; font-size: .95rem; }
 .att .chip.leave.on { background: var(--leave); border-color: var(--leave); color: #fff; }
 .att .chip.absent.on { background: var(--absent); border-color: var(--absent); color: #fff; }
 .list-tools .muted { font-size: .95rem; }
@@ -1358,7 +1367,7 @@ main:focus-visible { outline: none; }                     /* main gets focus onl
   body.adult.has-side .options > .muted, body.adult.has-side .att-list > .muted { grid-column: 1 / -1; }
   body.adult.has-side main > .card { max-width: 760px; }
 }
-@media (min-width: 1440px) { body.adult.has-side .att-list, body.adult.has-side .options { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1440px) { body.adult.has-side .options { grid-template-columns: repeat(3, 1fr); } }   /* v42: attendance stays 2 wide (rows need room for 3 chips) */
 /* v41 polish: the open tab is a soft pill behind its icon (the old line along the top read like a progress bar) */
 .kid-nav a.active { box-shadow: none; }
 .kid-nav a > span { padding: 0 16px; border-radius: 999px; transition: background .2s; }
@@ -1369,3 +1378,48 @@ main:focus-visible { outline: none; }                     /* main gets focus onl
 .date-row { align-items: center; }
 .date-row .input { flex: none; width: auto; min-width: 0; }
 .date-say { flex: 1; font-size: 1.05rem; font-weight: 600; color: var(--ink); }
+/* v42 adapt: kids' side on a computer or projector — a wider sheet, a lower tree, the ranking in columns
+   (reads down the first column, then the next), and a tab bar that stays a comfortable width in the middle */
+@media (min-width: 1024px) {
+  body:not(.adult) { --tree-h: 24vh; }
+  body:not(.adult) main { max-width: 1040px; }
+  body:not(.adult) .sheet { padding-left: 36px; padding-right: 36px; }
+  body:not(.adult) .rank-list { display: block; columns: 2; column-gap: 16px; }
+  body:not(.adult) .rank-list > .rank-row { width: 100%; break-inside: avoid; margin-bottom: 10px; }
+  body:not(.adult) .my-card, body:not(.adult) .notice, body:not(.adult) .rank-head { max-width: 720px; margin-left: auto; margin-right: auto; }
+  body:not(.adult) .kid-nav { left: 50%; right: auto; width: min(640px, 100%); transform: translateX(-50%); border-radius: 20px 20px 0 0; overflow: hidden; }
+}
+@media (min-width: 1440px) {
+  body:not(.adult) main { max-width: 1240px; }
+  body:not(.adult) .rank-list { columns: 3; }
+}
+/* v42 typeset: small grey words on the kids' side are bigger (≥ 15 px) and closer to the main text colour */
+body:not(.adult) { --text-soft: color-mix(in srgb, var(--text-d2) 45%, var(--k-text)); }
+.rank-row .n { width: auto; min-width: 34px; }
+.rank-row .n .tie { font-size: .9rem; color: var(--text-soft, var(--text-d2)); }
+body:not(.adult) .my-card .who span, body:not(.adult) .my-card .pts span { font-size: 1rem; color: var(--text-soft); }
+body:not(.adult) .rank-hint, body:not(.adult) .sheet-sub, body:not(.adult) .shop-hint { font-size: 1.05rem; color: var(--text-soft); }
+body:not(.adult) .zero-skills > summary { font-size: 1.05rem; color: var(--text-soft); }
+/* v42 adapt: computer admin home = today's jobs + what still needs doing (the side menu lists every page, so the groups hide) */
+.home-today { display: none; }
+@media (min-width: 1024px) {
+  body.adult.has-side .home-today { display: block; }
+  body.adult.has-side .mgrp, body.adult.has-side #view > .msearch { display: none; }   /* the side menu has the same search box */
+  .today-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
+  .today-tile { display: flex; flex-direction: column; gap: 6px; padding: 16px; border-radius: 14px; background: var(--white); border: 1px solid var(--line); color: var(--ink); text-decoration: none; min-height: 120px; }
+  .today-tile:hover { border-color: var(--primary); }
+  .today-tile .mi { font-size: 1.6rem; line-height: 1; }
+  .today-tile .mi .ico { width: 26px; height: 26px; }
+  .today-tile b { font-size: 1.1rem; }
+  .today-tile > span:last-child { color: var(--ink-2); font-size: .95rem; }
+  .home-needs a.li { text-decoration: none; color: var(--ink); }
+  .home-needs a.li:hover { background: var(--bg); }
+  .home-needs .need-tx { color: var(--absent); text-decoration: none; }
+  .home-needs .grp { margin-top: 0; }
+}
+/* v42: admin alerts pulse 3 times to catch the eye, then stay still (the red ring and dot remain) */
+.menu a.alert, .dot, .alert-banner, .alert-banner .bell { animation-iteration-count: 3; }
+/* v42: bigger tap targets (≥ 44 px): top bar buttons and the sheet handle (the handle keeps its look, only the tap area grows) */
+.top-actions .icon-btn { width: 44px; height: 44px; }
+body.sheet-full:not([data-mode="normal"]) .sheet-grab { height: 44px; margin: -28px auto -4px; }
+body.sheet-full:not([data-mode="normal"]) .sheet-grab::before { top: 19px; }

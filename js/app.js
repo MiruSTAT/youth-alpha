@@ -1,15 +1,15 @@
-import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=41';
-import { api, MODE, DEMO, ranked, byName, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=41';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=41';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=41';
+import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=42';
+import { api, MODE, DEMO, ranked, byName, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=42';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=42';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=42';
 
-import { music } from './music.js?v=41';
-import { art, burst, SPECIAL, pic, face, prizeIcon, isImg, shrinkImage } from './art.js?v=41';
-import { snow } from './snow.js?v=41';
-import { track, flush, deviceId } from './track.js?v=41';
-import { calmIcon } from './icons.js?v=41';
-import { metro } from './metronome.js?v=41';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=41';
+import { music } from './music.js?v=42';
+import { art, burst, SPECIAL, pic, face, prizeIcon, isImg, shrinkImage } from './art.js?v=42';
+import { snow } from './snow.js?v=42';
+import { track, flush, deviceId } from './track.js?v=42';
+import { calmIcon } from './icons.js?v=42';
+import { metro } from './metronome.js?v=42';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=42';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -37,6 +37,9 @@ async function pcats(force = false) {
   return catCache.list;
 }
 const cName = (c) => (getLang() === 'en' && c?.name_en) ? c.name_en : (c?.name_th || '?');
+// v42: the two built-in category notes follow the language while an admin has not changed them (other notes are the admin's own words)
+const INFO_EN = { 'เช่น ล้างจาน': 'e.g. washing dishes', 'ได้คะแนนอัตโนมัติทุกครั้งที่มาร่วมกิจกรรม': 'Given automatically each time they come' };
+const cInfo = (c) => (getLang() === 'en' && INFO_EN[c?.info]) || c?.info || '';
 const cOf = (key) => catCache.list.find(c => c.key === key) || { key, name_th: key, icon: '⭐', info: '' };
 const fmtMoney = (n) => Number(n || 0).toLocaleString('th-TH', { maximumFractionDigits: 2 });
 const signed = (n) => (n > 0 ? '+' : '') + n;
@@ -55,7 +58,17 @@ function fail(e, retry) {
   console.error(e);
   const mt = /maintenance/i.test(String(e?.message || e)), kid = kidSide();
   if (mt) retry = null;
-  showErr(mt ? t('mtBlocked') : kid ? t(retry ? 'errKid' : 'errGeneric') : t(retry ? 'errRetry' : 'errAgain'), retry);
+  showErr(mt ? t('mtBlocked') : kid ? t(retry ? 'errKid' : 'errGeneric') : errWhy(e) || t(retry ? 'errRetry' : 'errAgain'), retry);
+}
+// v42: admins get the real reason when it is not the internet (sign-in ran out, no permission, a duplicate or a value the database refused)
+function errWhy(e) {
+  const m = String(e?.message || e || ''), code = String(e?.code || e?.status || '');
+  if (!navigator.onLine || /failed to fetch|network|load failed|timeout/i.test(m)) return '';   // the internet text fits
+  if (/jwt|expired|not signed in|401/i.test(m + code)) return t('errSignin');
+  if (/permission|not allowed|row-level security|42501|403/i.test(m + code)) return t('errPerm');
+  if (/duplicate|unique|23505/i.test(m + code)) return t('errDup');
+  if (/violates|check constraint|invalid|23514|22P02|too long/i.test(m + code)) return t('errValue');
+  return m && m.length < 140 ? t('errServer', m) : '';
 }
 function showErr(msg, retry) {
   $('#toast').classList.remove('show');
@@ -77,9 +90,9 @@ function showErr(msg, retry) {
 function modal(title, inner, { okText = t('save'), extra = '', danger = false } = {}) {
   const dlg = $('#dlg'), form = $('#dlgForm');
   form.innerHTML = `<h3>${title}</h3>${inner}
-    <div class="dlg-actions"><button class="btn" value="cancel" formnovalidate>${t('cancel')}</button>
+    <div class="dlg-foot"><div class="dlg-actions"><button class="btn" value="cancel" formnovalidate>${t('cancel')}</button>
     <button class="btn ${danger ? 'danger-fill' : 'primary'}" value="ok">${okText}</button></div>
-    ${extra ? `<div class="dlg-extra">${extra}</div>` : ''}`;
+    ${extra ? `<div class="dlg-extra">${extra}</div>` : ''}</div>`;   // v42: the buttons stay in view at the bottom of a tall box
   form.querySelectorAll('[required]').forEach(i => i.closest('.field')?.querySelector('label')?.classList.add('req'));
   return new Promise((resolve) => {
     dlg.onclose = () => resolve(dlg.returnValue === 'ok' ? new FormData(form) : (dlg.returnValue || null));
@@ -95,6 +108,8 @@ async function leaderboard(force = false) {
 }
 const pageHead = (title, backTo = '#/admin') =>
   `<div class="page-head"><a class="back" href="${backTo}">‹ ${t('back')}</a><h1 class="page-title">${title}</h1></div>${subTabs()}`;
+// v42: an empty list says what to do next (a link to the page that fills it, only if this admin may open that page)
+const emptyGo = (txt, page, label) => `<p class="muted empty-go">${txt}${typeof pageOk === 'function' && pageOk(page) ? ` <a href="#/admin/${page}">${label} ›</a>` : ''}</p>`;
 // v37: pages that share one menu item show small tabs under the title (e.g. Settings | Point categories | Music)
 const TABSETS = [['admins', 'online'], ['about', 'ai'], ['settings', 'pcats', 'musicset', 'phone'], ['programs', 'look']];   // v38: + phone, look
 function subTabs() {
@@ -160,7 +175,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=41');
+    const m = await import('./scene3d.js?v=42');
     if (m.initScene($('#scene'), { pack: part('scene') === 'cross' ? 'easter' : 'christmas' })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -273,7 +288,9 @@ function kidDetail(k, rows) {
       + (det ? `<div class="sub-rows">${Object.entries(det).map(([d, v]) => `<div><span>${esc(d)}</span><span>${v}</span></div>`).join('')}</div>` : '');
   }).join('');
   const meBtns = loginOn() ? (member.me ? '' : `<a class="kbtn" href="#/login">🔑 ${t('mLoginTitle')}</a>`)
-    : isMe ? `<button class="text-btn" id="notMe">${t('notMe')}</button>` : `<button class="kbtn" id="thisMe">${t('thisIsMe')}</button>`;
+    : isMe ? `<button class="text-btn" id="notMe">${t('notMe')}</button>`
+    // v42: once this phone belongs to a kid, a friend's sheet shows only a small "switch?" link, not the big "นี่คือฉัน"
+    : (rows || []).some(r => r.id === localStorage.getItem(ME())) ? `<button class="text-btn" id="thisMe">${t('switchMe', k.nickname)}</button>` : `<button class="kbtn" id="thisMe">${t('thisIsMe')}</button>`;
   const p = kidSheet(`<div class="panel-head"><h2>${esc(k.nickname)}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
     <div class="kid-detail-head"><button class="av" data-pic="${k.id}" aria-label="${esc(k.nickname)}">${face(k)}</button><b>${k.total} ⭐</b><span class="me-rank">🏆 ${rankText(k, rows)}</span></div>
     ${meBtns ? `<div class="kd-me">${meBtns}</div>` : ''}
@@ -290,7 +307,7 @@ function kidDetail(k, rows) {
 
 function catInfo(c, pts) {
   kidSheet(`<div class="panel-head"><span class="art" style="font-size:2rem">${pic(c.icon)}</span><h2>${esc(cName(c))}</h2><button class="x" aria-label="${t('close')}">✕</button></div>
-    <p class="cat-info">${esc(c.info).replace(/\n/g, '<br>')}</p>
+    <p class="cat-info">${esc(cInfo(c)).replace(/\n/g, '<br>')}</p>
     ${pts !== null ? `<div class="cat-pts"><span>${t('myPointsIn')}</span><b>${pts} ⭐</b></div>` : ''}`);
 }
 
@@ -941,13 +958,13 @@ const PAGES = {
   admins: ['super', async (x) => x ? (await saMod()).pAdminEdit(saCtx(), x) : (await saMod()).pAdmins(saCtx())],
   programs: ['super', async () => (await saMod()).pPrograms(saCtx())], look: ['super', async () => (await saMod()).pLook(saCtx())],
   online: ['super', async () => (await saMod()).pOnline(saCtx())], ai: ['super', async () => (await saMod()).pAi(saCtx())],
-  data: ['super', async () => (await import('./datatools.js?v=41')).pData(dtCtx())],   // v38 roadmap step 8
+  data: ['super', async () => (await import('./datatools.js?v=42')).pData(dtCtx())],   // v38 roadmap step 8
 };
 const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? isSuper() : can(need); };
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
   PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame, paintMaintBar });
-const saMod = () => import('./superadmin.js?v=41');
+const saMod = () => import('./superadmin.js?v=42');
 // v38: helpers for the data tools page (js/datatools.js)
 const dtCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, program, leaderboard, pcats, cName, bkkToday, loadXLSX, isSuper });
 
@@ -1078,9 +1095,10 @@ function setSide(page) {                    // page = the admin page that is ope
 const EMO = /^(\s*)((?:[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}][️‍\u{1F3FB}-\u{1F3FF}\p{Extended_Pictographic}]*\s*)+)(?=\S)/u;
 const calmOn = () => document.body.dataset.mode === 'normal';
 function calmNode(root) {
-  root.querySelectorAll('.mi, .kid-nav a > span, .hc-i').forEach(el => {
+  // v42: + category icons on Give points / categories (.opt > .i); an emoji with no line icon there becomes a plain tag icon
+  root.querySelectorAll('.mi, .kid-nav a > span, .hc-i, .options .opt:not(.att-pick) > .i').forEach(el => {
     const f = el.firstChild; if (f?.nodeType !== 3) return;
-    const svg = calmIcon(f.textContent); if (!svg) return;
+    const svg = calmIcon(f.textContent) || (el.matches('.opt > .i') && f.textContent.trim() ? calmIcon('🏷️') : ''); if (!svg) return;
     el.dataset.emo = f.textContent; f.replaceWith(document.createRange().createContextualFragment(svg));
   });
   root.querySelectorAll('h1, h2, h3, summary, label, .btn, .kbtn, .grp, .mt b, .side-super, a.back, th, .my-hint, .rank-hint, .hint, .prog-name, .shop-bal span').forEach(el => {
@@ -1131,6 +1149,11 @@ function adultHome() {
       <button class="btn small head-btn" id="copyLink" title="${t('copyUserLinkSub')}">🔗 ${t('copyUserLink')}</button></div>
     <div class="adm-top" id="admTop">${progPicker('progSel')}${isSuper() ? '<span class="sa-until" id="saUntil"></span>' : ''}</div>
     ${findBox('homeFind')}
+    ${(() => {   // v42: on a computer the side menu already lists every page, so the home shows today's jobs and what needs doing instead
+      const daily = groups.find(([g]) => g === 'g_daily')?.[1] || [];
+      return `<section class="home-today">${daily.length ? `<h2 class="grp">${t('homeToday')}</h2><div class="today-tiles">${daily.map(([k, i]) => `<a class="today-tile" href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span><b>${t('tab_' + k)}</b><span>${t('m_' + k, VERSION)}</span></a>`).join('')}</div>` : ''}
+        <div class="card home-needs"><h2 class="grp">${t('homeNeeds')}</h2><div id="homeNeeds"><p class="muted">${t('homeAllSet')}</p></div></div></section>`;
+    })()}
     ${groups.map(([g, items]) => `<details class="mgrp" data-g="${g}" ${open.includes(g) ? 'open' : ''}><summary><span class="mgrp-tx"><span class="mgrp-t">${t(g)}</span><span class="mgrp-n">${items.map(([k]) => t('tab_' + k)).join(' · ')}</span></span></summary>
       <nav class="menu grouped">${items.map(([k, i]) => `<a href="#/admin/${k}" data-k="${k}"><span class="mi">${i}</span>
       <span class="mt"><b>${t('tab_' + k)}</b><span>${t('m_' + k, VERSION)}</span></span><span class="chev">›</span></a>`).join('')}</nav></details>`).join('')}
@@ -1154,6 +1177,8 @@ function adultHome() {
       el.querySelector('.mi').insertAdjacentHTML('beforeend', '<span class="dot"></span>');
       el.querySelector('.mt span').outerHTML = `<span class="need">${esc(n[k])}</span>`;
     });
+    const box = $('#homeNeeds'), ks = Object.keys(n).filter(k => pageOk(k));
+    if (box && ks.length) box.innerHTML = `<div class="list">${ks.map(k => `<a class="li click" href="#/admin/${k}"><span class="grow">${t('tab_' + k)}<span class="sub need-tx">${esc(n[k])}</span></span><span class="muted">${t('open')} ›</span></a>`).join('')}</div>`;
   }).catch(console.error);
 }
 async function copyText(txt, okMsg) {
@@ -1283,8 +1308,9 @@ let attDay = today();
 // v41: a day in words, Thai style ("ศ. 20 พ.ย. 2569"), next to every date picker
 const dayWords = (d) => d ? new Date(d + 'T00:00:00').toLocaleDateString(getLang() === 'th' ? 'th-TH' : 'en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) : '';
 async function pAttendance() {
-  const [kids, rows, round0] = await Promise.all([api.kids(), api.attendance(attDay), api.round(attDay)]);
+  const [kids, rows, round0, sets] = await Promise.all([api.kids(), api.attendance(attDay), api.round(attDay), api.settings().catch(() => ({}))]);
   let round = round0;
+  const pts = Number(sets?.attendance_points) || 0;               // v42: "มา" shows what it gives (+N ⭐)
   const status = Object.fromEntries(rows.map(r => [r.kid_id, r.status]));
   // v41: "รอเช็ก" first (order fixed while the page is open, so rows never jump under a finger), then A–Z
   const active = kids.filter(k => k.active).sort((a, b) => (status[a.id] ? 1 : 0) - (status[b.id] ? 1 : 0));
@@ -1305,16 +1331,17 @@ async function pAttendance() {
         <div><b class="c-leave">${c.leave}</b><span>${t('leave')}</span></div>
         <div><b class="c-absent">${c.absent}</b><span>${t('absent')}</span></div>
         <div><b class="c-wait">${waiting}</b><span>${t('waiting')}</span></div></div>
+      ${pts && active.length ? `<p class="att-pts muted">${t('attPtsNote', pts)}</p>` : ''}
       ${active.length ? `<div class="list-tools">${!multi && waiting && !round?.finished ? `<button class="btn small primary" id="allHere">✓ ${t('allHere', waiting)}</button>` : `<span class="muted">${multi ? '' : t('attTapHint')}</span>`}<button class="btn small ${multi ? 'primary' : ''}" id="multi">☑️ ${multi ? t('multiDone') : t('multiSelect')}</button>
         ${multi ? `<button class="btn small" id="pickAll">${pick.size === active.length ? t('clear') : t('selectAll')}</button>` : ''}</div>` : ''}
       <div class="att-list">${active.map(k => {
-        const st = status[k.id], [cls, label] = st ? stateTxt[st] : ['c-wait', t('waiting')];
+        const st = status[k.id], [cls, label] = st ? stateTxt[st] : ['c-wait', t('waiting')];   // v42: the row shows state on its filled chip
         if (multi) return `<button class="opt att-pick ${pick.has(k.id) ? 'on' : ''}" data-p="${k.id}" data-n="${esc(k.nickname.toLowerCase())}"><span class="i">${face(k)}</span>
           <span class="t">${esc(k.nickname)}<span class="opt-sub ${cls}">${label}</span></span><span class="check">${pick.has(k.id) ? '✓' : ''}</span></button>`;
         return `<div class="att ${st || 'wait'}" data-n="${esc(k.nickname.toLowerCase())}">
-          <button class="att-main ${st === 'present' ? 'on' : ''}" data-k="${k.id}" data-s="present" aria-pressed="${st === 'present'}"><span class="av">${face(k)}</span><span class="nm">${esc(k.nickname)}</span><span class="state ${cls}">${st === 'present' ? '✓ ' : ''}${label}</span></button>
-          ${['leave', 'absent'].map(s => `<button class="chip ${s} ${st === s ? 'on' : ''}" data-k="${k.id}" data-s="${s}" aria-pressed="${st === s}">${t(s)}</button>`).join('')}</div>`;
-      }).join('') || `<p class="muted">${t('noKids')}</p>`}</div>
+          <button class="att-main ${st === 'present' ? 'on' : ''}" data-k="${k.id}" data-s="present" aria-pressed="${st === 'present'}"><span class="av">${face(k)}</span><span class="nm">${esc(k.nickname)}</span>${st === 'present' && pts ? `<span class="state c-here">+${pts} ⭐</span>` : ''}</button>
+          <span class="chips">${['present', 'leave', 'absent'].map(s => `<button class="chip ${s} ${st === s ? 'on' : ''}" data-k="${k.id}" data-s="${s}" aria-pressed="${st === s}">${s === 'present' ? '✓ ' : ''}${t(s)}</button>`).join('')}</span></div>`;
+      }).join('') || emptyGo(t('noKids'), 'kids', t('addKid'))}</div>
       ${multi ? `<div class="bottom-bar bulk"><span class="muted">${t('selectedN', pick.size)}</span><div class="st">${['present', 'leave', 'absent'].map(s => `<button class="${s} on" data-bulk="${s}" ${pick.size ? '' : 'disabled'}>${t(s)}</button>`).join('')}</div></div>`
         : active.length && !round?.finished ? `<div class="bottom-bar"><button class="btn primary" id="finish">✓ ${t('finishRound')}</button></div>` : ''}`;
     $('#day').onchange = (e) => { attDay = e.target.value || today(); pAttendance().catch(fail); };
@@ -1370,7 +1397,7 @@ async function pPoints() {
   if (pw.step === 1) {
     view.innerHTML = `${head}<h2 style="margin-bottom:12px">${t('s1')}</h2>
       <div class="options">${cats.filter(c => c.active && baseKey(c.key) !== 'attendance').map(c => `<button class="opt" data-s="${c.key}"><span class="i">${pic(c.icon)}</span>
-        <span class="t">${esc(cName(c))}${c.info ? `<span class="opt-sub">${esc(c.info)}</span>` : ''}</span><span class="chev">›</span></button>`).join('')}</div>
+        <span class="t">${esc(cName(c))}${c.info ? `<span class="opt-sub">${esc(cInfo(c))}</span>` : ''}</span><span class="chev">›</span></button>`).join('')}</div>
       <a class="btn wide" style="margin-top:20px" href="#/admin/history">${t('seeHistory')}</a>`;
     view.querySelectorAll('[data-s]').forEach(b => b.onclick = () => { pw.skill = b.dataset.s; pw.detail = ''; pw.step = 2; pPoints(); });
   } else if (pw.step === 2) {
@@ -1379,16 +1406,26 @@ async function pPoints() {
       ${dets.length ? `<p class="muted" style="margin:0 0 8px">${t('pickDetail')}</p><div class="dchips">${['', ...dets].map(d => `<button class="dchip ${pw.detail === d ? 'on' : ''}" data-d="${esc(d)}">${d ? esc(d) : t('noDetail')}</button>`).join('')}</div>` : ''}
       <h2 style="margin-bottom:12px">${pic(cOf(pw.skill).icon)} ${t('s2')}</h2>
       ${(() => { // v40 polish: −5/−10 get their own labelled row, apart from the + amounts, so a minus is never one slip away
-        const amt = (list) => `<div class="amounts">${list.map(a => `<button class="opt ${a < 0 ? 'minus' : ''}" data-a="${a}">${signed(a)}</button>`).join('')}</div>`;
+        const amt = (list) => `<div class="amounts">${list.map(a => `<button class="opt ${a < 0 ? 'minus' : ''} ${pw.amount === a ? 'on' : ''}" data-a="${a}" aria-pressed="${pw.amount === a}">${signed(a)}</button>`).join('')}</div>`;
         if (baseKey(pw.skill) === 'bonus') return amt([5, 10, 20, 50]);
         return `<p class="amt-label">${t('addPts')}</p>${amt([5, 10, 20, 50])}<p class="amt-label minus">${t('removePts')}</p>${amt([-5, -10])}`;
       })()}
       <div class="field" style="margin-top:16px"><label>${t('customAmt')}</label>
-        <div style="display:flex;gap:10px"><input class="input" id="custom" type="number" inputmode="numeric" min="-1000" max="1000"><button class="btn primary" id="customGo">${t('next')}</button></div></div>`;
+        <input class="input" id="custom" type="number" inputmode="numeric" min="-1000" max="1000"></div>
+      <div class="bottom-bar"><button class="btn primary" id="amtGo" disabled>${t('next')} ›</button></div>`;
     view.querySelectorAll('[data-d]').forEach(b => b.onclick = () => { pw.detail = b.dataset.d; view.querySelectorAll('[data-d]').forEach(x => x.classList.toggle('on', x === b)); });
     const go = (a) => { if (!a || Math.abs(a) > 1000) return; if (baseKey(pw.skill) === 'bonus' && a < 0) { toast(t('bonusPositive')); return; } pw.amount = a; pw.step = 3; pPoints(); };
-    view.querySelectorAll('[data-a]').forEach(b => b.onclick = () => go(Number(b.dataset.a)));
-    $('#customGo').onclick = () => go(Math.trunc(Number($('#custom').value)));
+    // v42: a tap only picks the amount (shown on the Next button); Next moves on, so a slip on −5 is never saved by itself
+    let pickA = [5, 10, 20, 50, -5, -10].includes(pw.amount) ? pw.amount : null;
+    const nb = $('#amtGo'), paint = () => { nb.disabled = !pickA; nb.textContent = pickA ? `${t('next')}: ${signed(pickA)} ›` : `${t('next')} ›`; };
+    view.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
+      pickA = Number(b.dataset.a); $('#custom').value = '';
+      view.querySelectorAll('[data-a]').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); paint();
+    });
+    $('#custom').oninput = (e) => { const v = Math.trunc(Number(e.target.value)); pickA = v && Math.abs(v) <= 1000 ? v : null;
+      view.querySelectorAll('[data-a]').forEach(x => { x.classList.remove('on'); x.setAttribute('aria-pressed', 'false'); }); paint(); };
+    $('#custom').onkeydown = (e) => { if (e.key === 'Enter' && pickA) go(pickA); };
+    nb.onclick = () => go(pickA); paint();
   } else {
     const kids = (await api.kids()).filter(k => k.active);
     const draw = () => {
@@ -1396,7 +1433,7 @@ async function pPoints() {
       view.innerHTML = `${head}<h2 style="margin-bottom:12px">${t('s3')}</h2>
         <div class="list-tools"><span class="muted">${pic(cOf(pw.skill).icon)} ${esc(cName(cOf(pw.skill)))}${pw.detail ? ' · ' + esc(pw.detail) : ''} · ${signed(pw.amount)}</span>
           <button class="btn small" id="all">${n === kids.length && n ? t('clear') : t('selectAll')}</button></div>
-        <div class="options">${kids.map(k => `<button class="opt ${pw.sel.has(k.id) ? 'on' : ''}" data-k="${k.id}"><span class="i">${face(k)}</span><span class="t">${esc(k.nickname)}</span><span class="check">${pw.sel.has(k.id) ? '✓' : ''}</span></button>`).join('') || `<p class="muted">${t('noKids')}</p>`}</div>
+        <div class="options">${kids.map(k => `<button class="opt ${pw.sel.has(k.id) ? 'on' : ''}" data-k="${k.id}"><span class="i">${face(k)}</span><span class="t">${esc(k.nickname)}</span><span class="check">${pw.sel.has(k.id) ? '✓' : ''}</span></button>`).join('') || emptyGo(t('noKids'), 'kids', t('addKid'))}</div>
         <div class="field" style="margin-top:14px"><label>${t('note')}</label><input class="input" id="note" maxlength="80"></div>
         <div class="bottom-bar"><button class="btn primary" id="give" ${n ? '' : 'disabled'}>${t('giveTo', signed(pw.amount), pic(cOf(pw.skill).icon), n)}</button></div>`;
       wire();
@@ -1422,7 +1459,7 @@ async function pHistory() {
   view.innerHTML = `${pageHead(t('pointsHistory'), '#/admin/points')}
     <div class="card"><div class="list">${recent.map(p => `<div class="li"><span class="av">${face(p.kids)}</span>
       <span class="grow">${esc(p.kids?.nickname || '?')}<span class="sub">${pic(cOf(p.skill).icon)} ${esc(cName(cOf(p.skill)))}${p.detail ? ' · ' + esc(p.detail) : ''}${p.note ? ' · ' + esc(p.note) : ''}</span></span>
-      <span class="amt ${p.amount < 0 ? 'neg' : 'pos'}">${signed(p.amount)}</span><button class="btn small danger" data-del="${p.id}">${t('undo')}</button></div>`).join('') || `<p class="muted">${t('none')}</p>`}</div></div>`;
+      <span class="amt ${p.amount < 0 ? 'neg' : 'pos'}">${signed(p.amount)}</span><button class="btn small danger" data-del="${p.id}">${t('undo')}</button></div>`).join('') || emptyGo(t('none'), 'points', t('tab_points'))}</div></div>`;
   view.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
     const p = recent.find(x => x.id === b.dataset.del);
     if (await confirmBox(t('delPointWarn', p?.kids?.nickname || '', signed(p?.amount || 0)))) { try { await api.deletePoint(b.dataset.del); lbCache.at = 0; pHistory(); } catch (e) { fail(e); } }
@@ -1462,7 +1499,16 @@ async function kidForm(kid) {
       if (!d.nickname) return;
       kid ? await api.updateKid(kid.id, d) : await api.addKid(d); toast(t('saved'));
     } else if (r === 'toggle') await api.updateKid(kid.id, { active: !kid.active });
-    else if (r === 'delete') { if (!(await confirmBox(t('delKidConfirm', kid.nickname)))) return; await api.deleteKid(kid.id); }
+    else if (r === 'delete') {
+      // v42: hiding keeps every point and attendance row, so it is the main button; deleting for good is the small red one
+      if (kid.active) {
+        const a = await modal('⚠️ ' + t('warnTitle'), `<p style="font-size:1.05rem;white-space:pre-line">${esc(t('delKidConfirm', kid.nickname))}</p><p class="hint">${esc(t('hideInsteadNote'))}</p>`,
+          { okText: t('hideInstead'), extra: `<button class="btn small danger" value="reallyDel" formnovalidate>🗑 ${esc(t('delForGood', kid.nickname))}</button>` });
+        if (a instanceof FormData) await api.updateKid(kid.id, { active: false });
+        else if (a === 'reallyDel') await api.deleteKid(kid.id);
+        else return;
+      } else { if (!(await confirmBox(t('delKidConfirm', kid.nickname)))) return; await api.deleteKid(kid.id); }
+    }
     else return;
     lbCache.at = 0; pKids();
   } catch (e) { fail(e); }
@@ -1480,7 +1526,7 @@ async function pAttSummary() {
     <div class="summary"><div><b class="c-here">${tot.present}</b><span>${t('present')}</span></div><div><b class="c-leave">${tot.leave}</b><span>${t('leave')}</span></div><div><b class="c-absent">${tot.absent}</b><span>${t('absent')}</span></div></div>
     <div class="card"><div class="list">${list.map(r => `<div class="li"><span class="av">${face(r.k)}</span>
       <span class="grow">${esc(r.k.nickname)}<span class="sub">${t('attTimes', r.present, r.leave, r.absent)}</span></span>
-      <span class="amt c-here">${r.present}${days ? `<span class="muted"> / ${days}</span>` : ''}</span></div>`).join('') || `<p class="muted">${t('noKids')}</p>`}</div></div>`;
+      <span class="amt c-here">${r.present}${days ? `<span class="muted"> / ${days}</span>` : ''}</span></div>`).join('') || emptyGo(t('noKids'), 'kids', t('addKid'))}</div></div>`;
 }
 
 // ---------------- Point categories (name, icon, extra info)
@@ -1490,7 +1536,7 @@ async function pPcats() {
   view.innerHTML = `${pageHead(t('tab_settings'))}
     <button class="btn primary wide" id="addPc" style="margin-bottom:12px">+ ${t('addPcat')}</button>
     <div class="card"><div class="list">${cats.map(c => `<div class="li click" data-k="${c.key}"><span class="av">${pic(c.icon)}</span>
-      <span class="grow">${esc(cName(c))}<span class="sub">${c.details ? esc(c.details.split('\n').join(' · ')) + (c.info ? ' — ' : '') : ''}${c.info ? esc(c.info) : (c.details ? '' : '—')}${c.active ? '' : ' · ' + t('hidden')}</span></span><span class="muted">${t('edit')} ›</span></div>`).join('')}</div></div>`;
+      <span class="grow">${esc(cName(c))}<span class="sub">${c.details ? esc(c.details.split('\n').join(' · ')) + (c.info ? ' — ' : '') : ''}${c.info ? esc(cInfo(c)) : (c.details ? '' : '—')}${c.active ? '' : ' · ' + t('hidden')}</span></span><span class="muted">${t('edit')} ›</span></div>`).join('')}</div></div>`;
   $('#addPc').onclick = () => pcForm(null);
   view.querySelectorAll('[data-k]').forEach(b => b.onclick = () => pcForm(cats.find(c => c.key === b.dataset.k)));
 }
@@ -1500,7 +1546,7 @@ async function pcForm(c) {
     <div class="field"><label>${t('nameEn')}</label><input class="input" name="name_en" maxlength="40" value="${esc(c?.name_en || '')}"></div>
     <div class="field"><label>${t('avatar')}</label>${pickRow('icon', PC_ICONS, c?.icon || '⭐')}</div>
     <div class="field"><label>${t('infoLbl')}</label><textarea class="input" name="info" maxlength="500" rows="4" style="height:auto;padding:12px">${esc(c?.info || '')}</textarea></div>
-    <div class="field"><label>${t('details')}</label><textarea class="input" name="details" maxlength="300" rows="3" style="height:auto;padding:12px" placeholder="เปียโน&#10;ร้องเพลง">${esc(c?.details || '')}</textarea></div>`,
+    <div class="field"><label>${t('details')}</label><textarea class="input" name="details" maxlength="300" rows="3" style="height:auto;padding:12px" placeholder="${esc(t('detailsPh'))}">${esc(c?.details || '')}</textarea></div>`,
     { extra: c && baseKey(c.key) !== 'attendance' ? `<button class="btn small" value="toggle" formnovalidate>${c.active ? t('hidden') : t('show')}</button><button class="btn small danger" value="delete" formnovalidate>${t('del')}</button>` : '' });
   wirePickers($('#dlgForm'));
   const r = await p;
@@ -1607,7 +1653,7 @@ async function pRedeem(kidId) {
     view.innerHTML = `${pageHead(t('tab_redeem'))}
       <h2 style="margin-bottom:12px">${t('rd1')}</h2>
       ${kids.length > 8 ? `<input class="input" id="q" placeholder="🔍 ${t('search')}" style="margin-bottom:12px">` : ''}
-      <div class="options">${kidBtns(has) || `<p class="muted">${kids.length ? t('rdNobody') : t('noKids')}</p>`}</div>
+      <div class="options">${kidBtns(has) || (kids.length ? emptyGo(t('rdNobody'), 'points', t('tab_points')) : emptyGo(t('noKids'), 'kids', t('addKid')))}</div>
       ${broke.length ? `<details class="zero-skills rd-zero"><summary>${t('rdZero', broke.length)}</summary><div class="options">${kidBtns(broke)}</div></details>` : ''}
       <h2 class="grp" style="margin-top:26px">${t('rdHist')}</h2>
       <div class="card"><div class="list">${hist.map(h => `<div class="li">${art(h.item_icon)}
@@ -1711,7 +1757,8 @@ async function pAbout() {
       ${recent.map(c => `<div class="card clog-simple"><div class="clog-h"><b>${t('verN', c.v)}${c.v === VERSION ? ` <span class="now-tag">${t('verThis')}</span>` : ''}</b><span class="muted">${dLong(c.date)}</span></div>
         <ul>${c.list.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}`;
   } else view.innerHTML = `${pageHead(t('tab_about'))}${verCard}
-    ${isSuper() ? `<button class="btn wide" id="clogXl" style="margin-bottom:6px">📥 ${t('clogExport')}</button>` : ''}
+    ${isSuper() ? `<button class="btn wide" id="clogXl" style="margin-bottom:6px">📥 ${t('clogExport')}</button>
+      <p class="muted clog-hint">${t(program.look?.clogDetail ? 'clogHintOn' : 'clogHintOff')} <a href="#/admin/look">${t('clogHintGo')} ›</a></p>` : ''}
     <h2 class="grp">${t('clogTitle')}</h2>
     ${UPDATES.map((u, ui) => `<details class="card upd" ${ui === 0 ? 'open' : ''}><summary><span class="ut"><b>${esc(th ? u.th : u.en)}</b><span class="muted">${span(u)} · ${dates(u)}</span></span><span class="chev">›</span></summary>
       ${u.versions.map(c => `<div class="clog ${c.v === VERSION ? 'now' : ''}"><div class="clog-h"><b>${t('verN', c.v)}${c.v === VERSION ? ` <span class="now-tag">${t('verThis')}</span>` : ''}</b><span class="muted">${dLong(c.date)}</span></div>
@@ -1848,7 +1895,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=41');
+      const { readSheet } = await import('./ocr.js?v=42');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));

@@ -105,7 +105,7 @@ with sync_playwright() as p:
     check(side_on(pg) and 'points' in side and not any(k in side for k in ['admins', 'look', 'kids', 'songs', 'settings']), 'PC: points-only admin sees only allowed pages in the side menu')
     check(pg.locator('.side-super').count() == 0, 'PC: no super admin badge for a normal admin')
     go(pg, '#/', 1200)
-    check(not side_on(pg) and pg.evaluate("getComputedStyle(document.querySelector('main')).maxWidth") == '520px', 'PC: kids side unchanged (no side menu, phone-width column)')
+    check(not side_on(pg) and pg.evaluate("getComputedStyle(document.querySelector('main')).maxWidth") in ('1040px', '1240px'), 'PC: kids side has no side menu and (v42) the wide kids layout')
     cx.close()
     b.close()
 
