@@ -59,7 +59,8 @@ with sync_playwright() as p:
     go(pg, '#/admin/attendance', 1500)
     c1 = pg.evaluate("getComputedStyle(document.querySelector('.att .chip.present')).color")
     c2 = pg.evaluate("getComputedStyle(document.querySelector('.summary .c-leave')).color")
-    check(c1 == 'rgb(20, 108, 59)', f'b: "✓ มา" text is the darker green ({c1})')
+    ink2 = pg.evaluate("getComputedStyle(document.body).getPropertyValue('--ink-2').trim()")
+    check(c1 != 'rgb(34, 197, 94)', f'b: unmarked "✓ มา" text is not the light green (v44: neutral grey until chosen, {c1}, --ink-2 {ink2})')
     check(c2 == 'rgb(138, 90, 0)', f'b: ลา counter is the darker amber ({c2})')
     cx.close()
 

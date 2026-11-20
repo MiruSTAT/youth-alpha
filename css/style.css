@@ -1455,3 +1455,27 @@ body.sheet-full:not([data-mode="normal"]) .sheet-grab::before { top: 19px; }
 .rank-row.mine { border: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--card, #fff)); box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 30%, transparent); }
 /* phone admin header: the copy-link button shrinks to its icon so the title has room */
 @media (max-width: 599px) { .page-head .head-btn .hb-tx { display: none; } .page-head .head-btn { min-width: 44px; padding: 0 10px; } }
+/* v44: attendance rows never change height. "+10 ⭐" sits under the name, the three chips always stay on the name line,
+   and an unmarked "✓ มา" chip is neutral (it looked already chosen with a green outline) */
+.att { flex-wrap: nowrap; }
+.att-main { min-width: 0; }
+.att-main .nmw { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.att-main .nm { flex: none; }
+.att-main .state { font-size: .85rem; line-height: 1.2; }
+.att .chip.present { color: var(--ink-2); border-color: var(--line); }
+.att .chips { flex: none; }
+/* v44: calm to-do line (attendance still open) and the redeem explanation behind ⓘ with room around it */
+.home-needs .calm-tx { color: var(--ink-2); }
+.rd-bal b { font-size: 1.8rem; }
+.rd-bal span { font-size: .95rem; font-weight: 600; color: var(--ink); }
+.rd-why { margin: 10px 2px 26px; color: var(--ink-2); font-size: .95rem; }
+.rd-why summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; color: var(--primary); list-style: none; }
+.rd-why summary::-webkit-details-marker { display: none; }
+.rd-why p { margin: 4px 0 8px; line-height: 1.5; }
+/* v44: one column width per admin page on a computer. Before, cards stopped at 760 px but buttons, tabs and the page
+   header ran on to 1040 px, so edges never lined up. Wide pages (two-column pickers, the home grid, Look, Data tools)
+   use the full column for every block; every other page keeps every block at 760 px. WIDE_PAGES = home attendance points redeem look data */
+@media (min-width: 1024px) {
+  body.adult.has-side main:not([data-pg="home"]):not([data-pg="attendance"]):not([data-pg="points"]):not([data-pg="redeem"]):not([data-pg="look"]):not([data-pg="data"]) > * { max-width: 760px; }
+  body.adult.has-side main:is([data-pg="home"], [data-pg="attendance"], [data-pg="points"], [data-pg="redeem"], [data-pg="look"], [data-pg="data"]) > .card { max-width: none; }
+}

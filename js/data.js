@@ -1,6 +1,6 @@
 // Data layer: Supabase when configured, otherwise a local PREVIEW store.
 // v35: ?demo=1 (phone preview on the admin panel) always uses the local store, filled with sample data and never saved.
-import { DEMO, demoDb } from './demo.js?v=43';
+import { DEMO, demoDb } from './demo.js?v=44';
 const cfg = window.YA_CONFIG || {};
 // v40 polish: one name order everywhere (Thai rules, numbers as numbers: "Kid 2" before "Kid 10", case ignored)
 const NAME_ORDER = new Intl.Collator('th', { numeric: true, sensitivity: 'base' });
@@ -420,7 +420,7 @@ function previewApi(seed = null) {
     async deleteFeedback() { throw new Error('feedback is permanent'); },
 
     async songs() {
-      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=43'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
+      if (!db.songs) { const { SEED_SONGS } = await import('./songs-seed.js?v=44'); db.songs = SEED_SONGS.map(x => ({ id: id(), active: true, ...x })); save(); }
       return [...db.songs].filter(() => memberOk()).sort((a, b) => a.sort - b.sort || a.title.localeCompare(b.title, 'th'));
     },
     async saveSong(row) {

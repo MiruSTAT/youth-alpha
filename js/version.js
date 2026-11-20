@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '43';
+export const VERSION = '44';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,18 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '43', date: '2026-11-20', commit: '',
+      { v: '44', date: '2026-11-20', commit: '',
+        short: { th: 'แถวเช็กชื่อไม่กระโดดแล้ว หน้าแรกผู้ดูแลบอก "รอเช็ก N คน" แบบสงบ ปุ่ม "✓ มา" เป็นสีเทาจนกว่าจะเลือก หน้าแลกของรางวัลอ่านง่ายขึ้น และทุกหน้าบนคอมพิวเตอร์กว้างเท่ากันทั้งหน้า',
+                 en: 'Attendance rows no longer jump, a calm "N still to check" on the admin home, grey "✓ Here" until chosen, a clearer redeem page, and every computer page lines up at one width' },
+        items: [
+          { a: 'admin', th: 'เช็กชื่อ: แถวสูงเท่าเดิมหลังกด "มา" — "+10 ⭐" อยู่ใต้ชื่อ ปุ่ม มา/ลา/ขาด อยู่บรรทัดเดียวกับชื่อเสมอ แถวด้านล่างไม่เลื่อนแล้ว (เดิมแถวสูงขึ้นจาก 62 เป็น 110 px)', en: 'Attendance: a row keeps its height after "Here". "+10 ⭐" sits under the name and the Here/Leave/Absent buttons always stay on the name line, so rows below no longer jump (a row used to grow from 62 to 110 px)' },
+          { a: 'look', th: 'เช็กชื่อ: ปุ่ม "✓ มา" ที่ยังไม่ได้เลือกเป็นสีเทาเหมือน ลา/ขาด (เดิมมีกรอบเขียว ดูเหมือนเลือกไว้แล้ว) เป็นสีเขียวเมื่อเลือกเท่านั้น', en: 'Attendance: an unchosen "✓ Here" button is grey like Leave/Absent (its green outline looked already chosen); it turns green only when chosen' },
+          { a: 'admin', th: 'หน้าแรกผู้ดูแลบนมือถือ: เช็กชื่อที่ยังไม่เสร็จแสดงที่เดียวในกล่อง "ต้องทำต่อ" เป็น "รอเช็ก N คน" สีปกติ (เดิมขึ้นตัวแดง "วันนี้ยังเช็กชื่อไม่เสร็จ" สองที่)', en: 'Admin home on a phone: unfinished attendance shows once, in the to-do card, as a calm "N still to check" (it used to say "attendance not finished" in red twice)' },
+          { a: 'admin', th: 'แลกของรางวัล: "ใช้แลกได้" ตัวใหญ่ขึ้น คำอธิบายคะแนนสองแบบย้ายไปอยู่ใต้ "ⓘ คะแนนสองแบบต่างกันอย่างไร" กดเพื่ออ่าน และมีที่ว่างก่อนหัวข้อ "เลือกของรางวัล"', en: 'Redeem: "Points to spend" is bigger; the two-kinds-of-points note moved behind "ⓘ What is the difference?" (tap to read) with room before "Pick a prize"' },
+          { a: 'look', th: 'หน้าผู้ดูแลบนคอมพิวเตอร์: ทุกอย่างในหน้าเดียวกันกว้างเท่ากัน (เดิมการ์ดกว้าง 760 px แต่ปุ่ม แท็บ และหัวหน้ากว้าง 1040 px เช่น ปุ่ม "ส่งออกความคิดเห็นเป็น Excel" "+ เพิ่มของรางวัล" และแท็บ โปรแกรม/หน้าตา) หน้าที่มีสองคอลัมน์ (หน้าแรก เช็กชื่อ ให้คะแนน แลกของรางวัล หน้าตา เครื่องมือข้อมูล) ใช้ความกว้างเต็มทั้งหน้า', en: 'Admin pages on a computer: everything on a page is one width (cards stopped at 760 px while buttons, tabs and the page header ran to 1040 px, e.g. "Export feedback to Excel", "+ Add prize" and the Programs/Look tabs). Two-column pages (home, attendance, give points, redeem, Look, data tools) use the full width for everything' },
+          { a: 'fix', th: 'ตรวจทุกหน้าผู้ดูแลและผู้ดูแลสูงสุดที่ 390, 768 และ 1366 px ทั้งไทย/อังกฤษ โหมดเด็ก/โหมดปกติ: ไม่มีหน้าไหนเลื่อนออกด้านข้าง และขอบซ้าย-ขวาตรงกันทุกหน้า', en: 'Checked every admin and super admin page at 390, 768 and 1366 px, Thai/English, kids/normal mode: no page scrolls sideways and every page has one left and right edge' },
+        ] },
+      { v: '43', date: '2026-11-20', commit: 'e7fface',
         short: { th: 'แก้ตามผลตรวจงานออกแบบรอบ v42: กล่องแก้ไขปิดเองเมื่อเปลี่ยนหน้า ตัวอักษร "มา/ลา" เข้มขึ้น ให้คะแนนเลือกคนที่มาวันนี้ได้ในปุ่มเดียว ชื่อเพลงเรียงแบบเดียวกัน หน้าร้านอ่านง่ายขึ้น',
                  en: 'Fixes from the v42 design review: boxes close when you change page, darker "Here/Leave" text, Give points picks today\'s kids in one tap, song names shown the same way, a cleaner shop' },
         items: [

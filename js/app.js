@@ -1,15 +1,15 @@
-import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=43';
-import { api, MODE, DEMO, ranked, byName, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=43';
-import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=43';
-import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=43';
+import { t, getLang, setLang, setOverrides, setAdult, tBase } from './i18n.js?v=44';
+import { api, MODE, DEMO, ranked, byName, today, bkkToday, cached, net, program, P, linkFor, member } from './data.js?v=44';
+import { VERSION, UPDATES, CHANGELOG, AREAS } from './version.js?v=44';
+import { CHORD_TOKEN, isChordLine, ZERO_W, splitAtColumns, parseSong, songLangs, SHARPS, noteIdx, FLAT_KEYS, shiftNote, transposeChord, keyAfter, renderSong, measureCtx, SHEET_FONT, chordsIntoWords, splitSheet, ytId } from './songtext.js?v=44';
 
-import { music } from './music.js?v=43';
-import { art, burst, SPECIAL, pic, face, prizeIcon, isImg, shrinkImage } from './art.js?v=43';
-import { snow } from './snow.js?v=43';
-import { track, flush, deviceId } from './track.js?v=43';
-import { calmIcon } from './icons.js?v=43';
-import { metro } from './metronome.js?v=43';
-import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=43';
+import { music } from './music.js?v=44';
+import { art, burst, SPECIAL, pic, face, prizeIcon, isImg, shrinkImage } from './art.js?v=44';
+import { snow } from './snow.js?v=44';
+import { track, flush, deviceId } from './track.js?v=44';
+import { calmIcon } from './icons.js?v=44';
+import { metro } from './metronome.js?v=44';
+import { videoClock, cleanBeats, bpmOf, hashText, lowerBound } from './videosync.js?v=44';
 
 const $ = (s, el = document) => el.querySelector(s);
 const view = $('#view');
@@ -183,7 +183,7 @@ window.addEventListener('pointerdown', firstTap);
 async function ensureScene() {
   if (scene) { scene.refresh(); scene.start(); return scene; }
   try {
-    const m = await import('./scene3d.js?v=43');
+    const m = await import('./scene3d.js?v=44');
     if (m.initScene($('#scene'), { pack: part('scene') === 'cross' ? 'easter' : 'christmas' })) { scene = m; scene.start(); } else document.body.classList.add('no-webgl');
   } catch (e) { console.warn('3D unavailable', e); document.body.classList.add('no-webgl'); }
   return scene;
@@ -965,13 +965,13 @@ const PAGES = {
   admins: ['super', async (x) => x ? (await saMod()).pAdminEdit(saCtx(), x) : (await saMod()).pAdmins(saCtx())],
   programs: ['super', async () => (await saMod()).pPrograms(saCtx())], look: ['super', async () => (await saMod()).pLook(saCtx())],
   online: ['super', async () => (await saMod()).pOnline(saCtx())], ai: ['super', async () => (await saMod()).pAi(saCtx())],
-  data: ['super', async () => (await import('./datatools.js?v=43')).pData(dtCtx())],   // v38 roadmap step 8
+  data: ['super', async () => (await import('./datatools.js?v=44')).pData(dtCtx())],   // v38 roadmap step 8
 };
 const pageOk = (k) => { const need = PAGES[k]?.[0]; return need === 'super' ? isSuper() : can(need); };
 // helpers handed to the super admin module (js/superadmin.js), so it does not keep its own copies
 const saCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, render, confirmBox, VERSION, getLang, program, linkFor, modal, evReset: () => { evCache = null; }, tBase, applyLook, LOOK, layKeys, partOf, logoOf, uploadImage: async (f) => api.uploadImage(await shrinkImage(f, 512), 'logos'),
   PERMS, dTime, adult, renderSeq: () => renderSeq, phoneFrame, paintMaintBar });
-const saMod = () => import('./superadmin.js?v=43');
+const saMod = () => import('./superadmin.js?v=44');
 // v38: helpers for the data tools page (js/datatools.js)
 const dtCtx = () => ({ view, $, t, esc, toast, fail, pageHead, api, program, leaderboard, pcats, cName, bkkToday, loadXLSX, isSuper });
 
@@ -1000,6 +1000,7 @@ async function adultGate(page) {
   adminPing(PAGES[page] ? page : 'home');
   const ok = PAGES[page] && pageOk(page);
   setSide(ok ? (SIDE_OF[page] || page) : 'home');
+  view.dataset.pg = ok ? page : 'home';   // v44: CSS gives each admin page one column width (WIDE_PAGES in style.css)
   if (!ok) return adultHome();
   await PAGES[page][1](location.hash.split('/')[3]);
   if (findNext) setTimeout(flashFind, 350);                       // v38: came here from the settings search
@@ -1187,9 +1188,9 @@ function adultHome() {
     Object.entries(computeNeeds.st || {}).forEach(([k, v]) => {   // v43: live status on the "today" tiles
       const el = view.querySelector(`.today-tile[data-k="${k}"] > span:last-child`); if (el && v) { el.textContent = v; el.classList.add('tile-st'); }
     });
-    const box = $('#homeNeeds'), ks = Object.keys(n).filter(k => pageOk(k));
+    const soft = computeNeeds.soft || {}, ks = [...Object.keys(soft), ...Object.keys(n)].filter(k => pageOk(k)), box = $('#homeNeeds');
     box?.closest('.home-today')?.classList.toggle('has-needs', !!ks.length);   // v43: the phone shows the to-do card only when something is waiting
-    if (box && ks.length) box.innerHTML = `<div class="list">${ks.map(k => `<a class="li click" href="#/admin/${k}"><span class="grow">${t('tab_' + k)}<span class="sub need-tx">${esc(n[k])}</span></span><span class="muted">${t('open')} ›</span></a>`).join('')}</div>`;
+    if (box && ks.length) box.innerHTML = `<div class="list">${ks.map(k => `<a class="li click" href="#/admin/${k}"><span class="grow">${t('tab_' + k)}<span class="sub ${n[k] ? 'need-tx' : 'calm-tx'}">${esc(n[k] || soft[k])}</span></span><span class="muted">${t('open')} ›</span></a>`).join('')}</div>`;
   }).catch(console.error);
 }
 async function copyText(txt, okMsg) {
@@ -1203,15 +1204,17 @@ async function computeNeeds() {
   if (!active.length && can('kids')) n.kids = t('need_kids');
   const live = shop.items.filter(i => i === 1 || i.active);
   if (!live.length) n.shop = t('need_shopEmpty');
-  const st = {};   // v43: live status line for the "today" tiles (not a need)
+  const st = {}, soft = {};   // v43: live status line for the "today" tiles (not a need); v44: soft = calm to-do lines
   if (active.length && can('points')) {
     const [rowsToday, round] = await Promise.all([api.attendance(today()), api.round(today())]);
-    if (rowsToday.length && !round?.finished) n.attendance = t('need_att');
     const ids = new Set(active.map(k => k.id));
+    // v44: an unfinished attendance round is a calm status ("รอเช็ก N คน"), shown in one place only (the to-do card), never red
+    if (rowsToday.length && !round?.finished) { const wait = active.length - new Set(rowsToday.filter(r => ids.has(r.kid_id)).map(r => r.kid_id)).size;
+      soft.attendance = wait > 0 ? t('stWait', wait) : t('stTapFinish'); }
     st.attendance = t('stHere', rowsToday.filter(r => r.status === 'present' && ids.has(r.kid_id)).length, active.length);
   }
   st.shop = live.length && live[0] !== 1 ? t('stPrizes', live.length) : live.length ? '' : t('need_shopEmpty');
-  computeNeeds.st = st;
+  computeNeeds.st = st; computeNeeds.soft = soft;
   const ev = await eventInfo(true);
   if (!fb.some(f => f.created_at > (localStorage.getItem(pkey('ya_fb_seen')) || ''))) {
     const s = view.querySelector('.menu [data-k="feedback"] .mt span'); if (s) s.textContent = ev.fb_open ? t('fbStatusOn') : t('fbStatusOff');
@@ -1355,7 +1358,7 @@ async function pAttendance() {
         if (multi) return `<button class="opt att-pick ${pick.has(k.id) ? 'on' : ''}" data-p="${k.id}" data-n="${esc(k.nickname.toLowerCase())}"><span class="i">${face(k)}</span>
           <span class="t">${esc(k.nickname)}<span class="opt-sub ${cls}">${label}</span></span><span class="check">${pick.has(k.id) ? '✓' : ''}</span></button>`;
         return `<div class="att ${st || 'wait'}" data-n="${esc(k.nickname.toLowerCase())}">
-          <button class="att-main ${st === 'present' ? 'on' : ''}" data-k="${k.id}" data-s="present" aria-pressed="${st === 'present'}"><span class="av">${face(k)}</span><span class="nm">${esc(k.nickname)}</span>${st === 'present' && pts ? `<span class="state c-here">+${pts} ⭐</span>` : ''}</button>
+          <button class="att-main ${st === 'present' ? 'on' : ''}" data-k="${k.id}" data-s="present" aria-pressed="${st === 'present'}"><span class="av">${face(k)}</span><span class="nmw"><span class="nm">${esc(k.nickname)}</span>${st === 'present' && pts ? `<span class="state c-here">+${pts} ⭐</span>` : ''}</span></button>
           <span class="chips">${['present', 'leave', 'absent'].map(s => `<button class="chip ${s} ${st === s ? 'on' : ''}" data-k="${k.id}" data-s="${s}" aria-pressed="${st === s}">${s === 'present' ? '✓ ' : ''}${t(s)}</button>`).join('')}</span></div>`;
       }).join('') || emptyGo(t('noKids'), 'kids', t('addKid'))}</div>
       ${multi ? `<div class="bottom-bar bulk"><span class="muted">${t('selectedN', pick.size)}</span><div class="st">${['present', 'leave', 'absent'].map(s => `<button class="${s} on" data-bulk="${s}" ${pick.size ? '' : 'disabled'}>${t(s)}</button>`).join('')}</div></div>`
@@ -1696,7 +1699,7 @@ async function pRedeem(kidId) {
   view.innerHTML = `${pageHead(t('tab_redeem'), '#/admin/redeem')}
     <div class="card rd-kid"><span class="av">${face(kid)}</span><span class="grow"><b>${esc(kid.nickname)}</b><span class="sub">${t('rankPts')} ${kid.total} ⭐</span></span>
       <span class="rd-bal"><b>${b} ⭐</b><span>${t('canSpend')}</span></span></div>
-    <p class="hint rd-explain">${t('rdExplain')}</p>
+    <details class="rd-why"><summary>${t('rdWhy')}</summary><p>${t('rdWhyRank')}</p><p>${t('rdWhySpend')}</p></details>
     <h2 style="margin-bottom:12px">${t('rd2')}</h2>
     <div class="options">${live.map(i => { const ok = i.price <= b && !i.sold_out; return `<button class="opt ${ok ? '' : 'dim'}" data-i="${i.id}" ${ok ? '' : 'disabled'}><span class="i">${art(prizeIcon(i))}</span>
       <span class="t">${esc(i.name)}<span class="opt-sub">${i.sold_out ? t('soldOut') : ok ? t('rdLeft', b - i.price) : t('rdShort', i.price - b)}</span></span><span class="amt">${i.price} ⭐</span></button>`; }).join('') || emptyGo(t('need_shopEmpty'), 'shop', t('addPrizes'))}</div>`;
@@ -1920,7 +1923,7 @@ async function pSongEdit(id) {
     const st = $('#readStatus'); st.hidden = false; st.textContent = '✨ ' + t('reading') + '…';
     view.querySelectorAll('[data-read]').forEach(b => b.disabled = true);
     try {
-      const { readSheet } = await import('./ocr.js?v=43');
+      const { readSheet } = await import('./ocr.js?v=44');
       const txt = await readSheet(url, { skipTitles: [form.title.value, form.subtitle.value], key: form.song_key.value, onProgress: (p) => { st.textContent = `✨ ${t('reading')}… ${Math.round(p * 100)}%`; } });
       if (!txt.trim()) { st.textContent = t('readNothing'); return; }
       form.content.value = txt; form.content.dispatchEvent(new Event('input'));

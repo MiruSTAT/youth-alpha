@@ -888,6 +888,11 @@ Object.assign(DICT.en, { detailsPh: 'Piano\nSinging', attPtsNote: (n) => `Here =
 // v43
 Object.assign(DICT.th, { pickHereToday: (n) => `เลือกคนที่มาวันนี้ (${n})`, hereToday: 'มาวันนี้', emptyShopSub: 'ของรางวัลกำลังจะมาเร็ว ๆ นี้ สะสมดาวรอไว้ก่อนนะ ⭐', addPrizes: 'เพิ่มของรางวัล', rdExplain: 'คะแนนอันดับ = ดาวทั้งหมดที่เคยได้ (ไม่ลดเมื่อแลก) · ใช้แลกได้ = ดาวที่เหลือหลังหักของที่แลกไปแล้ว', stHere: (a, b) => `${a}/${b} มาแล้ววันนี้`, stPrizes: (n) => `มีของรางวัล ${n} ชิ้น`, editKidT: (n) => `แก้ไข ${n}` });
 Object.assign(DICT.en, { pickHereToday: (n) => `Pick today's kids (${n})`, hereToday: 'Here today', emptyShopSub: 'Prizes are coming soon. Keep collecting stars ⭐', addPrizes: 'Add prizes', rdExplain: 'Ranking points = every star ever earned (they do not go down after a prize) · Points to spend = stars left after prizes already taken', stHere: (a, b) => `${a}/${b} here today`, stPrizes: (n) => `${n} prizes in the shop`, editKidT: (n) => `Edit ${n}` });
+// v44
+Object.assign(DICT.th, { stWait: (n) => `รอเช็ก ${n} คน`, stTapFinish: 'เช็กครบแล้ว กด "เช็กชื่อเสร็จแล้ว" ได้เลย', rdWhy: 'ⓘ คะแนนสองแบบต่างกันอย่างไร',
+  rdWhyRank: 'คะแนนอันดับ = ดาวทั้งหมดที่เคยได้ ไม่ลดเมื่อแลกของ', rdWhySpend: 'ใช้แลกได้ = ดาวที่เหลือ หลังหักของที่แลกไปแล้ว' });
+Object.assign(DICT.en, { stWait: (n) => `${n} still to check`, stTapFinish: 'Everyone checked: tap "Finish attendance"', rdWhy: 'ⓘ What is the difference?',
+  rdWhyRank: 'Ranking points = every star ever earned. They do not go down after a prize.', rdWhySpend: 'Points to spend = stars left after prizes already taken.' });
 const NORMAL = { th: {}, en: {} };
 // v41 clarify: Normal mode also says "สมาชิก" / "member" instead of "เด็ก" / "kid" (admin menus, feedback, copy people…).
 // Texts that name the two modes themselves ("โหมดเด็ก", "Kids mode") are left alone.
