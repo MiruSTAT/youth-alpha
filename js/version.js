@@ -12,7 +12,7 @@
 //
 // Numbers match the ?v= the app carried at the time. Versions 1–3 come from before version numbers were
 // used and are numbered here in order; 4 and 6 were never released.
-export const VERSION = '42';
+export const VERSION = '43';
 
 export const AREAS = {
   kids: ['เด็ก', 'Kids'], admin: ['ผู้ดูแล', 'Admins'], songs: ['เพลง', 'Songs'], data: ['ข้อมูล', 'Data'],
@@ -22,7 +22,22 @@ export const AREAS = {
 export const UPDATES = [
   { id: 'modes', th: 'อัปเดตโหมดเด็ก / โหมดปกติ และหน้าจอคอมพิวเตอร์', en: 'Kids mode / Normal mode & PC layout update',
     versions: [
-      { v: '42', date: '2026-11-20', commit: '',
+      { v: '43', date: '2026-11-20', commit: '',
+        short: { th: 'แก้ตามผลตรวจงานออกแบบรอบ v42: กล่องแก้ไขปิดเองเมื่อเปลี่ยนหน้า ตัวอักษร "มา/ลา" เข้มขึ้น ให้คะแนนเลือกคนที่มาวันนี้ได้ในปุ่มเดียว ชื่อเพลงเรียงแบบเดียวกัน หน้าร้านอ่านง่ายขึ้น',
+                 en: 'Fixes from the v42 design review: boxes close when you change page, darker "Here/Leave" text, Give points picks today\'s kids in one tap, song names shown the same way, a cleaner shop' },
+        items: [
+          { a: 'fix', th: 'กล่องที่เปิดอยู่ (เช่น แก้ไขเด็ก) ปิดเองเมื่อกดย้อนกลับหรือไปหน้าอื่น = ยกเลิก ไม่บันทึกอะไร กล่องจะไม่ค้างทับหน้าใหม่อีก', en: 'An open box (e.g. Edit kid) now closes when you press Back or go to another page. It counts as Cancel and saves nothing, so it never covers the next page' },
+          { a: 'look', th: 'ตัวอักษร "✓ มา" และ "ลา" สีเข้มขึ้น อ่านง่ายบนพื้นขาว (เขียว 6.5:1, ส้ม 5.9:1 จากเดิม 3.5:1 และ 2.4:1)', en: 'The "✓ Here" and "Leave" text is darker and easy to read on white (green 6.5:1, amber 5.9:1, before 3.5:1 and 2.4:1)' },
+          { a: 'admin', th: 'เช็กชื่อภาษาอังกฤษบนมือถือไม่เลื่อนออกด้านข้างแล้ว ปุ่มด้านบนและแถบด้านล่างขึ้นบรรทัดใหม่ได้', en: 'English attendance on a phone no longer scrolls sideways; the top buttons and the bottom bar wrap. "All waiting are here" is now "Rest are here"' },
+          { a: 'admin', th: 'ให้คะแนน ขั้นที่ 3: เด็กที่มาวันนี้อยู่บนสุดพร้อม "✓ มาวันนี้" มีปุ่ม "เลือกคนที่มาวันนี้ (N)" (ไม่มีใครถูกเลือกไว้ก่อน) และช่องหมายเหตุอยู่เหนือรายชื่อ', en: 'Give points step 3: kids who came today are at the top with "✓ Here today", a "Pick today\'s kids (N)" button picks them all (nobody is ticked at the start), and Note is above the list' },
+          { a: 'admin', th: 'กล่องแก้ไขเด็กมีชื่อเด็กในหัวข้อ "แก้ไข <ชื่อ>" ปุ่ม "ลบ" เล็กลงและอยู่แยกจาก "ซ่อน" (คำเตือนก่อนลบยังเหมือนเดิม)', en: 'The Edit kid box title is "Edit <name>"; "Delete" is smaller and set apart from "Hide" (the warning before a delete is the same)' },
+          { a: 'admin', th: 'หน้าแรกผู้ดูแลบนคอมพิวเตอร์: ช่องงานวันนี้บอกสถานะสด เช่น "4/9 มาแล้ววันนี้" บนมือถือมีการ์ด "ต้องทำต่อ" ขึ้นเมื่อมีงานค้าง', en: 'Admin home on a computer: the today tiles show live status, e.g. "4/9 here today". On a phone the "To do" card shows when something is waiting' },
+          { a: 'songs', th: 'ชื่อเพลงแสดงแบบเดียวกันทุกเพลง: ภาษาไทยก่อนเมื่อใช้ภาษาไทย ภาษาอังกฤษก่อนเมื่อใช้ภาษาอังกฤษ (ข้อมูลเพลงไม่เปลี่ยน) และป้ายคีย์มีคำว่า "คีย์"', en: 'Song names show the same way for every song: Thai first in Thai, English first in English (song data is unchanged), and the key badge says "Key"' },
+          { a: 'kids', th: 'ร้านค้า: เอาบรรทัด "สะสมคะแนนแล้วมาแลกกันนะ!" ออก คำแนะนำ "แตะชื่อหนูที่หน้าแรก" เป็นปุ่มเล็กอ่านง่ายตรงกลาง ร้านว่างมีข้อความน่ารักแทนบรรทัดเปล่า', en: 'Shop: the "Collect points and come redeem!" line is gone; the "Tap your name" hint is a small, easy-to-read button in the middle; an empty shop shows a friendly message' },
+          { a: 'kids', th: 'แถวของตัวเองในอันดับเห็นชัดขึ้น (กรอบหนาและพื้นสี)', en: 'Your own row in the ranking stands out more (thicker border and a coloured background)' },
+          { a: 'admin', th: 'แลกของรางวัล: อธิบายว่า "คะแนนอันดับ" ต่างจาก "ใช้แลกได้" อย่างไร และถ้ายังไม่มีของรางวัลมีลิงก์ "เพิ่มของรางวัล" ปุ่มคัดลอกลิงก์บนมือถือเหลือแค่ไอคอนให้หัวข้อมีที่', en: 'Redeem explains "Ranking points" vs "Points to spend" and links to "Add prizes" when there are none; on a phone the copy-link button is icon-only so the title has room' },
+        ] },
+      { v: '42', date: '2026-11-20', commit: 'bcd04af',
         short: { th: 'แก้ตามผลตรวจงานออกแบบรอบ v41: ปุ่ม "✓ มา" ในเช็กชื่อ หน้าเด็กบนจอคอม/โปรเจกเตอร์ กล่องแก้ไขเด็กพอดีมือถือ ตัวหนังสือเล็กอ่านง่ายขึ้น',
                  en: 'Fixes from the v41 design review: a "✓ Here" button in attendance, a wide kids\' page for computers and projectors, the Edit kid box fits a phone, small text easier to read' },
         items: [

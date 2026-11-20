@@ -127,7 +127,7 @@ with sync_playwright() as p:
     pg.click('[data-a="10"]'); pg.wait_for_timeout(300)
     check(pg.locator('#amtGo').count() == 1 and '+10' in pg.inner_text('#amtGo') and pg.locator('[data-a]').count() > 0, 'f: a tap picks +10 and stays on step 2')
     pg.click('#amtGo'); pg.wait_for_timeout(400)
-    check('+10' in pg.inner_text('.list-tools'), 'f: "ถัดไป" goes on with +10')
+    check('+10' in pg.inner_text('.pw-sum'), 'f: "ถัดไป" goes on with +10')
     go(pg, '#/admin/attendance', 1300); pg.evaluate(BREAK)
     pg.locator('.att .chip.present').first.click(); pg.wait_for_timeout(600)
     check('boom' in pg.inner_text('#errBar'), 'f: a failed save that is not the internet shows the real reason')

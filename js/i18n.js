@@ -104,7 +104,7 @@ const DICT = {
     details: 'รายละเอียดย่อย (บรรทัดละ 1 อย่าง ไม่บังคับ)', pickDetail: 'รายละเอียด (ไม่บังคับ)', noDetail: 'ไม่ระบุ',
     tab_pcats: 'หมวดคะแนน', m_pcats: 'ชื่อ ไอคอน และข้อมูลเพิ่มเติม', addPcat: 'เพิ่มหมวดคะแนน', nameTh: 'ชื่อ (ไทย)', nameEn: 'ชื่อ (อังกฤษ ไม่บังคับ)', infoLbl: 'ข้อมูลเพิ่มเติม (เด็กแตะดูได้)', myPointsIn: 'คะแนนของหนูในหมวดนี้', cantDelPcat: 'ลบไม่ได้ เพราะมีคะแนนในหมวดนี้แล้ว — ใช้ "ซ่อน" แทนนะ',
     shop: 'ร้านค้า', shopTitle: 'ร้านของรางวัล', shopSub: 'สะสมคะแนนแล้วมาแลกกันนะ! แตะของรางวัลดูสิ',  tapCat: 'แตะเพื่อเปิดดู',
-    youHave: (n) => `หนูมี ${n} ⭐`, canGet: 'แลกได้!', needMore: (n) => `อีก ${n} ⭐`, emptyCat: 'ยังไม่มีของในหมวดนี้', emptyShop: 'ร้านยังไม่เปิด — รอผู้ดูแลจัดของนะ',
+    youHave: (n) => `หนูมี ${n} ⭐`, canGet: 'แลกได้!', needMore: (n) => `อีก ${n} ⭐`, emptyCat: 'ยังไม่มีของในหมวดนี้', emptyShop: 'ร้านยังไม่เปิดนะ',
     schedule: 'ตารางกิจกรรม', noSchedule: 'ยังไม่มีกิจกรรม', todayLbl: 'วันนี้', close: 'ปิด', pastEvents: 'ผ่านไปแล้ว',
     tut_schedule: 'แตะตรงนี้เพื่อดูตารางกิจกรรม', tut_shop: 'ร้านค้า! ดูของรางวัลที่แลกด้วยคะแนน', tut_rank: 'ดูอันดับของเพื่อน ๆ ที่นี่',
     tut_me: 'ดูคะแนนของหนูที่นี่', tut_music: 'เปิด / ปิดเพลงคริสต์มาส', gotIt: 'เข้าใจแล้ว', skip: 'ข้าม',
@@ -860,11 +860,11 @@ Object.assign(DICT.en, { addPts: 'Add points', removePts: 'Remove points' });
 Object.assign(DICT.th, { ptsUnit: 'คะแนน' });
 Object.assign(DICT.en, { ptsUnit: 'pts' });
 // v40 delight: the shop knows who is looking (youHave / canGet / needMore are the old shop keys, used again)
-Object.assign(DICT.th, { shopPickMe: 'แตะชื่อของหนูในหน้าแรก แล้วร้านจะบอกว่าหนูแลกอะไรได้บ้าง' });
-Object.assign(DICT.en, { shopPickMe: 'Tap your name on the home page and the shop will show what you can get' });
+Object.assign(DICT.th, { shopPickMe: 'แตะชื่อหนูที่หน้าแรก|ดูว่าแลกอะไรได้บ้าง' });
+Object.assign(DICT.en, { shopPickMe: 'Tap your name on the home page|to see what you can get' });
 // v41: attendance on a phone (one-line rows, everyone here)
 Object.assign(DICT.th, { allHere: (n) => `ทุกคนที่รอเช็กมา (${n})`, allHereConfirm: (n) => `บันทึก "มา" ให้ ${n} คนที่ยังรอเช็ก?\nคนที่บันทึก "ลา" หรือ "ขาด" แล้วจะไม่เปลี่ยน`, attTapHint: 'แตะชื่อ = มา' });
-Object.assign(DICT.en, { allHere: (n) => `All waiting are here (${n})`, allHereConfirm: (n) => `Save "Here" for the ${n} still waiting?\nAnyone already on Leave or Absent stays as is`, attTapHint: 'Tap a name = Here' });
+Object.assign(DICT.en, { allHere: (n) => `Rest are here (${n})`, allHereConfirm: (n) => `Save "Here" for the ${n} still waiting?\nAnyone already on Leave or Absent stays as is`, attTapHint: 'Tap a name = Here' });
 // v41: kid detail folds the categories that are still at 0
 Object.assign(DICT.th, { zeroCats: (n) => `ยังไม่มีคะแนนอีก ${n} หมวด` });
 Object.assign(DICT.en, { zeroCats: (n) => `${n} more with no points yet` });
@@ -885,6 +885,9 @@ Object.assign(DICT.th, { errSignin: 'การเข้าสู่ระบบ�
 Object.assign(DICT.en, { errSignin: 'Your sign-in ran out. Sign in again, then try again', errPerm: "This account isn't allowed to do this. Ask the super admin", errDup: 'That name or item is already there. Try another name', errValue: 'Something typed is not allowed. Check the numbers or the text length', errServer: (m) => `Couldn't save: ${m}` });
 Object.assign(DICT.th, { detailsPh: 'เปียโน\nร้องเพลง', attPtsNote: (n) => `มา = +${n} ⭐ ต่อคน` });
 Object.assign(DICT.en, { detailsPh: 'Piano\nSinging', attPtsNote: (n) => `Here = +${n} ⭐ each` });
+// v43
+Object.assign(DICT.th, { pickHereToday: (n) => `เลือกคนที่มาวันนี้ (${n})`, hereToday: 'มาวันนี้', emptyShopSub: 'ของรางวัลกำลังจะมาเร็ว ๆ นี้ สะสมดาวรอไว้ก่อนนะ ⭐', addPrizes: 'เพิ่มของรางวัล', rdExplain: 'คะแนนอันดับ = ดาวทั้งหมดที่เคยได้ (ไม่ลดเมื่อแลก) · ใช้แลกได้ = ดาวที่เหลือหลังหักของที่แลกไปแล้ว', stHere: (a, b) => `${a}/${b} มาแล้ววันนี้`, stPrizes: (n) => `มีของรางวัล ${n} ชิ้น`, editKidT: (n) => `แก้ไข ${n}` });
+Object.assign(DICT.en, { pickHereToday: (n) => `Pick today's kids (${n})`, hereToday: 'Here today', emptyShopSub: 'Prizes are coming soon. Keep collecting stars ⭐', addPrizes: 'Add prizes', rdExplain: 'Ranking points = every star ever earned (they do not go down after a prize) · Points to spend = stars left after prizes already taken', stHere: (a, b) => `${a}/${b} here today`, stPrizes: (n) => `${n} prizes in the shop`, editKidT: (n) => `Edit ${n}` });
 const NORMAL = { th: {}, en: {} };
 // v41 clarify: Normal mode also says "สมาชิก" / "member" instead of "เด็ก" / "kid" (admin menus, feedback, copy people…).
 // Texts that name the two modes themselves ("โหมดเด็ก", "Kids mode") are left alone.

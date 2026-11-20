@@ -25,6 +25,7 @@
   --primary: #1b2a5c;
   --here: #1f9d55;
   --leave: #d99a00;
+  --here-ink: #146c3b; --leave-ink: #8a5a00;   /* v43: text versions (≥ 5:1 on white) of the here / leave colours */
   --absent: #d93a4a;
 
   --font: 'Noto Sans Thai', 'Sarabun', system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -219,7 +220,7 @@ body.adult main { padding: 16px 16px calc(110px + var(--safe-b)); }
 .summary div { flex: 1; text-align: center; }
 .summary b { display: block; font-size: 1.4rem; line-height: 1.3; }
 .summary span { font-size: .9rem; color: var(--ink-2); }
-.c-here { color: var(--here); } .c-leave { color: var(--leave); } .c-absent { color: var(--absent); } .c-wait { color: var(--ink-2); }
+.c-here { color: var(--here-ink); } .c-leave { color: var(--leave-ink); } .c-absent { color: var(--absent); } .c-wait { color: var(--ink-2); }
 .att-list { display: flex; flex-direction: column; gap: 10px; }
 .att { background: var(--white); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; }
 .att .who { display: flex; align-items: center; gap: 10px; font-size: 1.15rem; font-weight: 600; margin-bottom: 10px; }
@@ -231,9 +232,9 @@ body.adult main { padding: 16px 16px calc(110px + var(--safe-b)); }
   height: 52px; border-radius: 12px; border: 2px solid var(--line); background: var(--white); font-weight: 700; font-size: 1.05rem; cursor: pointer; color: var(--ink-2);
 }
 .att .st .present.on { background: var(--here); border-color: var(--here); color: #fff; }
-.att .st .leave.on { background: var(--leave); border-color: var(--leave); color: #fff; }
+.att .st .leave.on { background: var(--leave); border-color: var(--leave); color: #2b1d00; }
 .att .st .absent.on { background: var(--absent); border-color: var(--absent); color: #fff; }
-.finished-banner { background: #e7f6ee; color: var(--here); border-radius: var(--r); padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; font-weight: 600; }
+.finished-banner { background: #e7f6ee; color: var(--here-ink); border-radius: var(--r); padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; font-weight: 600; }
 
 /* lists */
 .list { display: flex; flex-direction: column; }
@@ -244,7 +245,7 @@ body.adult main { padding: 16px 16px calc(110px + var(--safe-b)); }
 .li .sub { display: block; color: var(--ink-2); font-size: .9rem; }
 .li .amt { font-weight: 700; white-space: nowrap; }
 .li.click { cursor: pointer; }
-.pos { color: var(--here); } .neg { color: var(--absent); }
+.pos { color: var(--here-ink); } .neg { color: var(--absent); }
 .total-row { display: flex; justify-content: space-between; font-weight: 700; font-size: 1.05rem; }
 .emoji-pick { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; }   /* v42: fits a 390 px phone */
 .emoji-pick button { min-width: 0; font-size: 1.6rem; height: 52px; border-radius: 12px; border: 2px solid transparent; background: var(--bg); cursor: pointer; }
@@ -347,7 +348,7 @@ body.adult #snow, body.adult #schedBtn, body.adult #lockBtn { display: none; }
 .tag { position: relative; display: inline-block; margin-top: 10px; padding: 4px 14px 4px 22px; border-radius: 6px 14px 14px 6px; background: var(--gold); color: var(--dark-ink); font-weight: 700; font-size: 1.1rem; transform: rotate(-4deg); box-shadow: 0 2px 0 #d99a00; }
 .tag::before { content: ''; position: absolute; left: 8px; top: 50%; width: 7px; height: 7px; margin-top: -3.5px; border-radius: 50%; background: #f4e4c8; }
 .prize .can { display: block; font-size: .85rem; margin-top: 8px; font-weight: 600; }
-.prize .can.ok { color: var(--here); } .prize .can.no { color: #8b5a2b; }
+.prize .can.ok { color: var(--here-ink); } .prize .can.no { color: #8b5a2b; }
 .prize.wiggle .art { animation: wiggle .5s; }
 @keyframes wiggle { 25% { transform: rotate(-12deg) scale(1.15); } 50% { transform: rotate(10deg) scale(1.15); } 75% { transform: rotate(-6deg); } }
 
@@ -794,7 +795,7 @@ body[data-theme="snow"] .verse b { color: var(--dark-ink); }
 .rd-kid .grow { flex: 1; min-width: 0; font-size: 1.2rem; overflow-wrap: anywhere; }
 .rd-kid .sub { display: block; font-size: .9rem; color: var(--ink-2); font-weight: 400; }
 .rd-bal { text-align: right; }
-.rd-bal b { display: block; font-size: 1.5rem; color: var(--here); line-height: 1.2; white-space: nowrap; }
+.rd-bal b { display: block; font-size: 1.5rem; color: var(--here-ink); line-height: 1.2; white-space: nowrap; }
 .rd-bal span { font-size: .85rem; color: var(--ink-2); }
 .ver-now { display: flex; justify-content: space-between; align-items: baseline; }
 .ver-now span { font-size: 1.05rem; }
@@ -1316,8 +1317,11 @@ main:focus-visible { outline: none; }                     /* main gets focus onl
 @keyframes tag-shine { to { transform: translateX(120%); } }
 @media (prefers-reduced-motion: reduce) { .slot.can .tag::after { animation: none; display: none; } }
 /* No name picked yet: one quiet line that sends the kid to the home page to pick it */
-.shop-hint { margin: 0 0 14px; font-size: 1.05rem; line-height: 1.5; }
-.shop-hint a { color: inherit; text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+.shop-hint { display: block; width: fit-content; max-width: 100%; margin: 4px auto 16px; padding: 10px 18px; border-radius: 999px; background: var(--card, #fff);
+  border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: 1rem; line-height: 1.4; text-align: center; }   /* v43: a calm tappable pill */
+.shop-hint .nw { white-space: nowrap; display: inline-block; }
+.empty-shop { text-align: center; padding: 28px 12px; } .empty-shop > span { font-size: 3rem; display: block; margin-bottom: 8px; }
+.empty-shop p { margin: 4px 0; font-size: 1.15rem; } .empty-shop .muted { font-size: 1.05rem; }
 .shop-bal b { white-space: nowrap; }
 
 /* ---------- v41: attendance on a phone (one line per person; tap the name = มา, ลา/ขาด are small chips) ---------- */
@@ -1335,10 +1339,10 @@ main:focus-visible { outline: none; }                     /* main gets focus onl
   color: var(--ink-2); font: inherit; font-size: .88rem; font-weight: 700; cursor: pointer; }
 .att { flex-wrap: wrap; }                         /* v42: chips drop under the name instead of squeezing it */
 .att .chips { display: flex; gap: 4px; margin-left: auto; }
-.att .chip.present { color: var(--here); border-color: color-mix(in srgb, var(--here) 45%, var(--line)); min-width: 58px; }
-.att .chip.present.on { background: var(--here); border-color: var(--here); color: #fff; }
+.att .chip.present { color: var(--here-ink); border-color: color-mix(in srgb, var(--here) 45%, var(--line)); min-width: 58px; }
+.att .chip.present.on { background: var(--here-ink); border-color: var(--here-ink); color: #fff; }
 .att-pts { margin: -4px 0 8px; font-size: .95rem; }
-.att .chip.leave.on { background: var(--leave); border-color: var(--leave); color: #fff; }
+.att .chip.leave.on { background: var(--leave); border-color: var(--leave); color: #2b1d00; }
 .att .chip.absent.on { background: var(--absent); border-color: var(--absent); color: #fff; }
 .list-tools .muted { font-size: .95rem; }
 /* v41 clarify: Normal mode shows a person's initial instead of an animal emoji */
@@ -1398,11 +1402,19 @@ body:not(.adult) { --text-soft: color-mix(in srgb, var(--text-d2) 45%, var(--k-t
 .rank-row .n { width: auto; min-width: 34px; }
 .rank-row .n .tie { font-size: .9rem; color: var(--text-soft, var(--text-d2)); }
 body:not(.adult) .my-card .who span, body:not(.adult) .my-card .pts span { font-size: 1rem; color: var(--text-soft); }
-body:not(.adult) .rank-hint, body:not(.adult) .sheet-sub, body:not(.adult) .shop-hint { font-size: 1.05rem; color: var(--text-soft); }
+body:not(.adult) .rank-hint, body:not(.adult) .sheet-sub { font-size: 1.05rem; color: var(--text-soft); }
 body:not(.adult) .zero-skills > summary { font-size: 1.05rem; color: var(--text-soft); }
 /* v42 adapt: computer admin home = today's jobs + what still needs doing (the side menu lists every page, so the groups hide) */
 .home-today { display: none; }
+.home-today.has-needs { display: block; }   /* v43: phone = only the to-do card, and only when something is waiting */
+.home-today.has-needs > .grp, .home-today.has-needs > .today-tiles { display: none; }
+.home-needs a.li { text-decoration: none; color: var(--ink); }
+.home-needs .need-tx { color: var(--absent); }
+.home-needs .grp { margin-top: 0; }
 @media (min-width: 1024px) {
+  body.adult.has-side .home-today > .grp, body.adult.has-side .home-today > .today-tiles { display: revert; }
+  body.adult.has-side .home-today > .today-tiles { display: grid; }
+  .today-tile .tile-st { color: var(--ink); font-weight: 600; }
   body.adult.has-side .home-today { display: block; }
   body.adult.has-side .mgrp, body.adult.has-side #view > .msearch { display: none; }   /* the side menu has the same search box */
   .today-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 18px; }
@@ -1423,3 +1435,23 @@ body:not(.adult) .zero-skills > summary { font-size: 1.05rem; color: var(--text-
 .top-actions .icon-btn { width: 44px; height: 44px; }
 body.sheet-full:not([data-mode="normal"]) .sheet-grab { height: 44px; margin: -28px auto -4px; }
 body.sheet-full:not([data-mode="normal"]) .sheet-grab::before { top: 19px; }
+
+/* ---------- v43 */
+/* attendance tools never push the page sideways on a 390 px phone (long English labels wrap) */
+.list-tools { flex-wrap: wrap; gap: 8px; }
+.list-tools .btn { white-space: normal; text-align: center; max-width: 100%; }
+.bottom-bar.bulk { flex-wrap: wrap; gap: 6px 10px; }
+.bottom-bar.bulk > .muted { flex: 1 1 100%; text-align: center; }
+.bottom-bar.bulk .st { min-width: 0; }
+.bottom-bar.bulk .st button { min-width: 0; padding: 0 4px; overflow-wrap: anywhere; }
+.bottom-bar.bulk .leave { color: #2b1d00; }
+/* Edit kid box: Delete is small and set apart from Hide */
+.dlg-extra .btn.del-far { flex: 0 0 auto; margin-left: auto; min-width: 88px; }
+.dlg-extra .btn:not(.del-far):has(+ .del-far) { flex: 0 1 auto; min-width: 120px; }
+/* song key badge says what it is ("คีย์" over the letter) */
+.kchip { display: inline-flex; flex-direction: column; align-items: center; line-height: 1.05; padding: 3px 8px; }
+.kchip small { font-size: .82rem; font-weight: 600; color: var(--pt); }
+/* own row in the ranking stands out clearly */
+.rank-row.mine { border: 3px solid var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--card, #fff)); box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 30%, transparent); }
+/* phone admin header: the copy-link button shrinks to its icon so the title has room */
+@media (max-width: 599px) { .page-head .head-btn .hb-tx { display: none; } .page-head .head-btn { min-width: 44px; padding: 0 10px; } }

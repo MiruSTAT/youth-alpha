@@ -187,7 +187,7 @@ with sync_playwright() as p:
     lab = pg.locator('.amt-label').all_inner_texts()
     check(lab == ['เพิ่มคะแนน', 'ลบคะแนน'], f'5: rows labelled "เพิ่มคะแนน" / "ลบคะแนน" ({lab})')
     pg.click('[data-a="-5"]'); pg.click('#amtGo'); pg.wait_for_timeout(400)   # v42: a tap picks, Next moves on
-    check('-5' in pg.inner_text('.list-tools'), '5: −5 then Next goes to step 3 with −5')
+    check('-5' in pg.inner_text('.pw-sum'), '5: −5 then Next goes to step 3 with −5')
     go(pg, '#/admin', 1200)
     cut = pg.evaluate("[...document.querySelectorAll('.mgrp:not([open]) .mgrp-n')].filter(e => e.scrollWidth > e.clientWidth + 1 || getComputedStyle(e).textOverflow === 'ellipsis').length")
     full = pg.evaluate("[...document.querySelectorAll('.mgrp:not([open]) .mgrp-n')].map(e => e.getBoundingClientRect().width > 0).every(Boolean)")
@@ -280,8 +280,8 @@ with sync_playwright() as p:
                     {'id': 'i3', 'name': 'สติกเกอร์', 'icon': '🎨', 'price': 30, 'active': True, 'sort': 3}]
     cx, pg = ctx(b, db7); go(pg, '#/shop', 1500)
     check(pg.locator('.slot .reach').count() == 0, '7: no name picked: prizes show no "แลกได้/อีก"')
-    hint = pg.locator('.shop-hint a')
-    check(hint.count() == 1 and 'แตะชื่อของหนู' in hint.inner_text() and hint.get_attribute('href') == '#/', '7: no name picked: hint links to the home page')
+    hint = pg.locator('a.shop-hint')   # v43: the hint itself is the link
+    check(hint.count() == 1 and 'แตะชื่อหนู' in hint.inner_text() and hint.get_attribute('href') == '#/', '7: no name picked: hint links to the home page')
     pg.evaluate("localStorage.setItem('ya_me', '%s')" % k[0]); pg.reload(); pg.wait_for_timeout(1500)
     check('หนูมี 30 ⭐' in pg.inner_text('.shop-bal'), f"7: balance says 'หนูมี 30 ⭐' ({pg.inner_text('.shop-bal')!r})")
     check(pg.locator('.shop-hint').count() == 0, '7: hint gone once a name is picked')
@@ -307,7 +307,7 @@ with sync_playwright() as p:
     # Normal mode: "คุณมี 30 คะแนน", "อีก 20 คะแนน", no ⭐, no "หนู"
     db7['programs'][0]['look'] = {'mode': 'normal'}
     cx, pg = ctx(b, db7); go(pg, '#/shop', 1500)
-    check('แตะชื่อของคุณ' in pg.inner_text('.shop-hint'), '7: Normal mode hint says "คุณ"')
+    check('แตะชื่อคุณ' in pg.inner_text('.shop-hint'), '7: Normal mode hint says "คุณ"')
     pg.evaluate("localStorage.setItem('ya_me', '%s')" % k[0]); pg.reload(); pg.wait_for_timeout(1500)
     m = pg.inner_text('main')
     check('คุณมี 30 คะแนน' in m and 'อีก 20 คะแนน' in m and '⭐' not in m and 'หนู' not in m, f"7: Normal mode shop: คุณมี / คะแนน, no ⭐/หนู ({m!r})")

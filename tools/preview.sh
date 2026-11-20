@@ -16,6 +16,7 @@ fi
 rm -rf /tmp/prev && mkdir -p /tmp/prev
 cp -r index.html sw.js manifest.json icon.svg icons css js sheets vendor HANDOFF.md /tmp/prev/
 echo "window.YA_CONFIG = {};" > /tmp/prev/config.js
-curl -s --noproxy '*' -m 3 -o /dev/null http://localhost:8766/ || setsid python3 -m http.server 8766 --directory /tmp/prev </dev/null >/dev/null 2>&1 &
+# v43: the whole background list is detached from stdout, so "tools/preview.sh … | tail" no longer waits for the server forever
+(curl -s --noproxy '*' -m 3 -o /dev/null http://localhost:8766/ || setsid python3 -m http.server 8766 --directory /tmp/prev) </dev/null >/dev/null 2>&1 &
 sleep 1
 for t in "$@"; do echo "== $t"; timeout 500 python3 "tests/$t.py" 2>&1 | grep -v '^OK' | tail -15; done
